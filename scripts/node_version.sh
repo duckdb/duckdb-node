@@ -19,7 +19,7 @@ else
 
 	# set version to lastver
 	npm version --no-git-tag-version $VER
-	npm version prerelease --preid="dev"$DIST
+	npm version --no-git-tag-version prerelease --preid="dev"$DIST
 	export TAG='--tag next'
 fi
 
