@@ -18,7 +18,7 @@ else
 	export DIST=`git describe --tags --long | cut -f2 -d-`
 
 	# set version to lastver
-	npm version $VER
+	npm version --no-git-tag-version $VER
 	npm version prerelease --preid="dev"$DIST
 	export TAG='--tag next'
 fi
