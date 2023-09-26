@@ -14,8 +14,6 @@ clean:
 	rm -rf lib/binding/
 	rm -f test/support/big.db-journal
 	rm -rf ./node_modules/
-	rm -rf src/duckdb/
-	rm -f binding.gyp
 
 complete_build:
 	npm install
