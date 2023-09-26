@@ -2,6 +2,10 @@
 
 set -ex
 
+git config --global user.email "quack@duckdb.org"
+git config --global user.name "DuckDB Admin"
+
+
 export TAG=''
 # for main do prereleases
 if [[ "$GITHUB_REF" =~ ^refs/tags/v.+$ ]] ; then
