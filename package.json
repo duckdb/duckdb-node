@@ -45,7 +45,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/duckdb/duckdb.git"
+    "url": "git+https://github.com/duckdb/duckdb-node.git"
   },
   "ts-node": {
     "require": [
@@ -60,7 +60,7 @@
   "author": "Hannes Mühleisen",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/duckdb/duckdb/issues"
+    "url": "https://github.com/duckdb/duckdb-node/issues"
   },
   "homepage": "https://www.duckdb.org"
 }
