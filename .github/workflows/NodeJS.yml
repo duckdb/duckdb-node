@@ -1,38 +1,7 @@
 name: NodeJS
 on:
-  workflow_dispatch:
-  repository_dispatch:
-  push:
-    branches:
-      - '**'
-      - '!main'
-      - '!feature'
-    tags:
-      - '**'
-    paths-ignore:
-      - '**.md'
-      - 'data/**'
-      - 'examples/**'
-      - 'test/**'
-      - 'tools/**'
-      - '!tools/nodejs/**'
-      - '.github/patches/duckdb-wasm/**'
-      - '.github/workflows/**'
-      - '!.github/workflows/NodeJS.yml'
-
-  pull_request:
-    types: [opened, reopened, ready_for_review]
-    paths-ignore:
-      - '**.md'
-      - 'data/**'
-      - 'examples/**'
-      - 'test/**'
-      - 'tools/**'
-      - '!tools/nodejs/**'
-      - '.github/patches/duckdb-wasm/**'
-      - '.github/workflows/**'
-      - '!.github/workflows/NodeJS.yml'
-
+  push
+  pull_request
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}-${{ github.head_ref || '' }}-${{ github.base_ref || '' }}-${{ github.ref != 'refs/heads/main' || github.sha }}
@@ -70,7 +39,7 @@ jobs:
       DUCKDB_NODE_BUILD_CACHE: 0
     strategy:
       matrix:
-        # node.js current support policy to be found at https://github.com/duckdb/duckdb/tree/main/tools/nodejs#Supported-Node-versions
+        # node.js current support policy to be found at https://github.com/duckdb/duckdb-node/tree/main/#Supported-Node-versions
         node: [ '12', '14', '16', '17', '18', '19', '20' ]
         target_arch: [ x64, arm64 ]
         isRelease:
@@ -131,27 +100,11 @@ jobs:
         run: |
           sudo apt-get install -y git ninja-build make gcc-multilib g++-multilib wget libssl-dev
 
-      - name: Install CMake
-        shell: bash
-        run: |
-          wget https://github.com/Kitware/CMake/releases/download/v3.21.3/cmake-3.21.3-linux-x86_64.sh
-          chmod +x cmake-3.21.3-linux-x86_64.sh
-          sudo ./cmake-3.21.3-linux-x86_64.sh --skip-license --prefix=/usr/local
-
       - name: Setup Ccache
         uses: hendrikmuhs/ccache-action@main
         with:
           key: ${{ github.job }}
           save: ${{ ( github.ref == 'refs/heads/main' || github.repository != 'duckdb/duckdb' ) && ( matrix.node == '19' ) }}
-
-      - name: Build DuckDB
-        shell: bash
-        run: |
-          GEN=ninja EXTENSION_STATIC_BUILD=1 BUILD_TPCH=1 BUILD_HTTPFS=1 STATIC_OPENSSL=1 BUILD_NODE=1 make
-
-      - name: Print platform
-        shell: bash
-        run: ./build/release/duckdb -c "PRAGMA platform;"
 
       - name: Setup
         shell: bash
@@ -161,7 +114,7 @@ jobs:
           NODE_AUTH_TOKEN: ${{secrets.NODE_AUTH_TOKEN}}
 
       - name: Validate Docs
-        run: npx jsdoc-to-markdown --files tools/nodejs/lib/*.js >> $GITHUB_STEP_SUMMARY
+        run: npx jsdoc-to-markdown --files lib/*.js >> $GITHUB_STEP_SUMMARY
         env:
           npm_config_yes: true
 
@@ -210,26 +163,6 @@ jobs:
         with:
           key: ${{ github.job }}-${{ matrix.target_arch }}
           save: ${{ ( github.ref == 'refs/heads/main' || github.repository != 'duckdb/duckdb' ) && ( matrix.node == '19' ) }}
-
-      - name: Build DuckDB
-        shell: bash
-        if: matrix.target_arch == 'x64'
-        run: |
-          brew install openssl ninja
-          export OPENSSL_ROOT_DIR=`brew --prefix openssl`
-          echo $OPENSSL_ROOT_DIR
-          GEN=ninja BUILD_TPCH=1 BUILD_HTTPFS=1 STATIC_OPENSSL=1 BUILD_NODE=1 make
-
-      - name: Build DuckDB
-        shell: bash
-        if: matrix.target_arch == 'arm64'
-        run: |
-          brew install ninja
-          GEN=ninja BUILD_TPCH=1 BUILD_NODE=1 make
-
-      - name: Print platform
-        shell: bash
-        run: ./build/release/duckdb -c "PRAGMA platform;"
 
       - name: Setup
         shell: bash
