@@ -9,7 +9,6 @@ set +x
 source scripts/install_node.sh $1
 set -x
 make clean
-./configure
 
 if [ "$(expr substr $(uname -s) 1 5)" == "Linux" ] && [[ "$TARGET_ARCH" == "arm64" ]] ; then
   sudo apt-get install gcc-aarch64-linux-gnu g++-aarch64-linux-gnu --yes

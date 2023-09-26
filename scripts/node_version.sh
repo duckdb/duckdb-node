@@ -2,8 +2,6 @@
 
 set -ex
 
-./configure
-
 export TAG=''
 # for main do prereleases
 if [[ "$GITHUB_REF" =~ ^refs/tags/v.+$ ]] ; then
