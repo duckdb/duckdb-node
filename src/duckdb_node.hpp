@@ -41,6 +41,28 @@ struct Task {
 	// Called on a worker thread (i.e., not the main event loop thread)
 	virtual void DoWork() = 0;
 
+	virtual void Handle(const Napi::Error &e) {
+		Napi::HandleScope scope(object.Env());
+
+		auto function = callback.Value();
+		if (!function.IsUndefined()) {
+
+			const Napi::Object &recv = object.Value();
+
+			Napi::Error value = e.Env().GetAndClearPendingException();
+
+			D_ASSERT(!e.Env().IsExceptionPending());
+			D_ASSERT(function.IsObject());
+
+			try {
+				const Napi::Object &object1 = value.Value();
+				function.MakeCallback(recv, {object1});
+			} catch (const std::exception &e) {
+				duckdb::Printer::Print(e.what());
+			}
+		}
+	}
+
 	// Called on the event loop thread after the work has been completed. By
 	// default, call the associated callback, if defined. If you're writing
 	// a Task that uses promises, override this method instead of Callback.

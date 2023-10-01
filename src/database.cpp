@@ -130,13 +130,21 @@ void Database::Schedule(Napi::Env env, duckdb::unique_ptr<Task> task) {
 
 static void TaskExecuteCallback(napi_env e, void *data) {
 	auto holder = (TaskHolder *)data;
-	holder->task->DoWork();
+	try {
+		holder->task->DoWork();
+	} catch (const Napi::Error &e) {
+		holder->task->Handle(e);
+	}
 }
 
 static void TaskCompleteCallback(napi_env e, napi_status status, void *data) {
 	duckdb::unique_ptr<TaskHolder> holder((TaskHolder *)data);
 	holder->db->TaskComplete(e);
-	holder->task->DoCallback();
+	try {
+		holder->task->DoCallback();
+	} catch (const Napi::Error &e) {
+		holder->task->Handle(e);
+	}
 }
 
 void Database::TaskComplete(Napi::Env env) {
