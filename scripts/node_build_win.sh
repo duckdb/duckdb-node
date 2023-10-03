@@ -7,7 +7,6 @@ npm --version
 which node
 
 make clean
-./configure
 
 npm install --build-from-source
 npm test
