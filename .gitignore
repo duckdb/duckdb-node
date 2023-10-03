@@ -3,3 +3,6 @@ build
 lib/binding
 test/support/big.db
 .DS_Store
+test/tmp
+.idea
+bogusPath.db
