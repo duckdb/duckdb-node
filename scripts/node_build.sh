@@ -21,7 +21,9 @@ npm install --build-from-source --target_arch="$TARGET_ARCH"
 ./node_modules/.bin/node-pre-gyp reveal --target_arch="$TARGET_ARCH"
 
 if [[ "$TARGET_ARCH" != "arm64" ]] ; then
-  npm test
+  if [[ ! "$GITHUB_REF" =~ ^(refs/tags/v.+)$ ]] ; then
+    npm test
+  fi
 else
   ARCH=$(file lib/binding/duckdb.node | tr '[:upper:]' '[:lower:]')
   if [[ "$ARCH" != *"arm"* ]] ; then

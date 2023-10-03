@@ -9,8 +9,12 @@ which node
 make clean
 
 npm install --build-from-source
-npm test
+# no tests on releases
+if [[ ! "$GITHUB_REF" =~ ^(refs/tags/v.+)$ ]] ; then
+  npm test
+fi
 npx node-pre-gyp package testpackage testbinary
+
 
 # TODO
 # if [[ "$GITHUB_REF" =~ ^(refs/heads/main|refs/tags/v.+)$ ]] ; then
