@@ -377,10 +377,10 @@ struct RunPreparedTask : public Task {
 					// query results, the string data is owned by the QueryResult
 					auto result_ref_ptr = new std::shared_ptr<duckdb::QueryResult>(result_ptr);
 
-					auto array_buffer =
-					    Napi::ArrayBuffer::New(env, (void *)blob.GetData(), blob.GetSize(), deleter, result_ref_ptr);
+					auto array_buffer = Napi::Buffer<char>::NewOrCopy(env, (char *)blob.GetData(), blob.GetSize(),
+					                                                  deleter, result_ref_ptr);
 
-					auto typed_array = Napi::Uint8Array::New(env, blob.GetSize(), array_buffer, 0);
+					auto typed_array = Napi::TypedArrayOf<char>(env, array_buffer);
 
 					// TODO we should handle this in duckdb probably
 					if (is_header) {
@@ -708,7 +708,7 @@ struct GetNextArrowIpcTask : public Task {
 			delete static_cast<unique_ptr<duckdb::DataChunk> *>(hint);
 		};
 		auto array_buffer =
-		    Napi::ArrayBuffer::New(env, (void *)blob.GetData(), blob.GetSize(), deleter, data_chunk_ptr);
+		    Napi::Buffer<char>::NewOrCopy(env, (char *)blob.GetData(), blob.GetSize(), deleter, data_chunk_ptr);
 
 		deferred.Resolve(array_buffer);
 	}
