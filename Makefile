@@ -1,7 +1,7 @@
 all: build
 
 ./node_modules:
-	npm install --build-from-source
+	npm install --ignore-scripts
 
 build: ./node_modules
 	./node_modules/.bin/node-pre-gyp build -j max --loglevel=silent
