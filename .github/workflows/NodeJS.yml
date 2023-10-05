@@ -104,7 +104,7 @@ jobs:
         uses: hendrikmuhs/ccache-action@main
         with:
           key: ${{ github.job }}
-          save: ${{ ( github.ref == 'refs/heads/main' || github.repository != 'duckdb/duckdb' ) && ( matrix.node == '19' ) }}
+          save: ${{ ( github.ref == 'refs/heads/main' || github.repository != 'duckdb/duckdb-node' ) && ( matrix.node == '19' ) }}
 
       - name: Setup
         shell: bash
@@ -123,7 +123,7 @@ jobs:
         run: ./scripts/node_build.sh ${{ matrix.node }}
 
   osx-nodejs:
-    if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' || github.repository != 'duckdb/duckdb'
+    if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' || github.repository != 'duckdb/duckdb-node'
     name: node.js OSX
     runs-on: macos-latest
     needs: linux-nodejs
@@ -162,7 +162,7 @@ jobs:
         uses: hendrikmuhs/ccache-action@main
         with:
           key: ${{ github.job }}-${{ matrix.target_arch }}
-          save: ${{ ( github.ref == 'refs/heads/main' || github.repository != 'duckdb/duckdb' ) && ( matrix.node == '19' ) }}
+          save: ${{ ( github.ref == 'refs/heads/main' || github.repository != 'duckdb/duckdb-node' ) && ( matrix.node == '19' ) }}
 
       - name: Setup
         shell: bash
@@ -236,7 +236,7 @@ jobs:
         uses: hendrikmuhs/ccache-action@main
         with:
           key: ${{ github.job }}-${{ matrix.node }}
-          save: ${{ github.ref == 'refs/heads/main' || github.repository != 'duckdb/duckdb' }}
+          save: ${{ github.ref == 'refs/heads/main' || github.repository != 'duckdb/duckdb-node' }}
           variant: sccache
 
       - name: Node
