@@ -2,14 +2,16 @@ import * as duckdb from '..';
 import * as assert from 'assert';
 import {ArrowArray} from "..";
 
-describe.skip('arrow IPC API fails neatly when extension not loaded', function() {
+describe('arrow IPC API fails neatly when extension not loaded', function() {
     // Note: arrow IPC api requires the arrow extension to be loaded. The tests for this functionality reside in:
     //       https://github.com/duckdblabs/arrow
     let db: duckdb.Database;
     let conn;
     before((done) => {
         db = new duckdb.Database(':memory:', {"allow_unsigned_extensions": "true"}, () => {
-            done();
+            db.all('SET autoload_known_extensions=false;', () => {
+                done();
+            });
         });
     });
 
