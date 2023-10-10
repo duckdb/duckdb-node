@@ -15,10 +15,7 @@ if [[ ! "$GITHUB_REF" =~ ^(refs/tags/v.+)$ ]] ; then
 fi
 npx node-pre-gyp package testpackage testbinary
 
-
-TODO
 if [[ "$GITHUB_REF" =~ ^(refs/heads/main|refs/tags/v.+)$ ]] ; then
-  echo "UPLOAD"
-  # npx node-pre-gyp publish
-  # npx node-pre-gyp info
+  npx node-pre-gyp publish
+  npx node-pre-gyp info
 fi
