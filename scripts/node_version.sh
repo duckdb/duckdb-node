@@ -27,7 +27,8 @@ npm pack --dry-run
 
 # upload to npm, maybe
 if [[ "$GITHUB_REF" =~ ^(refs/heads/main|refs/tags/v.+)$ && "$1" = "upload" ]] ; then
-	echo "UPLOAD" $VER $DIST
+	npm version
+	echo $TAG
 	# npm config set //registry.npmjs.org/:_authToken $NODE_AUTH_TOKEN
 	# npm publish --access public $TAG
 fi
