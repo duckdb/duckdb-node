@@ -164,6 +164,12 @@ jobs:
           key: ${{ github.job }}-${{ matrix.target_arch }}
           save: ${{ ( github.ref == 'refs/heads/main' || github.repository != 'duckdb/duckdb-node' ) && ( matrix.node == '19' ) }}
 
+      - name: Downgrade curl # fixes a bug with the brew curl that lead to failed downloads
+        shell: bash
+        run: |
+          brew uninstall --ignore-dependencies curl
+          which curl
+
       - name: Setup
         shell: bash
         run: ./scripts/node_version.sh
