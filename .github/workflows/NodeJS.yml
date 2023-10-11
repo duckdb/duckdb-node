@@ -126,7 +126,7 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' || github.repository != 'duckdb/duckdb-node'
     name: node.js OSX
     runs-on: macos-latest
-    #needs: linux-nodejs
+    needs: linux-nodejs
     strategy:
       matrix:
         target_arch: [ x64, arm64 ]
