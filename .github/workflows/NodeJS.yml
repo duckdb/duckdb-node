@@ -167,11 +167,8 @@ jobs:
       - name: Update curl
         shell: bash
         run: |
+          brew upgrade curl
           which curl
-          brew update
-          brew install curl
-          which curl
-          echo $PATH
 
       - name: Setup
         shell: bash
