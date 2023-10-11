@@ -167,7 +167,7 @@ jobs:
       - name: Update curl
         shell: bash
         run: |
-          brew uninstall curl
+          brew uninstall --ignore-dependencies curl
           which curl
 
       - name: Setup
