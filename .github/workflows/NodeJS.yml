@@ -166,7 +166,7 @@ jobs:
 
       - name: Update curl
         shell: bash
-        run:
+        run: |
           which curl
           brew update
           brew install curl
