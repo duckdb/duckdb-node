@@ -182,8 +182,8 @@ void DuckDBNodeUDFLauncher(Napi::Env env, Napi::Function jsudf, std::nullptr_t *
 		case duckdb::LogicalTypeId::TIME:
 		case duckdb::LogicalTypeId::TIMESTAMP:
 		case duckdb::LogicalTypeId::TIMESTAMP_MS:
-		case duckdb::LogicalTypeId::TIMESTAMP_NS:
 		case duckdb::LogicalTypeId::TIMESTAMP_SEC:
+		case duckdb::LogicalTypeId::TIMESTAMP_NS:
 		case duckdb::LogicalTypeId::BIGINT: {
 #if NAPI_VERSION > 5
 			auto data = ret.Get("data").As<Napi::BigInt64Array>();
