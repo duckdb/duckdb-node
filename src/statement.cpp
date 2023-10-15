@@ -187,6 +187,15 @@ static Napi::Value convert_col_val(Napi::Env &env, duckdb::Value dval, duckdb::L
 		const auto scale = duckdb::Interval::SECS_PER_DAY * duckdb::Interval::MSECS_PER_SEC;
 		value = Napi::Date::New(env, double(dval.GetValue<int32_t>() * scale));
 	} break;
+	case duckdb::LogicalTypeId::TIMESTAMP_NS: {
+		value = Napi::Date::New(env, double(dval.GetValue<int64_t>() / (duckdb::Interval::MICROS_PER_MSEC * 1000)));
+	} break;
+	case duckdb::LogicalTypeId::TIMESTAMP_MS: {
+		value = Napi::Date::New(env, double(dval.GetValue<int64_t>()));
+	} break;
+	case duckdb::LogicalTypeId::TIMESTAMP_SEC: {
+		value = Napi::Date::New(env, double(dval.GetValue<int64_t>() * duckdb::Interval::MSECS_PER_SEC));
+	} break;
 	case duckdb::LogicalTypeId::TIMESTAMP:
 	case duckdb::LogicalTypeId::TIMESTAMP_TZ: {
 		value = Napi::Date::New(env, double(dval.GetValue<int64_t>() / duckdb::Interval::MICROS_PER_MSEC));
