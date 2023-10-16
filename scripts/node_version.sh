@@ -10,7 +10,7 @@ export TAG=''
 # for main do prereleases
 if [[ "$GITHUB_REF" =~ ^refs/tags/v.+$ ]] ; then
 	# proper release
-	npm version `echo $GITHUB_REF | sed 's|refs/tags/v||'`
+	npm version --no-git-tag-version `echo $GITHUB_REF | sed 's|refs/tags/v||'`
 else
 	git describe --tags --long || exit
 
