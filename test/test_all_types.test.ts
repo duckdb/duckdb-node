@@ -22,10 +22,12 @@ function timedelta(obj: { days: number; micros: number; months: number }) {
 const replacement_values: Record<string, string> = {
   timestamp:
     "'1990-01-01 00:00:00'::TIMESTAMP, '9999-12-31 23:59:59'::TIMESTAMP, NULL::TIMESTAMP",
-  // TODO: fix these, they are currently being returned as strings
-  //   timestamp_s: "'1990-01-01 00:00:00'::TIMESTAMP_S",
-  //   timestamp_ns: "'1990-01-01 00:00:00'::TIMESTAMP_NS",
-  //   timestamp_ms: "'1990-01-01 00:00:00'::TIMESTAMP_MS",
+  timestamp_s:
+    "'1990-01-01 00:00:00'::TIMESTAMP_S, '9999-12-31 23:59:59'::TIMESTAMP_S, NULL::TIMESTAMP_S",
+  // note: timestamp_ns does not support extreme values
+  timestamp_ns: "'1990-01-01 00:00:00'::TIMESTAMP_NS,  NULL::TIMESTAMP_NS",
+  timestamp_ms:
+    "'1990-01-01 00:00:00'::TIMESTAMP_MS,  '9999-12-31 23:59:59'::TIMESTAMP_MS, NULL::TIMESTAMP_MS",
   timestamp_tz:
     "'1990-01-01 00:00:00Z'::TIMESTAMPTZ, '9999-12-31 23:59:59.999999Z'::TIMESTAMPTZ, NULL::TIMESTAMPTZ",
   date: "'1990-01-01'::DATE, '9999-12-31'::DATE, NULL::DATE",
@@ -157,7 +159,7 @@ const correct_answer_map: Record<string, any[]> = {
     null,
   ],
   map: ["{}", "{key1=🦆🦆🦆🦆🦆🦆, key2=goose}", null],
-  union: ['Frank', '5', null],
+  union: ["Frank", "5", null],
 
   time_tz: ["00:00:00-1559", "23:59:59.999999+1559", null],
   interval: [
@@ -176,16 +178,15 @@ const correct_answer_map: Record<string, any[]> = {
     null,
   ],
   date: [new Date("1990-01-01"), new Date("9999-12-31"), null],
-  timestamp_s: ["290309-12-22 (BC) 00:00:00", "294247-01-10 04:00:54", null],
-
-  timestamp_ns: [
-    "1677-09-21 00:12:43.145225",
-    "2262-04-11 23:47:16.854775",
+  timestamp_s: [
+    new Date(Date.UTC(1990, 0, 1)),
+    new Date("9999-12-31T23:59:59.000Z"),
     null,
   ],
+  timestamp_ns: [new Date(Date.UTC(1990, 0, 1)), null],
   timestamp_ms: [
-    "290309-12-22 (BC) 00:00:00",
-    "294247-01-10 04:00:54.775",
+    new Date(Date.UTC(1990, 0, 1)),
+    new Date("9999-12-31T23:59:59.000Z"),
     null,
   ],
   timestamp_tz: [
