@@ -78,6 +78,8 @@ export type ArrowArray = Uint8Array[];
 export class Connection {
   constructor(db: Database, callback?: Callback<any>);
 
+  close(callback?: Callback<void>): void;
+
   all(sql: string, ...args: [...any, Callback<TableData>] | []): void;
   arrowIPCAll(sql: string, ...args: [...any, Callback<ArrowArray>] | []): void;
   each(sql: string, ...args: [...any, Callback<RowData>] | []): void;
