@@ -19,7 +19,7 @@ describe('QueryResult', () => {
         assert.deepEqual(stream.getColumns(), {
           range: {
             id: 14,
-            name: "1",
+            name: "BIGINT",
           },
         });
 
