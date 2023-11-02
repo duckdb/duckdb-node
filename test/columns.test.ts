@@ -10,7 +10,7 @@ describe('Column Types', function() {
       var stmt = db.prepare("SELECT * EXCLUDE(medium_enum, large_enum) FROM test_all_types()", function(err: null | Error) {
           if (err) throw err;
 
-          let cols = stmt.columns();
+          let cols = stmt.columns() as duckdb.ColumnInfo[];
           
           assert.equal(cols.length, 42);
 
