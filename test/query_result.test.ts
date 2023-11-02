@@ -16,12 +16,15 @@ describe('QueryResult', () => {
         let retrieved = 0;
 
         const stream = await conn.stream("SELECT * FROM range(0, ?)", total);
-        assert.deepEqual(stream.getColumns(), {
-          range: {
-            id: 14,
-            name: "BIGINT",
-          },
-        });
+        assert.deepEqual(stream.columns(), [
+            {
+                name: 'range',
+                type: {
+                    id: 'BIGINT',
+                    sql_type: 'BIGINT',
+                }
+            }
+        ]);
 
         for await (const row of stream) {
             retrieved++;

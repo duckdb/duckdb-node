@@ -108,13 +108,8 @@ export class Connection {
   unregister_buffer(name: string, callback?: Callback<void>): void;
 }
 
-export type LogicalType = {
-  id: number,
-  name: string,
-}
-
 export class QueryResult implements AsyncIterable<RowData> {
-  getColumns(): Record<string, LogicalType>;
+  columns(): ColumnInfo[] | null;
   [Symbol.asyncIterator](): AsyncIterator<RowData>;
 }
 
