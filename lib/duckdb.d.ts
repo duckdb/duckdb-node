@@ -109,7 +109,7 @@ export class Connection {
 }
 
 export class QueryResult implements AsyncIterable<RowData> {
-  columns(): ColumnInfo[] | null;
+  columns(): ColumnInfo[];
   [Symbol.asyncIterator](): AsyncIterator<RowData>;
 }
 
@@ -262,7 +262,7 @@ export class Statement {
 
   run(...args: [...any, Callback<void>] | any[]): Statement;
 
-  columns(): ColumnInfo[];
+  columns(): ColumnInfo[] | null;
 }
 
 export const ERROR: number;
