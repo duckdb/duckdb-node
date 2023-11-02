@@ -101,7 +101,7 @@ export class Connection {
   ): void;
   unregister_udf(name: string, callback: Callback<any>): void;
 
-  stream(sql: any, ...args: any[]): QueryResult;
+  stream(sql: any, ...args: any[]): Promise<QueryResult>;
   arrowIPCStream(sql: any, ...args: any[]): Promise<IpcResultStreamIterator>;
 
   register_buffer(name: string, array: ArrowIterable, force: boolean, callback?: Callback<void>): void;
@@ -172,7 +172,7 @@ export class Database {
   ): void;
   unregister_udf(name: string, callback: Callback<any>): void;
 
-  stream(sql: any, ...args: any[]): QueryResult;
+  stream(sql: any, ...args: any[]): Promise<QueryResult>;
   arrowIPCStream(sql: any, ...args: any[]): Promise<IpcResultStreamIterator>;
 
   serialize(done?: Callback<void>): void;
