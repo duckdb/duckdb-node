@@ -40,7 +40,7 @@ jobs:
     strategy:
       matrix:
         # node.js current support policy to be found at https://github.com/duckdb/duckdb-node/tree/main/#Supported-Node-versions
-        node: [ '12', '14', '16', '17', '18', '19', '20' ]
+        node: [ '12', '14', '16', '17', '18', '19', '20', '21']
         target_arch: [ x64, arm64 ]
         isRelease:
           - ${{ startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' }}
@@ -83,6 +83,9 @@ jobs:
             target_arch: arm64
           - isRelease: false
             node: 20
+            target_arch: arm64
+          - isRelease: false
+            node: 21
             target_arch: arm64
 
     steps:
@@ -130,7 +133,7 @@ jobs:
     strategy:
       matrix:
         target_arch: [ x64, arm64 ]
-        node: [ '12', '14', '16', '17', '18', '19', '20' ]
+        node: [ '12', '14', '16', '17', '18', '19', '20', '21']
         isRelease:
           - ${{ startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' }}
         exclude:
@@ -189,7 +192,7 @@ jobs:
 
     strategy:
       matrix:
-        node: [ '12', '14', '16', '17', '18', '19', '20' ]
+        node: [ '12', '14', '16', '17', '18', '19', '20', '21']
         isRelease:
           - ${{ startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' }}
         exclude:
@@ -205,6 +208,8 @@ jobs:
             node: 18
           - isRelease: false
             node: 19
+          - isRelease: false
+            node: 20
 
     steps:
       - uses: actions/setup-python@v4
