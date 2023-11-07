@@ -58,6 +58,15 @@ jobs:
             node: 17
           - isRelease: false
             node: 19
+          - isRelease: false
+            node: 18
+            target_arch: arm64
+          - isRelease: false
+            node: 20
+            target_arch: arm64
+          - isRelease: false
+            node: 21
+            target_arch: arm64
 
     steps:
       - uses: actions/checkout@v3
