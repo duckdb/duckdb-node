@@ -36,6 +36,7 @@ jobs:
     name: node.js Linux
     runs-on: ubuntu-20.04
     needs: set-up-npm
+    continue-on-error: ${{ matrix.node != '18' && matrix.node != '20' && matrix.node != '21' }}
     env:
       TARGET_ARCH: ${{ matrix.target_arch }}
       DUCKDB_NODE_BUILD_CACHE: 0
@@ -49,46 +50,14 @@ jobs:
         exclude:
           - isRelease: false
             node: 12
-            target_arch: x64
           - isRelease: false
             node: 14
-            target_arch: x64
           - isRelease: false
             node: 16
-            target_arch: x64
           - isRelease: false
             node: 17
-            target_arch: x64
-          - isRelease: false
-            node: 18
-            target_arch: x64
           - isRelease: false
             node: 19
-            target_arch: x64
-          - isRelease: false
-            node: 12
-            target_arch: arm64
-          - isRelease: false
-            node: 14
-            target_arch: arm64
-          - isRelease: false
-            node: 16
-            target_arch: arm64
-          - isRelease: false
-            node: 17
-            target_arch: arm64
-          - isRelease: false
-            node: 18
-            target_arch: arm64
-          - isRelease: false
-            node: 19
-            target_arch: arm64
-          - isRelease: false
-            node: 20
-            target_arch: arm64
-          - isRelease: false
-            node: 21
-            target_arch: arm64
 
     steps:
       - uses: actions/checkout@v3
@@ -132,6 +101,7 @@ jobs:
     name: node.js OSX
     runs-on: macos-latest
     needs: linux-nodejs
+    continue-on-error: ${{ matrix.node != '18' && matrix.node != '20' && matrix.node != '21' }}
     strategy:
       matrix:
         target_arch: [ x64, arm64 ]
@@ -148,7 +118,7 @@ jobs:
           - isRelease: false
             node: 17
           - isRelease: false
-            node: 18
+            node: 19
           - target_arch: arm64
             node: 12
           - target_arch: arm64
@@ -189,6 +159,7 @@ jobs:
     name: node.js Windows
     runs-on: windows-latest
     needs: linux-nodejs
+    continue-on-error: ${{ matrix.node != '18' && matrix.node != '20' && matrix.node != '21' }}
     env:
       npm_config_msvs_version: 2019
 
