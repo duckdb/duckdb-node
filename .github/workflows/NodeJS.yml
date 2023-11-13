@@ -142,6 +142,11 @@ jobs:
         with:
           fetch-depth: 0
 
+      # Default Python (3.12) doesn't have support for distutils
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
       - name: Setup Ccache
         uses: hendrikmuhs/ccache-action@main
         with:
