@@ -28,5 +28,3 @@
 
 #include "src/storage/serialization/serialize_storage.cpp"
 
-#include "src/storage/serialization/serialize_aggregate_function.cpp"
-
