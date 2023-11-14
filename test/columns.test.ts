@@ -236,7 +236,7 @@ describe('Column Types', function() {
               name: "union",
               type: {
                 id: "UNION",
-                sql_type: "UNION(name VARCHAR, age SMALLINT)",
+                sql_type: "UNION(\"name\" VARCHAR, age SMALLINT)",
                 children: [
                   {
                     name: "name",
