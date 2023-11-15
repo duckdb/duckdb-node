@@ -222,7 +222,7 @@ describe("typescript: stream and QueryResult", function () {
 
   it("streams results", async () => {
     let retrieved = 0;
-    const stream = conn.stream("SELECT * FROM range(0, ?)", total);
+    const stream = await conn.stream("SELECT * FROM range(0, ?)", total);
     for await (const row of stream) {
       retrieved++;
     }
