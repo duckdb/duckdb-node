@@ -3,12 +3,7 @@
         {
             "target_name": "<(module_name)", 
             "sources": [
-                "src/duckdb_node.cpp", 
-                "src/database.cpp", 
-                "src/data_chunk.cpp", 
-                "src/connection.cpp", 
-                "src/statement.cpp", 
-                "src/utils.cpp", 
+                "src/duckdb_node.cpp",
                 "src/duckdb/ub_src_catalog.cpp", 
                 "src/duckdb/ub_src_catalog_catalog_entry.cpp", 
                 "src/duckdb/ub_src_catalog_default.cpp", 
