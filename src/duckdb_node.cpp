@@ -6,56 +6,57 @@
 using namespace Napi;
 using namespace std;
 
-enum NodeObjectType {
-    INVALID,
-    DATABASE,
-    CONNECTION
+typedef uint8_t data_t;
+
+
+class DuckDBNodeNative : public Napi::Addon<DuckDBNodeNative> {
+public:
+    DuckDBNodeNative(Napi::Env env, Napi::Object exports);
+
+    static DuckDBNodeNative *GetData(Napi::Env env) {
+        return env.GetInstanceData<DuckDBNodeNative>();
+    }
+
+    Napi::FunctionReference *config_holder_constructor;
+    Napi::FunctionReference *database_holder_constructor;
+    Napi::FunctionReference *connection_holder_constructor;
+
 };
 
 
-static Object GetObject(const CallbackInfo &info, size_t offset, NodeObjectType type) {
+template<class T>
+class PointerHolder : public ObjectWrap<PointerHolder<T>> {
+public:
+    static Napi::FunctionReference *Init(Env env, const char *name) {
+        // This method is used to hook the accessor and method callbacks
+        auto func = ObjectWrap<PointerHolder<T>>::DefineClass(env, name, {});
+        auto constructor = new Napi::FunctionReference();
+        *constructor = Napi::Persistent(func); // weird
+        env.SetInstanceData<Napi::FunctionReference>(constructor);
+        return constructor;
+    }
+
+    PointerHolder(const Napi::CallbackInfo &info) : Napi::ObjectWrap<PointerHolder<T>>(info) {
+        ptr = unique_ptr<data_t[]>(new data_t[sizeof(T)]);
+    }
+
+    T *Get() {
+        // TODO check here that we are getting the right kind of pointer
+        return (T *) ptr.get();
+    }
+
+private:
+    unique_ptr<data_t[]> ptr;
+};
+
+
+static Object GetObject(const CallbackInfo &info, size_t offset) {
     Env env = info.Env();
 
     if (info.Length() < offset || !info[offset].IsObject()) {
         throw TypeError::New(env, "Object expected");
     }
-    auto object = info[offset].As<Object>();
-    if (!object.Has("type") || !object.Has("ptr")) {
-        throw Error::New(env, "Not a wrapper object");
-    }
-    if (object.Get("type").As<Number>().Uint32Value() != type) {
-        throw Error::New(env, "Invalid wrapper object type");
-    }
-    auto ptr = (void *) object.Get("ptr").As<Number>().Int64Value();
-    if (!ptr) {
-        throw Error::New(env, "Invalid pointer"); // TODO?
-    }
-    return object;
-}
-
-static void* GetObjectPtr2(Env& env, Object object) {
-    auto ptr = (void *) object.Get("ptr").As<Number>().Int64Value();
-    if (!ptr) {
-        throw Error::New(env, "Invalid pointer");
-    }
-    return ptr;
-}
-
-static Object InvalidateObjectPtr2(Env& env, Object object) {
-    if (!object.Has("type") || !object.Has("ptr")) {
-        throw Error::New(env, "Not a wrapper object");
-    }
-    object.Set("ptr", env.Null());
-    object.Set("type", env.Null());
-
-    return object;
-}
-
-static Object CreateObjectPtr(Env &env, void *ptr, NodeObjectType type) {
-    auto ret = Object::New(env);
-    ret.Set("ptr", Number::New(env, (ptrdiff_t) ptr));
-    ret.Set("type", Number::New(env, type));
-    return ret;
+    return info[offset].As<Object>();
 }
 
 
@@ -87,23 +88,26 @@ public:
     OpenWorker(Napi::Env &env, const CallbackInfo &info)
             : PromiseWorker(env) {
         path = ":memory:"; // TODO
+        auto db_object = DuckDBNodeNative::GetData(info.Env())->database_holder_constructor->New({});
+        db = Napi::ObjectWrap<PointerHolder<duckdb_database>>::Unwrap(db_object)->Get(); // todo simplify
+        db_object_ref = Persistent(db_object);
     }
 
     void Execute() override { // this runs on worker thread so no allocs etc. (?)
-        db = (duckdb_database *) malloc(sizeof(duckdb_database));
-        if (!db || duckdb_open(path.c_str(), db) == DuckDBError) {
+        if (duckdb_open(path.c_str(), db) == DuckDBError) {
             SetError("Error opening database");
             free(db);
         }
     }
 
     void OnOK() override {
-        auto env = Env();
-        deferred.Resolve(CreateObjectPtr(env, db, NodeObjectType::DATABASE));
+        deferred.Resolve(db_object_ref.Value());
     }
 
 private:
     std::string path;
+    ObjectReference db_object_ref;
+
     duckdb_database *db;
 };
 
@@ -111,41 +115,45 @@ private:
 class ConnectWorker : public PromiseWorker {
 public:
     ConnectWorker(Napi::Env &env, const CallbackInfo &info)
-    : PromiseWorker(env) {
-            auto db_object = GetObject(info, 0, NodeObjectType::DATABASE);
-            db_object_ref = Persistent(db_object);
-            db = (duckdb_database*)GetObjectPtr2(env, db_object);
+            : PromiseWorker(env) {
+        auto db_object = GetObject(info, 0);
+        db = Napi::ObjectWrap<PointerHolder<duckdb_database>>::Unwrap(db_object)->Get(); // todo simplify
+        db_object_ref = Persistent(db_object);
+
+        auto con_object = DuckDBNodeNative::GetData(info.Env())->connection_holder_constructor->New({});
+        con = Napi::ObjectWrap<PointerHolder<duckdb_connection>>::Unwrap(con_object)->Get(); // todo simplify
+        con_object_ref = Persistent(con_object);
     }
 
 
     void Execute() override {
-        con = (duckdb_connection *) malloc(sizeof(duckdb_connection));
-        if (!con || duckdb_connect(*db, con) == DuckDBError) {
+        if (duckdb_connect(*db, con) == DuckDBError) {
             SetError("Error connecting to database");
-            free(con);
         }
     }
 
     void OnOK() override {
         auto env = Env();
-        deferred.Resolve(CreateObjectPtr(env, con, NodeObjectType::CONNECTION));
+        deferred.Resolve(con_object_ref.Value());
     }
 
 private:
     ObjectReference db_object_ref;
+    ObjectReference con_object_ref;
 
-    duckdb_connection *con;
     duckdb_database *db;
+    duckdb_connection *con;
+
 
 };
 
 class CloseWorker : public PromiseWorker {
 public:
     CloseWorker(Napi::Env &env, const CallbackInfo &info)
-    : PromiseWorker(env) {
-            auto db_object = GetObject(info, 0, NodeObjectType::DATABASE);
-            db_object_ref = Persistent(db_object);
-            db = (duckdb_database*)GetObjectPtr2(env, db_object);
+            : PromiseWorker(env) {
+        auto db_object = GetObject(info, 0);
+        db_object_ref = Persistent(db_object);
+        db = Napi::ObjectWrap<PointerHolder<duckdb_database>>::Unwrap(db_object)->Get(); // todo simplify
     }
 
     void Execute() override {
@@ -154,7 +162,6 @@ public:
 
     void OnOK() override {
         auto env = Env();
-        InvalidateObjectPtr2(env, db_object_ref.Value());
         PromiseWorker::OnOK();
     }
 
@@ -169,9 +176,9 @@ class DisconnectWorker : public PromiseWorker {
 public:
     DisconnectWorker(Napi::Env &env, const CallbackInfo &info)
             : PromiseWorker(env) {
-        auto con_object = GetObject(info, 0, NodeObjectType::CONNECTION);
+        auto con_object = GetObject(info, 0);
         con_object_ref = Persistent(con_object);
-        con = (duckdb_connection*)GetObjectPtr2(env, con_object);
+        con = Napi::ObjectWrap<PointerHolder<duckdb_connection>>::Unwrap(con_object)->Get(); // todo simplify
     }
 
     void Execute() override {
@@ -180,7 +187,6 @@ public:
 
     void OnOK() override {
         auto env = Env();
-        InvalidateObjectPtr2(env, con_object_ref.Value());
         PromiseWorker::OnOK();
     }
 
@@ -189,7 +195,7 @@ private:
     duckdb_connection *con;
 };
 
-template <class WORKER>
+template<class WORKER>
 static Value WorkerWrapper(const CallbackInfo &info) {
     Env env = info.Env();
     return (new WORKER(env, info))->QueueAndPromise();
@@ -201,18 +207,29 @@ static Value LibraryVersion(const CallbackInfo &info) {
     return String::New(env, duckdb_library_version());
 }
 
-static Object Init(Env env, Object exports) {
-    exports.Set(String::New(env, "library_version"), Function::New<LibraryVersion>(env));
-
-    // generate a bunch of async promise worker wrappers
-
-
-    exports.Set(String::New(env, "open"), Function::New<WorkerWrapper<OpenWorker>>(env));
-    exports.Set(String::New(env, "connect"), Function::New<WorkerWrapper<ConnectWorker>>(env));
-    exports.Set(String::New(env, "disconnect"), Function::New<WorkerWrapper<DisconnectWorker>>(env));
-    exports.Set(String::New(env, "close"), Function::New<WorkerWrapper<CloseWorker>>(env));
-
-    return exports;
+static Value CreateConfig(const CallbackInfo &info) {
+    auto config_object = DuckDBNodeNative::GetData(info.Env())->config_holder_constructor->New({});
+    auto config = Napi::ObjectWrap<PointerHolder<duckdb_config>>::Unwrap(config_object)->Get(); // todo simplify
+    duckdb_create_config(config);
+    return config_object;
 }
 
-NODE_API_MODULE(NODE_GYP_MODULE_NAME, Init)
+DuckDBNodeNative::DuckDBNodeNative(Env env, Object exports) {
+    exports.Set(String::New(env, "library_version"), Function::New<LibraryVersion>(env));
+    exports.Set(String::New(env, "create_config"), Function::New<CreateConfig>(env));
+
+    // generate a bunch of async promise worker wrappers
+    exports.Set(String::New(env, "open"), Function::New<WorkerWrapper<OpenWorker>>(env));
+    exports.Set(String::New(env, "connect"),
+                Function::New<WorkerWrapper<ConnectWorker>>(env)); // TODO this can never block?
+    exports.Set(String::New(env, "disconnect"),
+                Function::New<WorkerWrapper<DisconnectWorker>>(env)); // TODO this can never block?
+    exports.Set(String::New(env, "close"), Function::New<WorkerWrapper<CloseWorker>>(env));
+
+    config_holder_constructor = PointerHolder<duckdb_config>::Init(env, "duckdb_config");
+    database_holder_constructor = PointerHolder<duckdb_database>::Init(env, "duckdb_database");
+    connection_holder_constructor = PointerHolder<duckdb_connection>::Init(env, "duckdb_connection");
+
+}
+
+NODE_API_ADDON(DuckDBNodeNative);
