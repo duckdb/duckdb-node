@@ -1,6 +1,9 @@
 import sys
 import pycparser
 
+# those functions return promises asynchronously since they may block and/or do IO
+async_functions = ['duckdb_open', 'duckdb_open_ext', 'duckdb_close', 'duckdb_connect', 'duckdb_interrupt', 'duckdb_disconnect', 'duckdb_query', 'duckdb_prepare', 'duckdb_execute_prepared', 'duckdb_stream_fetch_chunk', 'duckdb_execute_tasks', 'duckdb_appender_create', 'duckdb_appender_flush', 'duckdb_appender_close', 'duckdb_appender_destroy', 'duckdb_execute_prepared', 'duckdb_extract_statements', 'duckdb_prepare_extracted_statement', 'duckdb_execute_pending']
+
 def typename(decl):
     const = ''
     if hasattr(decl, 'quals') and 'const' in decl.quals:
@@ -50,10 +53,14 @@ class FuncDefVisitor(pycparser.c_ast.NodeVisitor):
            return # TODO
 
        register_name = name.replace('duckdb_', '')
-       print(f"{ret} {name} ({', '.join(args)})")
+       #print(f"{ret} {name} ({', '.join(args)})")
+       print(f"{name}")
 
        n_args = len(args)
        args.append(name)
+       asyncstr = ''
+       if name in async_functions:
+           asyncstr = 'Async'
        voidstr = ''
        if ret == 'void':
            voidstr = 'Void'
@@ -61,7 +68,7 @@ class FuncDefVisitor(pycparser.c_ast.NodeVisitor):
            args.insert(0, ret)
        arg_str = ', '.join(args)
 
-       self.result += f'exports.Set(String::New(env, "{register_name}"), Function::New<AsyncFunctionWrapper{n_args}{voidstr}<{arg_str}>>(env));\n'
+       self.result += f'exports.Set(String::New(env, "{register_name}"), Function::New<{asyncstr}FunctionWrapper{n_args}{voidstr}<{arg_str}>>(env));\n'
 
 def create_func_defs(filename):
     # produce input like so: gcc -E -D__builtin_va_list=int src/duckdb/src/include/duckdb.h > dd.h

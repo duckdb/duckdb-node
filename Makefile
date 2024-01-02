@@ -23,4 +23,7 @@ test:
 
 check: test
 
-.PHONY: test clean build
+.PHONY: test clean build format
+
+format:
+	clang-format --sort-includes=0 -style=file -i src/*.cpp
