@@ -22,18 +22,27 @@ def typename(decl):
     else:
        raise ValueError(decl)
 
-class FuncDefVisitor(pycparser.c_ast.NodeVisitor):
+class DuckDBHeaderVisitor(pycparser.c_ast.NodeVisitor):
     result = ''
 
-
-
     def visit_TypeDecl(self, node):
-        print(node)
         name = node.declname
-        if name.startswith('duckdb_'):
-            print(name)
-            register_name = name.replace('duckdb_', '')
-            self.result += f'exports.Set(Napi::String::New(env, "{register_name}"), duckdb_node::PointerHolder<{name}>::Init(env, "{name}")->Value());\n'
+        if not name.startswith('duckdb_'):
+            return
+
+        if isinstance(node.type, pycparser.c_ast.Struct):
+            self.result += f'exports.Set(Napi::String::New(env, "{name}"), duckdb_node::PointerHolder<{name}>::Init(env, "{name}")->Value());\n'
+
+        if isinstance(node.type, pycparser.c_ast.Enum):
+            self.result += f'auto {name}_enum = Napi::Object::New(env);\n'
+            enum_idx = 0
+            for enum in node.type.values.enumerators:
+                if enum.value is not None:
+                    enum_idx = int(enum.value.value)
+                self.result += f'{name}_enum.Set("{enum.name}", {enum_idx});\n'
+                enum_idx += 1
+            self.result += f'exports.DefineProperty(Napi::PropertyDescriptor::Value("{name}", {name}_enum, static_cast<napi_property_attributes>(napi_enumerable | napi_configurable)));\n'
+
 
     def visit_FuncDecl(self, node):
        name = None
@@ -71,7 +80,6 @@ class FuncDefVisitor(pycparser.c_ast.NodeVisitor):
        if name in deprecated_functions:
            return
 
-       register_name = name.replace('duckdb_', '')
        #print(f"{ret} {name} ({', '.join(args)})")
        print(f"{name}")
 
@@ -87,14 +95,14 @@ class FuncDefVisitor(pycparser.c_ast.NodeVisitor):
            args.insert(0, ret)
        arg_str = ', '.join(args)
 
-       self.result += f'exports.Set(Napi::String::New(env, "{register_name}"), Napi::Function::New<duckdb_node::FunctionWrappers::{asyncstr}FunctionWrapper{n_args}{voidstr}<{arg_str}>>(env));\n'
+       self.result += f'exports.Set(Napi::String::New(env, "{name}"), Napi::Function::New<duckdb_node::FunctionWrappers::{asyncstr}FunctionWrapper{n_args}{voidstr}<{arg_str}>>(env));\n'
 
 def create_func_defs(filename):
     # produce input like so: gcc -E -D__builtin_va_list=int src/duckdb/src/include/duckdb.h > dd.h
 
     ast = pycparser.parse_file(filename, use_cpp=False)
 
-    v = FuncDefVisitor()
+    v = DuckDBHeaderVisitor()
     v.visit(ast)
     return v.result
 

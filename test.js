@@ -1,42 +1,48 @@
-const duckdb = require('.');
+const duckdb_native = require('.');
 
 // const config = duckdb.create_config();
 // console.log(config);
 
-console.log("DuckDB version:", duckdb.library_version());
+console.log("DuckDB version:", duckdb_native.duckdb_library_version());
 
 
 async function test() {
 
-  const db = new duckdb.database;
-  const status1 = await duckdb.open(":memory:", db);
 
-  const con = new duckdb.connection;
-  const status2 = await duckdb.connect(db, con);
+  // TODO try config
 
-  const prepared_statement = new duckdb.prepared_statement;
-  const status3 = await duckdb.prepare(con, "FROM range(?)", prepared_statement);
+  const db = new duckdb_native.duckdb_database;
+  const status1 = await duckdb_native.duckdb_open(":memory:", db);
 
-  const stateb = duckdb.bind_int64(prepared_statement, 1, 4000);
+  if (status1 != duckdb_native.duckdb_state.DuckDBSuccess) {
+    console.log("error", status1);
+    return;
+  }
 
-  const pending_result = new duckdb.pending_result;
+  const con = new duckdb_native.duckdb_connection;
+  const status2 = await duckdb_native.duckdb_connect(db, con);
 
-  // we want a streaming query result
-  var status4 = await duckdb.pending_prepared_streaming(prepared_statement, pending_result);
+  // create a statement and bind some values to it
+  const prepared_statement = new duckdb_native.duckdb_prepared_statement;
+  const status3 = await duckdb_native.duckdb_prepare(con, "FROM range(?)", prepared_statement);
+  const stateb = duckdb_native.duckdb_bind_int64(prepared_statement, 1, 4000);
 
-  const result = new duckdb.result;
+  // we want an incremental AND streaming query result
+  const pending_result = new duckdb_native.duckdb_pending_result;
+  const result = new duckdb_native.duckdb_result;
+  var status4 = await duckdb_native.duckdb_pending_prepared_streaming(prepared_statement, pending_result);
 
   // pending query api, allows abandoning query processing between each call to pending_execute_task()
   while (true) {
-    const status = await duckdb.pending_execute_task(pending_result);
-    if (status == 'DUCKDB_PENDING_ERROR') {
-      console.log(duckdb.pending_error(pending_result)); // TODO this seems broken
+    const status = await duckdb_native.duckdb_pending_execute_task(pending_result);
+    if (status == duckdb_native.duckdb_pending_state.DUCKDB_PENDING_ERROR) {
+      console.log(duckdb_native.duckdb_pending_state.duckdb_pending_error(pending_result)); // TODO this seems broken
       return;
     }
-    else if (status == 'DUCKDB_PENDING_RESULT_READY') {
-      const status5 = await duckdb.execute_pending(pending_result, result);
+    else if (status == duckdb_native.duckdb_pending_state.DUCKDB_PENDING_RESULT_READY) {
+      const status5 = await duckdb_native.duckdb_execute_pending(pending_result, result);
       break; }
-    else if (status == 'DUCKDB_PENDING_RESULT_NOT_READY') {
+    else if (status == duckdb_native.duckdb_pending_state.DUCKDB_PENDING_RESULT_NOT_READY) {
         continue;
     } else { // ??
       console.log(status);
@@ -44,30 +50,31 @@ async function test() {
     }
   }
 
-  if (!duckdb.result_is_streaming(result)) {
+  if (!duckdb_native.duckdb_result_is_streaming(result)) {
     // FIXME: this should also working for streaming result sets!
     return;
   }
 
+  // now consume result set stream
   while (true) {
-    const chunk = await duckdb.stream_fetch_chunk(result);
-    if (duckdb.data_chunk_get_size(chunk) == 0) {
+    const chunk = await duckdb_native.duckdb_stream_fetch_chunk(result);
+    if (duckdb_native.duckdb_data_chunk_get_size(chunk) == 0) { // empty chunk means end of stream
       break;
     }
-    //console.log();
-    const n = duckdb.data_chunk_get_size(chunk);
+    const n = duckdb_native.duckdb_data_chunk_get_size(chunk);
 
-    for (let col_idx = 0; col_idx < duckdb.data_chunk_get_column_count(chunk); col_idx++) {
-      const vector = duckdb.data_chunk_get_vector(chunk, col_idx);
+    // loop over columns and interpret vector bytes
+    for (let col_idx = 0; col_idx < duckdb_native.duckdb_data_chunk_get_column_count(chunk); col_idx++) {
+      const vector = duckdb_native.duckdb_data_chunk_get_vector(chunk, col_idx);
 
-      const type = duckdb.vector_get_column_type(vector);
-      const type_id = duckdb.get_type_id(type);
+      const type = duckdb_native.duckdb_vector_get_column_type(vector);
+      const type_id = duckdb_native.duckdb_get_type_id(type);
 
-      const data_ptr = duckdb.vector_get_data(vector);
+      const data_ptr = duckdb_native.duckdb_vector_get_data(vector);
 
       switch(type_id) {
-        case "DUCKDB_TYPE_BIGINT": // TODO make those constant members, not strings
-          const data_buf = duckdb.copy_buffer(data_ptr, 8 * n);
+        case duckdb_native.duckdb_type.DUCKDB_TYPE_BIGINT:
+          const data_buf = duckdb_native.copy_buffer(data_ptr, 8 * n);
           const typed_data_arr = new BigInt64Array(data_buf.buffer);
           console.log(typed_data_arr);
           break;
@@ -76,13 +83,12 @@ async function test() {
       }
     }
 
-    //   console.log(vector);
-    duckdb.destroy_data_chunk(chunk);
+    duckdb_native.duckdb_destroy_data_chunk(chunk);
   }
   // clean up again
-  duckdb.destroy_pending(pending_result);
-  duckdb.destroy_prepare(prepared_statement);
-
+  duckdb_native.duckdb_destroy_pending(pending_result);
+  duckdb_native.duckdb_destroy_result(result);
+  duckdb_native.duckdb_destroy_prepare(prepared_statement);
 
 
 /*
@@ -109,8 +115,8 @@ async function test() {
 */
 
 
-  await duckdb.disconnect(con);
-  await duckdb.close(db);
+  await duckdb_native.duckdb_disconnect(con);
+  await duckdb_native.duckdb_close(db);
 
 
 }
