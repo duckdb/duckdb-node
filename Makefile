@@ -26,4 +26,4 @@ check: test
 .PHONY: test clean build format
 
 format:
-	clang-format --sort-includes=0 -style=file -i src/*.cpp
+	clang-format --sort-includes=0 -style=file -i src/*.cpp src/*.hpp
