@@ -3,30 +3,30 @@ const duckdb = require('.');
 // const config = duckdb.create_config();
 // console.log(config);
 
-console.log(duckdb.library_version());
+console.log("DuckDB version:", duckdb.library_version());
+
 
 async function test() {
 
   const db = new duckdb.database;
   const status1 = await duckdb.open(":memory:", db);
-  console.log(status1);
 
   const con = new duckdb.connection;
   const status2 = await duckdb.connect(db, con);
-  console.log(status2);
 
   const prepared_statement = new duckdb.prepared_statement;
-  const status3 = await duckdb.prepare(con, "FROM range(10000)", prepared_statement);
-  console.log(status3);
+  const status3 = await duckdb.prepare(con, "FROM range(?)", prepared_statement);
 
+  const stateb = duckdb.bind_int64(prepared_statement, 1, 4000);
 
   const pending_result = new duckdb.pending_result;
 
+  // we want a streaming query result
   var status4 = await duckdb.pending_prepared_streaming(prepared_statement, pending_result);
-  console.log(status4)
 
   const result = new duckdb.result;
 
+  // pending query api, allows abandoning query processing between each call to pending_execute_task()
   while (true) {
     const status = await duckdb.pending_execute_task(pending_result);
     if (status == 'DUCKDB_PENDING_ERROR') {
@@ -35,7 +35,6 @@ async function test() {
     }
     else if (status == 'DUCKDB_PENDING_RESULT_READY') {
       const status5 = await duckdb.execute_pending(pending_result, result);
-      console.log(status5);
       break; }
     else if (status == 'DUCKDB_PENDING_RESULT_NOT_READY') {
         continue;
@@ -45,25 +44,37 @@ async function test() {
     }
   }
 
-  console.log(duckdb.result_is_streaming(result));
+  if (!duckdb.result_is_streaming(result)) {
+    // FIXME: this should also working for streaming result sets!
+    return;
+  }
 
   while (true) {
     const chunk = await duckdb.stream_fetch_chunk(result);
     if (duckdb.data_chunk_get_size(chunk) == 0) {
       break;
     }
-//    console.log(chunk);
-//    console.log(duckdb.data_chunk_get_column_count(chunk));
-    console.log(duckdb.data_chunk_get_size(chunk));
+    //console.log();
+    const n = duckdb.data_chunk_get_size(chunk);
 
-    const vector = duckdb.data_chunk_get_vector(chunk, 0);
+    for (let col_idx = 0; col_idx < duckdb.data_chunk_get_column_count(chunk); col_idx++) {
+      const vector = duckdb.data_chunk_get_vector(chunk, col_idx);
 
-    console.log(vector);
+      const type = duckdb.vector_get_column_type(vector);
+      const type_id = duckdb.get_type_id(type);
 
-    // TODO
-    //const type = duckdb.vector_get_column_type(vector);
-    //console.log(type);
-    // const data = duckdb.vector_get_data(vector);
+      const data_ptr = duckdb.vector_get_data(vector);
+
+      switch(type_id) {
+        case "DUCKDB_TYPE_BIGINT": // TODO make those constant members, not strings
+          const data_buf = duckdb.copy_buffer(data_ptr, 8 * n);
+          const typed_data_arr = new BigInt64Array(data_buf.buffer);
+          console.log(typed_data_arr);
+          break;
+        default:
+          console.log('Unsupported type :/');
+      }
+    }
 
     //   console.log(vector);
     duckdb.destroy_data_chunk(chunk);
