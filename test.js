@@ -1,10 +1,7 @@
 const duckdb_native = require('.');
 
-// const config = duckdb.create_config();
-// console.log(config);
-
+// some warmup
 console.log("DuckDB version:", duckdb_native.duckdb_library_version());
-
 
 async function test() {
 
@@ -36,7 +33,7 @@ async function test() {
   const con = new duckdb_native.duckdb_connection;
   await duckdb_native.duckdb_connect(db, con);
 
-  // create a statement and bind some values to it
+  // create a statement and bind a value to it
   const prepared_statement = new duckdb_native.duckdb_prepared_statement;
   const prepare_status = await duckdb_native.duckdb_prepare(con, "FROM range(?)", prepared_statement);
   if (prepare_status != duckdb_native.duckdb_state.DuckDBSuccess) {
@@ -44,8 +41,11 @@ async function test() {
     duckdb_native.duckdb_destroy_prepare(prepared_statement);
     return;
   }
-  const state_bind = duckdb_native.duckdb_bind_int64(prepared_statement, 1, 4000);
-  // TODO check state_bind
+  const bind_state = duckdb_native.duckdb_bind_int64(prepared_statement, 1, 4000);
+  if (bind_state != duckdb_native.duckdb_state.DuckDBSuccess) {
+    console.error("Failed to bind parameter");
+    return;
+  }
 
   // we want an incremental AND streaming query result
   const pending_result = new duckdb_native.duckdb_pending_result;
@@ -71,7 +71,7 @@ async function test() {
   }
 
   if (!duckdb_native.duckdb_result_is_streaming(result)) {
-    // FIXME: this should also working for streaming result sets!
+    // TODO: this should also working for streaming result sets!
     return;
   }
 
