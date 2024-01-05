@@ -100,6 +100,11 @@ public:
 	}
 
 	template <>
+	static Napi::Value ToJS(Napi::Env &env, uint64_t *val) {
+		return PointerHolder<void *>::NewAndSet(env, val);
+	}
+
+	template <>
 	static Napi::Value ToJS(Napi::Env &env, duckdb_string val) {
 		auto ret = Napi::String::New(env, val.data, val.size);
 		duckdb_free(val.data);
