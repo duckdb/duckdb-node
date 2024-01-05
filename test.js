@@ -72,6 +72,9 @@ async function test() {
             return;
         }
     }
+    // can clean this stuff up already
+    duckdb_native.duckdb_destroy_pending(pending_result);
+    duckdb_native.duckdb_destroy_prepare(prepared_statement);
 
     if (!duckdb_native.duckdb_result_is_streaming(result)) {
         // TODO: this should also working for streaming result sets!
@@ -135,9 +138,8 @@ async function test() {
     }
 
     // clean up again
-    duckdb_native.duckdb_destroy_pending(pending_result);
     duckdb_native.duckdb_destroy_result(result);
-    duckdb_native.duckdb_destroy_prepare(prepared_statement);
+
     duckdb_native.duckdb_disconnect(con);
     duckdb_native.duckdb_close(db);
     duckdb_native.duckdb_destroy_config(config);
