@@ -205,8 +205,8 @@ if __name__ == "__main__":
         types_out.write('// generated types and functions\n'.encode())
         types_out.write(types_result.encode())
 
-        types_out.write('// bindings-defined functions\n'.encode())
-        types_out.write('export function copy_buffer(buffer: pointer, length: number): Buffer;\n'.encode())
-        types_out.write('export function out_get_string(string_wrapper: out_string_wrapper): string;\n'.encode())
-        types_out.write('export function convert_string_vector(vector: duckdb_vector, size: number): (string | null)[];\n'.encode())
+    types_out.write('// bindings-defined functions\n'.encode())
+    types_out.write('export function copy_buffer(buffer: pointer, length: number): Buffer | null;\n'.encode())
+    types_out.write('export function out_get_string(string_wrapper: out_string_wrapper): string;\n'.encode())
+    types_out.write('export function convert_string_vector(vector: duckdb_vector, size: number): (string | null)[];\n'.encode())
 
