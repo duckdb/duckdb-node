@@ -44,11 +44,11 @@ static Napi::Value ConvertStringVector(const Napi::CallbackInfo &info) {
 			continue;
 		}
 		if (duckdb_string_is_inlined(strings[row_idx])) {
-			array[row_idx] =
-			    Napi::String::New(env, strings[row_idx].value.inlined.inlined, strings[row_idx].value.inlined.length);
+			array[row_idx] = Napi::Buffer<uint8_t>::NewOrCopy(env, (uint8_t *)strings[row_idx].value.inlined.inlined,
+			                                                  strings[row_idx].value.inlined.length);
 		} else {
-			array[row_idx] =
-			    Napi::String::New(env, strings[row_idx].value.pointer.ptr, strings[row_idx].value.pointer.length);
+			array[row_idx] = Napi::Buffer<uint8_t>::NewOrCopy(env, (uint8_t *)strings[row_idx].value.pointer.ptr,
+			                                                  strings[row_idx].value.pointer.length);
 		}
 	}
 	return array;
