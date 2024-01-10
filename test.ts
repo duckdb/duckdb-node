@@ -52,7 +52,7 @@ async function test() {
 
     // we want an incremental AND streaming query result
     const pending_result = new duckdb_native.duckdb_pending_result;
-    await duckdb_native.duckdb_pending_prepared_streaming(prepared_statement, pending_result); // TODO can this fail?
+    duckdb_native.duckdb_pending_prepared_streaming(prepared_statement, pending_result); // TODO can this fail?
 
     // pending query api, allows abandoning query processing between each call to pending_execute_task()
     const result = new duckdb_native.duckdb_result;
