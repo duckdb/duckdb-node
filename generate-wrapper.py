@@ -28,7 +28,7 @@ def typename(decl):
        raise ValueError(decl)
 
 class DuckDBHeaderVisitor(pycparser.c_ast.NodeVisitor):
-    result = ''
+    cpp_result = ''
     types_result = ''
     c_type_to_ts_type = {
         "bool": "boolean",
@@ -61,23 +61,23 @@ class DuckDBHeaderVisitor(pycparser.c_ast.NodeVisitor):
             return
 
         if isinstance(node.type, pycparser.c_ast.Struct):
-            self.result += f'exports.Set(Napi::String::New(env, "{name}"), duckdb_node::PointerHolder<{name}>::Init(env, "{name}")->Value());\n'
+            self.cpp_result += f'exports.Set(Napi::String::New(env, "{name}"), duckdb_node::PointerHolder<{name}>::Init(env, "{name}")->Value());\n'
             self.types_result += f'export class {name} {{}}\n'
             self.c_type_to_ts_type[name] = f'{name}'
             self.c_type_to_ts_type[f'{name}*'] = f'{name}'
 
         elif isinstance(node.type, pycparser.c_ast.Enum):
-            self.result += f'auto {name}_enum = Napi::Object::New(env);\n'
+            self.cpp_result += f'auto {name}_enum = Napi::Object::New(env);\n'
             self.types_result += f'export enum {name} {{\n'
             self.c_type_to_ts_type[name] = name
             enum_idx = 0
             for enum in node.type.values.enumerators:
                 if enum.value is not None:
                     enum_idx = int(enum.value.value)
-                self.result += f'{name}_enum.Set("{enum.name}", {enum_idx});\n'
+                self.cpp_result += f'{name}_enum.Set("{enum.name}", {enum_idx});\n'
                 self.types_result += f'  {enum.name} = {enum_idx},\n'
                 enum_idx += 1
-            self.result += f'exports.DefineProperty(Napi::PropertyDescriptor::Value("{name}", {name}_enum, static_cast<napi_property_attributes>(napi_enumerable | napi_configurable)));\n'
+            self.cpp_result += f'exports.DefineProperty(Napi::PropertyDescriptor::Value("{name}", {name}_enum, static_cast<napi_property_attributes>(napi_enumerable | napi_configurable)));\n'
             self.types_result += f'}}\n'
         
         elif typename(node.type) == 'void':
@@ -157,7 +157,7 @@ class DuckDBHeaderVisitor(pycparser.c_ast.NodeVisitor):
        if is_async:
           ts_ret_type = f'Promise<{ts_ret_type}>'
 
-       self.result += f'exports.Set(Napi::String::New(env, "{name}"), Napi::Function::New<duckdb_node::FunctionWrappers::{asyncstr}FunctionWrapper{n_args}{voidstr}<{fwrap_arg_str}>>(env));\n'
+       self.cpp_result += f'exports.Set(Napi::String::New(env, "{name}"), Napi::Function::New<duckdb_node::FunctionWrappers::{asyncstr}FunctionWrapper{n_args}{voidstr}<{fwrap_arg_str}>>(env));\n'
        self.types_result += f'export function {name}({ts_args_str}): {ts_ret_type};\n'
 
 
@@ -167,7 +167,7 @@ def create_func_defs(filename):
 
     v = DuckDBHeaderVisitor()
     v.visit(ast)
-    return v.result
+    return v.cpp_result, v.types_result
 
 
 if __name__ == "__main__":
