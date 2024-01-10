@@ -1,6 +1,7 @@
 #define NODE_API_NO_EXTERNAL_BUFFERS_ALLOWED // apparently electron does not like those
 
 #include "napi.h"
+#include <dlfcn.h>
 
 // this file contains generated template instantiations from duckdb.h
 #include "duckdb_node_generated.cpp"
@@ -54,6 +55,18 @@ static Napi::Value ConvertStringVector(const Napi::CallbackInfo &info) {
 	return array;
 }
 
+// TODO this relies on RTLD_LAZY but should probably switch to use a bunch of (generated) function pointers
+static Napi::Value Initialize(const Napi::CallbackInfo &info) {
+	Napi::Env env = info.Env();
+	auto path = duckdb_node::ValueConversion::FromJS<std::string>(info, 0);
+	auto path2 = path.substr(0, path.rfind('/')) + "/libduckdb";
+	auto lib = dlopen(path2.c_str(), RTLD_GLOBAL);
+	if (!lib) {
+		return Napi::Boolean::New(env, false);
+	}
+	return Napi::Boolean::New(env, true);
+}
+
 class DuckDBNodeNative : public Napi::Addon<DuckDBNodeNative> {
 public:
 	DuckDBNodeNative(Napi::Env env, Napi::Object exports) {
@@ -65,6 +78,7 @@ public:
 		    duckdb_node::PointerHolder<duckdb_node::out_string_wrapper>::Init(env, "out_string_wrapper")->Value());
 		exports.Set(Napi::String::New(env, "out_get_string"), Napi::Function::New<OutGetString>(env));
 		exports.Set(Napi::String::New(env, "convert_string_vector"), Napi::Function::New<ConvertStringVector>(env));
+		exports.Set(Napi::String::New(env, "initialize"), Napi::Function::New<Initialize>(env));
 	}
 };
 

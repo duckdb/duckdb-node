@@ -18,7 +18,6 @@ function convert_validity(vector, n) {
 }
 
 function convert_primitive_vector(vector, n, array_type) {
-
     const validity = convert_validity(vector, n);
     const data_buf =
         duckdb_native.copy_buffer(duckdb_native.duckdb_vector_get_data(vector), array_type.BYTES_PER_ELEMENT * n);
