@@ -4,7 +4,7 @@ const duckdb_native = require('.');
 console.log("DuckDB version:", duckdb_native.duckdb_library_version());
 
 function convert_validity(vector, n) {
-    const res = new Uint8Array(n).fill(true);
+    const res = Array.from({ length: n }).fill(true);
     const validity_buf = duckdb_native.copy_buffer(duckdb_native.duckdb_vector_get_validity(vector),
                                                    Math.ceil(n / 64) * 8); // this will be null if all rows are valid
     if (validity_buf == null) {
@@ -12,7 +12,7 @@ function convert_validity(vector, n) {
     }
     const typed_validity_buf = new BigUint64Array(validity_buf.buffer);
     for (let row_idx = 0; row_idx < n; row_idx++) {
-        res[row_idx] = (typed_validity_buf[Math.floor(row_idx / 64)] & (1n << BigInt(row_idx % 64))) > 0;
+        res[row_idx] = (typed_validity_buf[Math.floor(row_idx / 64)] & (BigInt(1) << BigInt(row_idx % 64))) > 0;
     }
     return res;
 }
@@ -21,10 +21,10 @@ function convert_primitive_vector(vector, n, array_type) {
     const validity = convert_validity(vector, n);
     const data_buf =
         duckdb_native.copy_buffer(duckdb_native.duckdb_vector_get_data(vector), array_type.BYTES_PER_ELEMENT * n);
-    const typed_data_arr = new array_type(data_buf.buffer);
+    const typed_data_arr = data_buf ? new array_type(data_buf.buffer) : null;
     const vector_data = new Array(n)
     for (let row_idx = 0; row_idx < n; row_idx++) {
-        vector_data[row_idx] = validity[row_idx] ? typed_data_arr[row_idx] : null;
+        vector_data[row_idx] = validity[row_idx] ? (typed_data_arr ? typed_data_arr[row_idx] : undefined) : null;
     }
     return vector_data;
 }
@@ -91,12 +91,16 @@ function convert_vector(vector, n) {
 
         const list_buf =
             duckdb_native.copy_buffer(duckdb_native.duckdb_vector_get_data(vector), 128 * n); // two 64 bit numbers
-        typed_list_buf = new BigUint64Array(list_buf.buffer);
+        const typed_list_buf = list_buf ? new BigUint64Array(list_buf.buffer) : null;
 
         for (let row_idx = 0; row_idx < n; row_idx++) {
-            const offset = typed_list_buf[2 * row_idx];
-            const len = typed_list_buf[2 * row_idx + 1];
-            result[row_idx] = validity[row_idx] ? child.slice(Number(offset), Number(offset + len)) : null;
+            if (typed_list_buf) {
+                const offset = typed_list_buf[2 * row_idx];
+                const len = typed_list_buf[2 * row_idx + 1];
+                result[row_idx] = validity[row_idx] ? child.slice(Number(offset), Number(offset + len)) : null;
+            } else {
+                result[row_idx] = undefined;
+            }
         }
         return result;
     }
@@ -110,7 +114,7 @@ function convert_vector(vector, n) {
         const validity = convert_validity(vector, n);
 
         // TODO handle whole NULL
-        const result = new Object();
+        const result = {};
         for (let child_idx = 0; child_idx < duckdb_native.duckdb_struct_type_child_count(type); child_idx++) {
             const child_name = duckdb_native.duckdb_struct_type_child_name(type, child_idx);
             result[child_name] = convert_vector(duckdb_native.duckdb_struct_vector_get_child(vector, child_idx), n);

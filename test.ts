@@ -30,7 +30,6 @@ type ArrayType =
   | Uint32ArrayConstructor
   ;
 
-
 function convert_primitive_vector<T>(vector: duckdb_native.duckdb_vector, n: number, array_type: ArrayType) {
     const validity = convert_validity(vector, n);
     const data_buf =
@@ -38,7 +37,7 @@ function convert_primitive_vector<T>(vector: duckdb_native.duckdb_vector, n: num
     const typed_data_arr = data_buf ? new array_type(data_buf.buffer) : null;
     const vector_data = new Array(n)
     for (let row_idx = 0; row_idx < n; row_idx++) {
-        vector_data[row_idx] = validity[row_idx] ? typed_data_arr?.[row_idx] : null;
+        vector_data[row_idx] = validity[row_idx] ? (typed_data_arr ? typed_data_arr[row_idx] : undefined) : null;
     }
     return vector_data;
 }
@@ -109,11 +108,11 @@ function convert_vector(vector: duckdb_native.duckdb_vector, n: number) {
 
         for (let row_idx = 0; row_idx < n; row_idx++) {
             if (typed_list_buf) {
-              const offset = typed_list_buf[2 * row_idx];
-              const len = typed_list_buf[2 * row_idx + 1];
-              result[row_idx] = validity[row_idx] ? child.slice(Number(offset), Number(offset + len)) : null;
+                const offset = typed_list_buf[2 * row_idx];
+                const len = typed_list_buf[2 * row_idx + 1];
+                result[row_idx] = validity[row_idx] ? child.slice(Number(offset), Number(offset + len)) : null;
             } else {
-              result[row_idx] = undefined;
+                result[row_idx] = undefined;
             }
         }
         return result;
