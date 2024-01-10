@@ -23,7 +23,32 @@ def typename(decl):
        raise ValueError(decl)
 
 class DuckDBHeaderVisitor(pycparser.c_ast.NodeVisitor):
-    result = ''
+    cpp_result = ''
+    types_result = ''
+    c_type_to_ts_type = {
+        "bool": "boolean",
+        "double": "number",
+        "char*": "string",
+        "char**": "out_string_wrapper",
+        "const char*": "string",
+        "const char**": "out_string_wrapper",
+        "float": "number",
+        "idx_t": "number",
+        "idx_t*": "idx_pointer",
+        "int8_t": "number",
+        "int16_t": "number",
+        "int32_t": "number",
+        "int64_t": "number", # should use bigint because max safe int in JS is 2^53-1
+        "uint8_t": "number",
+        "uint16_t": "number",
+        "uint32_t": "number",
+        "uint64_t": "number", # should use bigint because max safe int in JS is 2^53-1
+        "uint64_t*": "uint64_pointer",
+        "size_t": "number",
+        "void": "void",
+        "void*": "pointer",
+        "const void*": "pointer",
+    }
 
     def visit_TypeDecl(self, node):
         name = node.declname
@@ -31,17 +56,34 @@ class DuckDBHeaderVisitor(pycparser.c_ast.NodeVisitor):
             return
 
         if isinstance(node.type, pycparser.c_ast.Struct):
-            self.result += f'exports.Set(Napi::String::New(env, "{name}"), duckdb_node::PointerHolder<{name}>::Init(env, "{name}")->Value());\n'
+            self.cpp_result += f'exports.Set(Napi::String::New(env, "{name}"), duckdb_node::PointerHolder<{name}>::Init(env, "{name}")->Value());\n'
+            self.types_result += f'export class {name} {{}}\n'
+            self.c_type_to_ts_type[name] = name
+            self.c_type_to_ts_type[f'{name}*'] = name
 
-        if isinstance(node.type, pycparser.c_ast.Enum):
-            self.result += f'auto {name}_enum = Napi::Object::New(env);\n'
+        elif isinstance(node.type, pycparser.c_ast.Enum):
+            self.cpp_result += f'auto {name}_enum = Napi::Object::New(env);\n'
+            self.types_result += f'export enum {name} {{\n'
+            self.c_type_to_ts_type[name] = name
             enum_idx = 0
             for enum in node.type.values.enumerators:
                 if enum.value is not None:
                     enum_idx = int(enum.value.value)
-                self.result += f'{name}_enum.Set("{enum.name}", {enum_idx});\n'
+                self.cpp_result += f'{name}_enum.Set("{enum.name}", {enum_idx});\n'
+                self.types_result += f'  {enum.name} = {enum_idx},\n'
                 enum_idx += 1
-            self.result += f'exports.DefineProperty(Napi::PropertyDescriptor::Value("{name}", {name}_enum, static_cast<napi_property_attributes>(napi_enumerable | napi_configurable)));\n'
+            self.cpp_result += f'exports.DefineProperty(Napi::PropertyDescriptor::Value("{name}", {name}_enum, static_cast<napi_property_attributes>(napi_enumerable | napi_configurable)));\n'
+            self.types_result += f'}}\n'
+        
+        elif typename(node.type) == 'void':
+            # Do these void* types need any corresponding Napi code?
+            self.types_result += f'export class {name} {{}}\n'
+            self.c_type_to_ts_type[name] = name
+            self.c_type_to_ts_type[f'{name}*'] = name
+            
+        else:
+            print(f'type not handled: {name}')
+            print(node)
 
 
     def visit_FuncDecl(self, node):
@@ -59,43 +101,60 @@ class DuckDBHeaderVisitor(pycparser.c_ast.NodeVisitor):
 
        if node.args:
            for p in node.args.params:
-               args.append(typename(p.type))
+               args.append((p.name, typename(p.type)))
 
        if name == '__routine':
+           print(f'function not handled: {name}')
            return # ??
 
        if 'replacement' in name:
+           print(f'function not handled: {name}')
            return # ??
 
        if 'delete_callback' in name:
+           print(f'function not handled: {name}')
+           self.types_result += f'export type {name} = (data: pointer) => void;\n'
            return # ??
 
 
        if 'table_function' in name:
+           print(f'function not handled: {name}')
            return # TODO
 
        if 'arrow' in name:
+           print(f'function not handled: {name}')
            return # TODO
 
        if name in deprecated_functions:
            return
 
        #print(f"{ret} {name} ({', '.join(args)})")
-       print(f"{name}")
+       #print(f"{name}")
 
        n_args = len(args)
-       args.append(name)
+
+       fwrap_args = list(map(lambda arg: arg[1], args)) + [name]
+       is_async = name in async_functions
        asyncstr = ''
-       if name in async_functions:
+       if is_async:
            asyncstr = 'Async'
        voidstr = ''
        if ret == 'void':
            voidstr = 'Void'
        else:
-           args.insert(0, ret)
-       arg_str = ', '.join(args)
+           fwrap_args.insert(0, ret)
+       fwrap_arg_str = ', '.join(fwrap_args)
 
-       self.result += f'exports.Set(Napi::String::New(env, "{name}"), Napi::Function::New<duckdb_node::FunctionWrappers::{asyncstr}FunctionWrapper{n_args}{voidstr}<{arg_str}>>(env));\n'
+       ts_args_strs = list(map(lambda arg: f'{arg[0]}: {self.c_type_to_ts_type[arg[1]] if arg[1] in self.c_type_to_ts_type else arg[1]}', args))
+       ts_args_str = ', '.join(ts_args_strs)
+       ts_ret_type = self.c_type_to_ts_type[ret] if ret in self.c_type_to_ts_type else ret
+       if is_async:
+          ts_ret_type = f'Promise<{ts_ret_type}>'
+
+       self.cpp_result += f'exports.Set(Napi::String::New(env, "{name}"), Napi::Function::New<duckdb_node::FunctionWrappers::{asyncstr}FunctionWrapper{n_args}{voidstr}<{fwrap_arg_str}>>(env));\n'
+       self.types_result += f'export function {name}({ts_args_str}): {ts_ret_type};\n'
+
+
 
 def create_func_defs(filename):
     # produce input like so: gcc -E -D__builtin_va_list=int src/duckdb/src/include/duckdb.h > dd.h
@@ -104,15 +163,36 @@ def create_func_defs(filename):
 
     v = DuckDBHeaderVisitor()
     v.visit(ast)
-    return v.result
+    return v.cpp_result, v.types_result
 
 
 
 
 if __name__ == "__main__":
     # TODO call preprocessor and create temp file header
+
+    cpp_result, types_result = create_func_defs(sys.argv[1])
+
     out = open('src/duckdb_node_generated.cpp', 'wb')
     out.write('// This file is generated by generate-wrapper.py, please do not edit\n\n#include "function_wrappers.hpp"\n#include "duckdb.h"\n\nstatic void RegisterGenerated(Napi::Env env, Napi::Object exports){\n'.encode())
-    out.write(create_func_defs(sys.argv[1]).encode())
+    out.write(cpp_result.encode())
     out.write('}\n\n'.encode())
+
+    types_out = open('lib/duckdb.d.ts', 'wb')
+
+    types_out.write('// placeholder interfaces for pointer types\n'.encode())
+    types_out.write('export interface pointer {}\n'.encode())
+    types_out.write('export interface uint64_pointer extends pointer {}\n'.encode())
+    types_out.write('export interface idx_pointer extends pointer {}\n'.encode())
+
+    types_out.write('// bindings-defined types\n'.encode())
+    types_out.write('export class out_string_wrapper {}\n'.encode())
+
+    types_out.write('// generated types and functions\n'.encode())
+    types_out.write(types_result.encode())
+
+    types_out.write('// bindings-defined functions\n'.encode())
+    types_out.write('export function copy_buffer(buffer: pointer, length: number): Buffer;\n'.encode())
+    types_out.write('export function out_get_string(string_wrapper: out_string_wrapper): string;\n'.encode())
+    types_out.write('export function convert_string_vector(vector: duckdb_vector, size: number): (string | null)[];\n'.encode())
 
