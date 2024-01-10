@@ -63,8 +63,8 @@ class DuckDBHeaderVisitor(pycparser.c_ast.NodeVisitor):
         if isinstance(node.type, pycparser.c_ast.Struct):
             self.cpp_result += f'exports.Set(Napi::String::New(env, "{name}"), duckdb_node::PointerHolder<{name}>::Init(env, "{name}")->Value());\n'
             self.types_result += f'export class {name} {{}}\n'
-            self.c_type_to_ts_type[name] = f'{name}'
-            self.c_type_to_ts_type[f'{name}*'] = f'{name}'
+            self.c_type_to_ts_type[name] = name
+            self.c_type_to_ts_type[f'{name}*'] = name
 
         elif isinstance(node.type, pycparser.c_ast.Enum):
             self.cpp_result += f'auto {name}_enum = Napi::Object::New(env);\n'
