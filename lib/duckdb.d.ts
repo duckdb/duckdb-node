@@ -218,13 +218,6 @@ export function duckdb_bind_get_named_parameter(info: duckdb_bind_info, name: st
 export function duckdb_bind_set_bind_data(info: duckdb_bind_info, bind_data: pointer, destroy: duckdb_delete_callback_t): void;
 export function duckdb_bind_set_cardinality(info: duckdb_bind_info, cardinality: number, is_exact: boolean): void;
 export function duckdb_bind_set_error(info: duckdb_bind_info, error: string): void;
-export function duckdb_init_get_extra_info(info: duckdb_init_info): pointer;
-export function duckdb_init_get_bind_data(info: duckdb_init_info): pointer;
-export function duckdb_init_set_init_data(info: duckdb_init_info, init_data: pointer, destroy: duckdb_delete_callback_t): void;
-export function duckdb_init_get_column_count(info: duckdb_init_info): number;
-export function duckdb_init_get_column_index(info: duckdb_init_info, column_index: number): number;
-export function duckdb_init_set_max_threads(info: duckdb_init_info, max_threads: number): void;
-export function duckdb_init_set_error(info: duckdb_init_info, error: string): void;
 export function duckdb_function_get_extra_info(info: duckdb_function_info): pointer;
 export function duckdb_function_get_bind_data(info: duckdb_function_info): pointer;
 export function duckdb_function_get_init_data(info: duckdb_function_info): pointer;
