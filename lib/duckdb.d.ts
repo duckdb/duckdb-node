@@ -197,7 +197,6 @@ export function duckdb_data_chunk_set_size(chunk: duckdb_data_chunk, size: numbe
 export function duckdb_vector_get_column_type(vector: duckdb_vector): duckdb_logical_type;
 export function duckdb_vector_get_data(vector: duckdb_vector): pointer;
 export function duckdb_vector_get_validity(vector: duckdb_vector): uint64_pointer;
-export function duckdb_vector_ensure_validity_writable(vector: duckdb_vector): void;
 export function duckdb_vector_assign_string_element(vector: duckdb_vector, index: number, str: string): void;
 export function duckdb_vector_assign_string_element_len(vector: duckdb_vector, index: number, str: string, str_len: number): void;
 export function duckdb_list_vector_get_child(vector: duckdb_vector): duckdb_vector;

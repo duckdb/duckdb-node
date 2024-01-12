@@ -53,6 +53,7 @@ deprecated_functions = [
     'duckdb_validity_set_row_invalid',
     'duckdb_validity_set_row_valid',
     'duckdb_validity_set_row_validity',
+    'duckdb_vector_ensure_validity_writable',
     'duckdb_value_blob',
     'duckdb_value_boolean',
     'duckdb_value_date',
