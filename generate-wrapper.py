@@ -7,12 +7,76 @@ import os
 import zipfile
 
 # those functions return promises asynchronously since they may block and/or do IO
-async_functions = ['duckdb_open', 'duckdb_open_ext', 'duckdb_close', 'duckdb_connect', 'duckdb_disconnect', 'duckdb_query', 'duckdb_prepare', 'duckdb_execute_prepared', 'duckdb_stream_fetch_chunk', 'duckdb_execute_tasks', 'duckdb_appender_create', 'duckdb_appender_flush', 'duckdb_appender_close', 'duckdb_appender_destroy', 'duckdb_execute_prepared', 'duckdb_extract_statements', 'duckdb_prepare_extracted_statement', 'duckdb_execute_pending']
+async_functions = [
+    'duckdb_open',
+    'duckdb_open_ext',
+    'duckdb_close',
+    'duckdb_connect',
+    'duckdb_disconnect',
+    'duckdb_query',
+    'duckdb_prepare',
+    'duckdb_execute_prepared',
+    'duckdb_stream_fetch_chunk',
+    'duckdb_execute_tasks',
+    'duckdb_appender_create',
+    'duckdb_appender_flush',
+    'duckdb_appender_close',
+    'duckdb_appender_destroy',
+    'duckdb_execute_prepared',
+    'duckdb_extract_statements',
+    'duckdb_prepare_extracted_statement',
+    'duckdb_execute_pending',
+]
 
-pointer_wrappers = ['duckdb_appender',
-                     'duckdb_config', 'duckdb_connection', 'duckdb_data_chunk', 'duckdb_database', 'duckdb_extracted_statements', 'duckdb_logical_type', 'duckdb_pending_result', 'duckdb_prepared_statement', 'duckdb_value', 'duckdb_vector'] # 'duckdb_arrow', 'duckdb_arrow_array', 'duckdb_arrow_schema', 'duckdb_arrow_stream'
+pointer_wrappers = [
+    'duckdb_appender',
+    'duckdb_config',
+    'duckdb_connection',
+    'duckdb_data_chunk',
+    'duckdb_database',
+    'duckdb_extracted_statements',
+    'duckdb_logical_type',
+    'duckdb_pending_result',
+    'duckdb_prepared_statement',
+    'duckdb_value',
+    'duckdb_vector',
+    #'duckdb_arrow',
+    #'duckdb_arrow_array',
+    #'duckdb_arrow_schema',
+    #'duckdb_arrow_stream',
+]
 
-deprecated_functions = ['duckdb_column_data', 'duckdb_nullmask_data', 'duckdb_validity_row_is_valid', 'duckdb_validity_set_row_invalid', 'duckdb_validity_set_row_valid', 'duckdb_validity_set_row_validity', 'duckdb_value_blob', 'duckdb_value_boolean', 'duckdb_value_date', 'duckdb_value_decimal', 'duckdb_value_double', 'duckdb_value_float', 'duckdb_value_hugeint', 'duckdb_value_int16', 'duckdb_value_int32', 'duckdb_value_int64', 'duckdb_value_int8', 'duckdb_value_interval', 'duckdb_value_is_null', 'duckdb_value_string', 'duckdb_value_string_internal', 'duckdb_value_time', 'duckdb_value_timestamp', 'duckdb_value_uint16', 'duckdb_value_uint32', 'duckdb_value_uint64', 'duckdb_value_uint8', 'duckdb_value_varchar', 'duckdb_value_varchar_internal']
+deprecated_functions = [
+    'duckdb_column_data',
+    'duckdb_nullmask_data',
+    #'duckdb_validity_row_is_valid',
+    'duckdb_validity_set_row_invalid',
+    'duckdb_validity_set_row_valid',
+    'duckdb_validity_set_row_validity',
+    'duckdb_value_blob',
+    'duckdb_value_boolean',
+    'duckdb_value_date',
+    'duckdb_value_decimal',
+    'duckdb_value_double',
+    'duckdb_value_float',
+    'duckdb_value_hugeint',
+    'duckdb_value_int16',
+    'duckdb_value_int32',
+    'duckdb_value_int64',
+    'duckdb_value_int8',
+    'duckdb_value_interval',
+    'duckdb_value_is_null',
+    'duckdb_value_string',
+    'duckdb_value_string_internal',
+    'duckdb_value_time',
+    'duckdb_value_timestamp',
+    'duckdb_value_uint16',
+    'duckdb_value_uint32',
+    'duckdb_value_uint64',
+    'duckdb_value_uint8',
+    'duckdb_value_varchar',
+    'duckdb_value_varchar_internal',
+]
 
 def typename(decl):
     const = ''
@@ -109,30 +173,32 @@ class DuckDBHeaderVisitor(pycparser.c_ast.NodeVisitor):
                args.append((p.name, typename(p.type)))
 
        if name == '__routine':
-           print(f'function not handled: {name}')
+           print(f'function skipped: {name}')
            return # ??
 
        if 'replacement' in name:
-           print(f'function not handled: {name}')
+           print(f'function skipped: {name}')
            return # ??
 
        if 'delete_callback' in name:
-           print(f'function not handled: {name}')
+           print(f'function skipped: {name}')
            self.types_result += f'export type {name} = (data: pointer) => void;\n'
            return # ??
 
        if 'duckdb_init_' in name:
+            print(f'function skipped: {name}')
             return
 
        if 'table_function' in name:
-           print(f'function not handled: {name}')
+           print(f'function skipped: {name}')
            return # TODO
 
        if 'arrow' in name:
-           print(f'function not handled: {name}')
+           print(f'function skipped: {name}')
            return # TODO
 
        if name in deprecated_functions:
+           print(f'deprecated function skipped: {name}')
            return
 
        #print(f"{name}")

@@ -205,6 +205,7 @@ export function duckdb_list_vector_get_size(vector: duckdb_vector): number;
 export function duckdb_list_vector_set_size(vector: duckdb_vector, size: number): duckdb_state;
 export function duckdb_list_vector_reserve(vector: duckdb_vector, required_capacity: number): duckdb_state;
 export function duckdb_struct_vector_get_child(vector: duckdb_vector, index: number): duckdb_vector;
+export function duckdb_validity_row_is_valid(validity: uint64_pointer, row: number): boolean;
 export class duckdb_table_function {}
 export class duckdb_bind_info {}
 export class duckdb_init_info {}
