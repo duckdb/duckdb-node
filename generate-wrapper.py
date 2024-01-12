@@ -75,6 +75,8 @@ class DuckDBHeaderVisitor(pycparser.c_ast.NodeVisitor):
        if 'delete_callback' in name:
            return # ??
 
+       if 'duckdb_init_' in name:
+            return
 
        if 'table_function' in name:
            return # TODO
@@ -85,7 +87,6 @@ class DuckDBHeaderVisitor(pycparser.c_ast.NodeVisitor):
        if name in deprecated_functions:
            return
 
-       #print(f"{ret} {name} ({', '.join(args)})")
        print(f"{name}")
 
        n_args = len(args)
@@ -103,8 +104,6 @@ class DuckDBHeaderVisitor(pycparser.c_ast.NodeVisitor):
        self.result += f'exports.Set(Napi::String::New(env, "{name}"), Napi::Function::New<duckdb_node::FunctionWrappers::{asyncstr}FunctionWrapper{n_args}{voidstr}<{arg_str}>>(env));\n'
 
 def create_func_defs(filename):
-    # produce input like so: gcc -E -D__builtin_va_list=int src/duckdb/src/include/duckdb.h > dd.h
-
     ast = pycparser.parse_file(filename, use_cpp=False)
 
     v = DuckDBHeaderVisitor()

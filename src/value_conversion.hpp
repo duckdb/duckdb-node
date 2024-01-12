@@ -325,5 +325,35 @@ public:
 	int32_t FromJS(const Napi::CallbackInfo &info, idx_t offset) {
 		return GetValue(info, offset).As<Napi::Number>().Int32Value();
 	}
+
+	template <>
+	uint32_t FromJS(const Napi::CallbackInfo &info, idx_t offset) {
+		return GetValue(info, offset).As<Napi::Number>().Int32Value();
+	}
+
+	template <>
+	int16_t FromJS(const Napi::CallbackInfo &info, idx_t offset) {
+		return GetValue(info, offset).As<Napi::Number>().Int32Value();
+	}
+
+	template <>
+	uint16_t FromJS(const Napi::CallbackInfo &info, idx_t offset) {
+		return GetValue(info, offset).As<Napi::Number>().Int32Value();
+	}
+
+	template <>
+	float FromJS(const Napi::CallbackInfo &info, idx_t offset) {
+		return GetValue(info, offset).As<Napi::Number>().FloatValue();
+	}
+
+	template <>
+	int8_t FromJS(const Napi::CallbackInfo &info, idx_t offset) {
+		return GetValue(info, offset).As<Napi::Number>().Int32Value();
+	}
+
+	template <>
+	bool FromJS(const Napi::CallbackInfo &info, idx_t offset) {
+		return GetValue(info, offset).As<Napi::Boolean>().Value();
+	}
 };
 } // namespace duckdb_node
