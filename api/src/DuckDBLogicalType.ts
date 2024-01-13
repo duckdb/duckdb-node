@@ -21,6 +21,7 @@ import {
   DuckDBTimestampSecondsType,
   DuckDBTimestampType,
   DuckDBTinyIntType,
+  DuckDBType,
   DuckDBUBigIntType,
   DuckDBUIntegerType,
   DuckDBUSmallIntType,
@@ -35,6 +36,12 @@ export class DuckDBLogicalType {
   readonly logical_type: ddb.duckdb_logical_type;
   protected constructor(logical_type: ddb.duckdb_logical_type) {
     this.logical_type = logical_type;
+  }
+  static consumeAsType(logical_type: ddb.duckdb_logical_type): DuckDBType {
+    const logicalType = DuckDBLogicalType.create(logical_type);
+    const type = logicalType.asType();
+    logicalType.dispose();
+    return type;
   }
   static create(logical_type: ddb.duckdb_logical_type): DuckDBLogicalType {
     switch (ddb.duckdb_get_type_id(logical_type)) {
@@ -57,18 +64,23 @@ export class DuckDBLogicalType {
   public static createDecimal(width: number, scale: number): DuckDBDecimalLogicalType {
     return new DuckDBDecimalLogicalType(ddb.duckdb_create_decimal_type(width, scale));
   }
-  // TODO: createEnum? (missing C API)
+  public static createEnum(values: readonly string[]): DuckDBEnumLogicalType {
+    // TODO: missing C API
+    throw new Error('not implemented');
+  }
   public static createList(valueType: DuckDBLogicalType): DuckDBListLogicalType {
     return new DuckDBListLogicalType(ddb.duckdb_create_list_type(valueType.logical_type));
   }
   public static createMap(keyType: DuckDBLogicalType, valueType: DuckDBLogicalType): DuckDBMapLogicalType {
     return new DuckDBMapLogicalType(ddb.duckdb_create_map_type(keyType.logical_type, valueType.logical_type));
   }
-  public static createStruct() {
-    // TODO: C API takes raw pointers
+  public static createStruct(entries: readonly DuckDBStructEntry[]): DuckDBStructLogicalType {
+    // TODO: C API takes raw pointers (lists of names and types)
+    throw new Error('not implemented');
   }
-  public static createUnion() {
-    // TODO: C API takes raw pointers
+  public static createUnion(alternatives: readonly DuckDBUnionAlternative[]): DuckDBUnionLogicalType {
+    // TODO: C API takes raw pointers (lists of tags and types)
+    throw new Error('not implemented');
   }
   public dispose() {
     ddb.duckdb_destroy_logical_type(this.logical_type);
@@ -76,7 +88,7 @@ export class DuckDBLogicalType {
   public get typeId(): DuckDBTypeId {
     return ddb.duckdb_get_type_id(this.logical_type) as unknown as DuckDBTypeId;
   }
-  public asType() {
+  public asType(): DuckDBType {
     switch (this.typeId) {
       case DuckDBTypeId.BOOLEAN:
         return DuckDBBooleanType.instance;
