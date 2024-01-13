@@ -74,11 +74,11 @@ export class DuckDBLogicalType {
   public static createMap(keyType: DuckDBLogicalType, valueType: DuckDBLogicalType): DuckDBMapLogicalType {
     return new DuckDBMapLogicalType(ddb.duckdb_create_map_type(keyType.logical_type, valueType.logical_type));
   }
-  public static createStruct(entries: readonly DuckDBStructEntry[]): DuckDBStructLogicalType {
+  public static createStruct(entries: readonly DuckDBLogicalStructEntry[]): DuckDBStructLogicalType {
     // TODO: C API takes raw pointers (lists of names and types)
     throw new Error('not implemented');
   }
-  public static createUnion(alternatives: readonly DuckDBUnionAlternative[]): DuckDBUnionLogicalType {
+  public static createUnion(alternatives: readonly DuckDBLogicalUnionAlternative[]): DuckDBUnionLogicalType {
     // TODO: C API takes raw pointers (lists of tags and types)
     throw new Error('not implemented');
   }
@@ -211,7 +211,7 @@ export class DuckDBMapLogicalType extends DuckDBLogicalType {
   }
 }
 
-export interface DuckDBStructEntry {
+export interface DuckDBLogicalStructEntry {
   readonly name: string;
   readonly valueType: DuckDBLogicalType;
 }
@@ -226,8 +226,8 @@ export class DuckDBStructLogicalType extends DuckDBLogicalType {
   public entryValueType(index: number): DuckDBLogicalType {
     return DuckDBLogicalType.create(ddb.duckdb_struct_type_child_type(this.logical_type, index));
   }
-  public entries(): readonly DuckDBStructEntry[] {
-    const entries: DuckDBStructEntry[] = [];
+  public entries(): readonly DuckDBLogicalStructEntry[] {
+    const entries: DuckDBLogicalStructEntry[] = [];
     const count = this.entryCount;
     for (let i = 0; i < count; i++) {
       const name = this.entryName(i);
@@ -244,7 +244,7 @@ export class DuckDBStructLogicalType extends DuckDBLogicalType {
   }
 }
 
-export interface DuckDBUnionAlternative {
+export interface DuckDBLogicalUnionAlternative {
   readonly tag: string;
   readonly valueType: DuckDBLogicalType;
 }
@@ -259,8 +259,8 @@ export class DuckDBUnionLogicalType extends DuckDBLogicalType {
   public alternativeValueType(index: number): DuckDBLogicalType {
     return DuckDBLogicalType.create(ddb.duckdb_union_type_member_type(this.logical_type, index));
   }
-  public alternatives(): readonly DuckDBUnionAlternative[] {
-    const alternatives: DuckDBUnionAlternative[] = [];
+  public alternatives(): readonly DuckDBLogicalUnionAlternative[] {
+    const alternatives: DuckDBLogicalUnionAlternative[] = [];
     const count = this.alternativeCount;
     for (let i = 0; i < count; i++) {
       const tag = this.alternativeTag(i);
