@@ -33,6 +33,7 @@ struct OpenTask : public Task {
 	    : Task(database_, callback_), filename(filename_) {
 
 		duckdb_config.options.access_mode = access_mode_;
+		duckdb_config.SetOptionByName("duckdb_api", duckdb::Value("nodejs"));
 		Napi::Env env = database_.Env();
 		Napi::HandleScope scope(env);
 
