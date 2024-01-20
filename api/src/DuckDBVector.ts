@@ -547,6 +547,9 @@ export class DuckDBMapVector extends DuckDBVector<readonly DuckDBMapEntry[]> {
   }
   public override getItem(itemIndex: number): readonly DuckDBMapEntry[] | null {
     const itemVector = this.listVector.getItem(itemIndex);
+    if (!itemVector) {
+      return null;
+    }
     if (!(itemVector instanceof DuckDBStructVector)) {
       throw new Error('item in map list vector is not a struct');
     }
