@@ -19,7 +19,7 @@ export class DuckDBDataChunk {
   public get columnCount(): number {
     return ddb.duckdb_data_chunk_get_column_count(this.chunk);
   }
-  public getColumn(columnIndex: number): DuckDBVector {
+  public getColumn(columnIndex: number): DuckDBVector<any> {
     // TODO: cache vectors?
     return DuckDBVector.create(ddb.duckdb_data_chunk_get_vector(this.chunk, columnIndex), this.rowCount);
   }
