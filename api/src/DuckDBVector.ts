@@ -6,6 +6,7 @@ import {
   DuckDBFloatType,
   DuckDBIntegerType,
   DuckDBListType,
+  DuckDBMapType,
   DuckDBSmallIntType,
   DuckDBStructType,
   DuckDBTinyIntType,
@@ -109,8 +110,10 @@ export abstract class DuckDBVector<T> {
         }
         throw new Error('DuckDBType has STRUCT type id but is not an instance of DuckDBStructType');
       case DuckDBTypeId.MAP:
-        throw new Error('not yet implemented');
-      //   return DuckDBMapVector.fromRawVector(vectorType, vector, itemCount);
+        if (vectorType instanceof DuckDBMapType) {
+          return DuckDBMapVector.fromRawVector(vectorType, vector, itemCount);
+        }
+        throw new Error('DuckDBType has MAP type id but is not an instance of DuckDBMapType');
       case DuckDBTypeId.UUID: // Int128
         throw new Error('not yet implemented');
       case DuckDBTypeId.UNION:
@@ -432,7 +435,7 @@ export class DuckDBListVector extends DuckDBVector<DuckDBVector<any>> {
 
     return new DuckDBListVector(listType, entryData, validity, childData);
   }
-  public override get type(): DuckDBType {
+  public override get type(): DuckDBListType {
     return this.listType;
   }
   public override get itemCount(): number {
@@ -447,7 +450,7 @@ export class DuckDBListVector extends DuckDBVector<DuckDBVector<any>> {
     const length = Number(this.entryData[entryDataStartIndex + 1]);
     return this.childData.slice(offset, length);
   }
-  public override slice(offset: number, length: number): DuckDBVector<DuckDBVector<any>> {
+  public override slice(offset: number, length: number): DuckDBListVector {
     const entryDataStartIndex = offset * 2;
     return new DuckDBListVector(
       this.listType,
@@ -486,7 +489,7 @@ export class DuckDBStructVector extends DuckDBVector<readonly DuckDBStructEntry[
     const validity = DuckDBValidity.fromVector(vector);
     return new DuckDBStructVector(structType, itemCount, entryVectors, validity);
   }
-  public override get type(): DuckDBType {
+  public override get type(): DuckDBStructType {
     return this.structType;
   }
   public override get itemCount(): number {
@@ -505,7 +508,7 @@ export class DuckDBStructVector extends DuckDBVector<readonly DuckDBStructEntry[
     }
     return entries;
   }
-  public override slice(offset: number, length: number): DuckDBVector<readonly DuckDBStructEntry[]> {
+  public override slice(offset: number, length: number): DuckDBStructVector {
     return new DuckDBStructVector(
       this.structType,
       length,
@@ -515,13 +518,60 @@ export class DuckDBStructVector extends DuckDBVector<readonly DuckDBStructEntry[
   }
 }
 
-// MAP = LIST(STRUCT(key KEY_TYPE, value VALUE_TYPE))
-// TODO: should this contain or extend list vector?
-// export class DuckDBMapVector extends DuckDBListVector {
-//   // TODO
-// }
+export interface DuckDBMapEntry {
+  readonly key: any;
+  readonly value: any;
+}
 
-// TODO: should this contain or extend struct vector?
-// export class DuckDBUnionVector extends DuckDBStructVector {
+// MAP = LIST(STRUCT(key KEY_TYPE, value VALUE_TYPE))
+export class DuckDBMapVector extends DuckDBVector<readonly DuckDBMapEntry[]> {
+  private readonly mapType: DuckDBMapType;
+  private readonly listVector: DuckDBListVector;
+  constructor(mapType: DuckDBMapType, listVector: DuckDBListVector) {
+    super();
+    this.mapType = mapType;
+    this.listVector = listVector;
+  }
+  static fromRawVector(mapType: DuckDBMapType, vector: ddb.duckdb_vector, itemCount: number): DuckDBMapVector {
+    const listVectorType = new DuckDBListType(new DuckDBStructType([
+      { name: 'key', valueType: mapType.keyType },
+      { name: 'value', valueType: mapType.valueType }
+    ]));
+    return new DuckDBMapVector(mapType, DuckDBListVector.fromRawVector(listVectorType, vector, itemCount));
+  }
+  public override get type(): DuckDBType {
+    return this.mapType;
+  }
+  public override get itemCount(): number {
+    return this.listVector.itemCount;
+  }
+  public override getItem(itemIndex: number): readonly DuckDBMapEntry[] | null {
+    const itemVector = this.listVector.getItem(itemIndex);
+    if (!(itemVector instanceof DuckDBStructVector)) {
+      throw new Error('item in map list vector is not a struct');
+    }
+    const entries: DuckDBMapEntry[] = [];
+    const itemEntryCount = itemVector.itemCount;
+    for (let i = 0; i < itemEntryCount; i++) {
+      const entry = itemVector.getItem(i);
+      if (!entry) {
+        throw new Error('null entry in map struct');
+      }
+      const keyEntry = entry[0];
+      const valueEntry = entry[1];
+      entries.push({ key: keyEntry.value, value: valueEntry.value });
+    }
+    return entries;
+  }
+  public override slice(offset: number, length: number): DuckDBMapVector {
+    return new DuckDBMapVector(
+      this.mapType,
+      this.listVector.slice(offset, length),
+    );
+  }
+}
+
+// UNION = STRUCT with first entry named "tag"
+// export class DuckDBUnionVector extends DuckDBVector<...> {
 //   // TODO
 // }
