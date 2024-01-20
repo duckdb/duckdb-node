@@ -7,6 +7,7 @@ import {
   DuckDBIntegerType,
   DuckDBListType,
   DuckDBSmallIntType,
+  DuckDBStructType,
   DuckDBTinyIntType,
   DuckDBType,
   DuckDBUBigIntType,
@@ -103,8 +104,10 @@ export abstract class DuckDBVector<T> {
         }
         throw new Error('DuckDBType has LIST type id but is not an instance of DuckDBListType');
       case DuckDBTypeId.STRUCT:
-        throw new Error('not yet implemented');
-      //   return DuckDBStructVector.fromRawVector(vectorType, vector, itemCount);
+        if (vectorType instanceof DuckDBStructType) {
+          return DuckDBStructVector.fromRawVector(vectorType, vector, itemCount);
+        }
+        throw new Error('DuckDBType has STRUCT type id but is not an instance of DuckDBStructType');
       case DuckDBTypeId.MAP:
         throw new Error('not yet implemented');
       //   return DuckDBMapVector.fromRawVector(vectorType, vector, itemCount);
@@ -455,9 +458,62 @@ export class DuckDBListVector extends DuckDBVector<DuckDBVector<any>> {
   }
 }
 
-// export class DuckDBStructVector extends DuckDBVector {
-//   // TODO
-// }
+export interface DuckDBStructEntry {
+  readonly name: string;
+  readonly value: any;
+}
+
+export class DuckDBStructVector extends DuckDBVector<readonly DuckDBStructEntry[]> {
+  private readonly structType: DuckDBStructType;
+  private readonly _itemCount: number;
+  private readonly entryVectors: readonly DuckDBVector<any>[];
+  private readonly validity: DuckDBValidity;
+  constructor(structType: DuckDBStructType, itemCount: number, entryVectors: readonly DuckDBVector<any>[], validity: DuckDBValidity) {
+    super();
+    this.structType = structType;
+    this._itemCount = itemCount;
+    this.entryVectors = entryVectors;
+    this.validity = validity;
+  }
+  static fromRawVector(structType: DuckDBStructType, vector: ddb.duckdb_vector, itemCount: number): DuckDBStructVector {
+    const entryCount = structType.entries.length;
+    const entryVectors: DuckDBVector<any>[] = [];
+    for (let i = 0; i < entryCount; i++) {
+      const entry = structType.entries[i];
+      const child_vector = ddb.duckdb_struct_vector_get_child(vector, i);
+      entryVectors.push(DuckDBVector.create(child_vector, itemCount, entry.valueType));
+    }
+    const validity = DuckDBValidity.fromVector(vector);
+    return new DuckDBStructVector(structType, itemCount, entryVectors, validity);
+  }
+  public override get type(): DuckDBType {
+    return this.structType;
+  }
+  public override get itemCount(): number {
+    return this._itemCount;
+  }
+  public override getItem(itemIndex: number): readonly DuckDBStructEntry[] | null {
+    if (!this.validity.itemValid(itemIndex)) {
+      return null;
+    }
+    const entries: DuckDBStructEntry[] = [];
+    const entryCount = this.structType.entries.length;
+    for (let i = 0; i < entryCount; i++) {
+      const entry = this.structType.entries[i];
+      const entryVector = this.entryVectors[i];
+      entries.push({ name: entry.name, value: entryVector.getItem(itemIndex) });
+    }
+    return entries;
+  }
+  public override slice(offset: number, length: number): DuckDBVector<readonly DuckDBStructEntry[]> {
+    return new DuckDBStructVector(
+      this.structType,
+      length,
+      this.entryVectors.map(entryVector => entryVector.slice(offset, length)),
+      this.validity.slice(offset),
+    );
+  }
+}
 
 // MAP = LIST(STRUCT(key KEY_TYPE, value VALUE_TYPE))
 // TODO: should this contain or extend list vector?

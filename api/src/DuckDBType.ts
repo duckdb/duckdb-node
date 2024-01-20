@@ -183,14 +183,14 @@ export class DuckDBListType extends BaseDuckDBType {
   }
 }
 
-export interface DuckDBStructEntry {
+export interface DuckDBStructEntryType {
   readonly name: string;
   readonly valueType: DuckDBType;
 }
 
 export class DuckDBStructType extends BaseDuckDBType {
-  public readonly entries: readonly DuckDBStructEntry[];
-  public constructor(entries: readonly DuckDBStructEntry[]) {
+  public readonly entries: readonly DuckDBStructEntryType[];
+  public constructor(entries: readonly DuckDBStructEntryType[]) {
     super(DuckDBTypeId.STRUCT);
     this.entries = entries;
   }
@@ -213,14 +213,14 @@ export class DuckDBUUIDType extends BaseDuckDBType {
   public static readonly instance = new DuckDBUUIDType();
 }
 
-export interface DuckDBUnionAlternative {
+export interface DuckDBUnionAlternativeType {
   readonly tag: string;
   readonly valueType: DuckDBType;
 }
 
 export class DuckDBUnionType extends BaseDuckDBType {
-  public readonly alternatives: readonly DuckDBUnionAlternative[];
-  public constructor(alternatives: readonly DuckDBUnionAlternative[]) {
+  public readonly alternatives: readonly DuckDBUnionAlternativeType[];
+  public constructor(alternatives: readonly DuckDBUnionAlternativeType[]) {
     super(DuckDBTypeId.UNION);
     this.alternatives = alternatives;
   }
