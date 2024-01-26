@@ -8,6 +8,7 @@ import {
   DuckDBListType,
   DuckDBMapType,
   DuckDBSmallIntType,
+  DuckDBStructEntryType,
   DuckDBStructType,
   DuckDBTinyIntType,
   DuckDBType,
@@ -15,6 +16,7 @@ import {
   DuckDBUIntegerType,
   DuckDBUSmallIntType,
   DuckDBUTinyIntType,
+  DuckDBUnionType,
 } from './DuckDBType';
 import { DuckDBTypeId } from './DuckDBTypeId';
 
@@ -508,6 +510,13 @@ export class DuckDBStructVector extends DuckDBVector<readonly DuckDBStructEntry[
     }
     return entries;
   }
+  public getItemValue(itemIndex: number, entryIndex: number): any | null {
+    if (!this.validity.itemValid(itemIndex)) {
+      return null;
+    }
+    const entryVector = this.entryVectors[entryIndex];
+    return entryVector.getItem(itemIndex);
+  }
   public override slice(offset: number, length: number): DuckDBStructVector {
     return new DuckDBStructVector(
       this.structType,
@@ -574,7 +583,49 @@ export class DuckDBMapVector extends DuckDBVector<readonly DuckDBMapEntry[]> {
   }
 }
 
+export interface DuckDBUnionAlternative {
+  readonly tag: string;
+  readonly value: any;
+}
+
 // UNION = STRUCT with first entry named "tag"
-// export class DuckDBUnionVector extends DuckDBVector<...> {
-//   // TODO
-// }
+export class DuckDBUnionVector extends DuckDBVector<DuckDBUnionAlternative> {
+  private readonly unionType: DuckDBUnionType;
+  private readonly structVector: DuckDBStructVector;
+  constructor(unionType: DuckDBUnionType, structVector: DuckDBStructVector) {
+    super();
+    this.unionType = unionType;
+    this.structVector = structVector;
+  }
+  static fromRawVector(unionType: DuckDBUnionType, vector: ddb.duckdb_vector, itemCount: number): DuckDBUnionVector {
+    const structEntryTypes: DuckDBStructEntryType[] = [{ name: 'tag', valueType: DuckDBUTinyIntType.instance }];
+    for (const alternative of unionType.alternatives) {
+      structEntryTypes.push({ name: alternative.tag, valueType: alternative.valueType });
+    }
+    const structVectorType = new DuckDBStructType(structEntryTypes);
+    return new DuckDBUnionVector(unionType, DuckDBStructVector.fromRawVector(structVectorType, vector, itemCount));
+  }
+  public override get type(): DuckDBUnionType {
+    return this.unionType;
+  }
+  public override get itemCount(): number {
+    return this.structVector.itemCount;
+  }
+  public override getItem(itemIndex: number): DuckDBUnionAlternative | null {
+    const tagValue = this.structVector.getItemValue(itemIndex, 0);
+    if (tagValue == null) {
+      return null;
+    }
+    const alternativeIndex = Number(tagValue);
+    const tag = this.unionType.alternatives[alternativeIndex].tag;
+    const entryIndex = alternativeIndex + 1;
+    const value = this.structVector.getItemValue(itemIndex, entryIndex);
+    return { tag, value };
+  }
+  public override slice(offset: number, length: number): DuckDBUnionVector {
+    return new DuckDBUnionVector(
+      this.unionType,
+      this.structVector.slice(offset, length),
+    );
+  }
+}
