@@ -7,7 +7,7 @@ import {
 } from '../src';
 
 describe('api', () => {
-  it('should support creating, connecting, and running a basic query', async () => {
+  it('should support creating, connecting, running a basic query, and reading results', async () => {
     const instance = await DuckDBInstance.create();
     const connection = await instance.connect();
 
