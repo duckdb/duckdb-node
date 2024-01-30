@@ -3,7 +3,7 @@ import { DuckDBAppender } from './DuckDBAppender';
 import { DuckDBExtractedStatements } from './DuckDBExtractedStatements';
 import { DuckDBInstance } from './DuckDBInstance';
 import { DuckDBPreparedStatement } from './DuckDBPreparedStatement';
-import { DuckDBResult } from './DuckDBResult';
+import { DuckDBMaterializedResult } from './DuckDBResult';
 import { throwOnFailure } from './throwOnFailure';
 
 export class DuckDBConnection {
@@ -27,12 +27,12 @@ export class DuckDBConnection {
   public get finished(): boolean {
     return ddb.duckdb_execution_is_finished(this.connection);
   }
-  public async run(sql: string): Promise<DuckDBResult> {
+  public async run(sql: string): Promise<DuckDBMaterializedResult> {
     const result = new ddb.duckdb_result;
     throwOnFailure(await ddb.duckdb_query(this.connection, sql, result),
       'Failed to query', () => ddb.duckdb_result_error(result),
       () => ddb.duckdb_destroy_result(result));
-    return new DuckDBResult(result);
+    return new DuckDBMaterializedResult(result);
   }
   public async prepare(sql: string): Promise<DuckDBPreparedStatement> {
     const prepared_statement = new ddb.duckdb_prepared_statement;
