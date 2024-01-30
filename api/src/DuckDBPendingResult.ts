@@ -2,7 +2,7 @@ import * as ddb from '../..';
 import { DuckDBMaterializedResult, DuckDBStreamingResult } from './DuckDBResult';
 import { throwOnFailure } from './throwOnFailure';
 
-// Values match simlarly-named enum in C API.
+// Values match similar enum in C API.
 export enum DuckDBPendingResultState {
   RESULT_READY = 0,
   RESULT_NOT_READY = 1,
