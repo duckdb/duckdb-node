@@ -10,7 +10,9 @@ import {
   DuckDBType,
   DuckDBTypeId,
   DuckDBVarCharType,
-  DuckDBVector
+  DuckDBVector,
+  configurationOptionDescriptions,
+  version
 } from '../src';
 
 async function withConnection(fn: (connection: DuckDBConnection) => Promise<void>) {
@@ -52,6 +54,14 @@ function assertNullValue(chunk: DuckDBDataChunk, columnIndex: number, rowIndex: 
 }
 
 describe('api', () => {
+  it('should expose version', () => {
+    const ver = version();
+    assert.ok(ver.startsWith('v'), `version starts with 'v'`);
+  });
+  it('should expose configuration option descriptions', () => {
+    const descriptions = configurationOptionDescriptions();
+    assert.ok(descriptions['memory_limit'], `descriptions has 'memory_limit'`);
+  });
   it('should support creating, connecting, running a basic query, and reading results', async () => {
     const instance = await DuckDBInstance.create();
     const connection = await instance.connect();
