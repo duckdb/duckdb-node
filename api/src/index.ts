@@ -5,6 +5,7 @@ export * from './DuckDBDataChunk';
 export * from './DuckDBExtractedStatements';
 export * from './DuckDBInstance';
 export * from './DuckDBLogicalType';
+export * from './DuckDBPendingResult';
 export * from './DuckDBPreparedStatement';
 export * from './DuckDBResult';
 export * from './DuckDBType';
