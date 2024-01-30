@@ -101,7 +101,7 @@ public:
 
 	template <>
 	static Napi::Value ToJS(Napi::Env &env, uint64_t *val) {
-		return PointerHolder<void *>::NewAndSet(env, val);
+		return PointerHolder<uint64_t *>::NewAndSet(env, val);
 	}
 
 	template <>
@@ -304,6 +304,11 @@ public:
 	template <>
 	void *FromJS(const Napi::CallbackInfo &info, idx_t offset) {
 		return *PointerHolder<void *>::FromInfo(info, offset);
+	}
+
+	template <>
+	uint64_t *FromJS(const Napi::CallbackInfo &info, idx_t offset) {
+		return *PointerHolder<uint64_t *>::FromInfo(info, offset);
 	}
 
 	template <>

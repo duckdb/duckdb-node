@@ -1,10 +1,10 @@
-const duckdb_native = require('.');
+import * as duckdb_native from '.';
 
 // some warmup
 console.log("DuckDB version:", duckdb_native.duckdb_library_version());
 
-function convert_validity(vector, n) {
-    const res = Array.from({ length: n }).fill(true);
+function convert_validity(vector: duckdb_native.duckdb_vector, n: number) {
+    const res: boolean[] = Array.from<boolean>({ length: n }).fill(true);
     const validity_buf = duckdb_native.copy_buffer(duckdb_native.duckdb_vector_get_validity(vector),
                                                    Math.ceil(n / 64) * 8); // this will be null if all rows are valid
     if (validity_buf == null) {
@@ -17,7 +17,20 @@ function convert_validity(vector, n) {
     return res;
 }
 
-function convert_primitive_vector(vector, n, array_type) {
+type ArrayType =
+  | BigInt64ArrayConstructor
+  | BigUint64ArrayConstructor
+  | Float32ArrayConstructor
+  | Float64ArrayConstructor
+  | Int8ArrayConstructor
+  | Int16ArrayConstructor
+  | Int32ArrayConstructor
+  | Uint8ArrayConstructor
+  | Uint16ArrayConstructor
+  | Uint32ArrayConstructor
+  ;
+
+function convert_primitive_vector<T>(vector: duckdb_native.duckdb_vector, n: number, array_type: ArrayType) {
     const validity = convert_validity(vector, n);
     const data_buf =
         duckdb_native.copy_buffer(duckdb_native.duckdb_vector_get_data(vector), array_type.BYTES_PER_ELEMENT * n);
@@ -29,7 +42,7 @@ function convert_primitive_vector(vector, n, array_type) {
     return vector_data;
 }
 
-function convert_vector(vector, n) {
+function convert_vector(vector: duckdb_native.duckdb_vector, n: number) {
     const type = duckdb_native.duckdb_vector_get_column_type(vector);
     const type_id = duckdb_native.duckdb_get_type_id(type);
 
@@ -114,7 +127,7 @@ function convert_vector(vector, n) {
         const validity = convert_validity(vector, n);
 
         // TODO handle whole NULL
-        const result = {};
+        const result: any = {};
         for (let child_idx = 0; child_idx < duckdb_native.duckdb_struct_type_child_count(type); child_idx++) {
             const child_name = duckdb_native.duckdb_struct_type_child_name(type, child_idx);
             result[child_name] = convert_vector(duckdb_native.duckdb_struct_vector_get_child(vector, child_idx), n);
