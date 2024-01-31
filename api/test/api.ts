@@ -1,19 +1,26 @@
 import assert from 'assert';
 import {
+  DuckDBBigIntType,
+  DuckDBBigIntVector,
   DuckDBBooleanType,
   DuckDBConnection,
   DuckDBDataChunk,
   DuckDBInstance,
   DuckDBIntegerType,
   DuckDBIntegerVector,
+  DuckDBPendingResultState,
   DuckDBResult,
   DuckDBType,
-  DuckDBTypeId,
   DuckDBVarCharType,
-  DuckDBVector,
   configurationOptionDescriptions,
   version
 } from '../src';
+
+async function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
 
 async function withConnection(fn: (connection: DuckDBConnection) => Promise<void>) {
   const instance = await DuckDBInstance.create();
@@ -42,6 +49,15 @@ function assertIntegerValue(chunk: DuckDBDataChunk, columnIndex: number, rowInde
   const column = chunk.getColumn(columnIndex);
   if (!(column instanceof DuckDBIntegerVector)) {
     assert.fail('column not integer vector');
+  }
+  const value = column.getItem(rowIndex);
+  assert.equal(value, expectedValue);
+}
+
+function assertBigIntValue(chunk: DuckDBDataChunk, columnIndex: number, rowIndex: number, expectedValue: bigint) {
+  const column = chunk.getColumn(columnIndex);
+  if (!(column instanceof DuckDBBigIntVector)) {
+    assert.fail('column not bigint vector');
   }
   const value = column.getItem(rowIndex);
   assert.equal(value, expectedValue);
@@ -108,6 +124,70 @@ describe('api', () => {
       assertNullValue(chunk, 3, 0);
       chunk.dispose();
       result.dispose();
+      prepared.dispose();
+    });
+  });
+  it('should support starting prepared statements and running them incrementally', async () => {
+    await withConnection(async (connection) => {
+      const prepared = await connection.prepare('select int from test_all_types()');
+      const pending = prepared.start();
+      let taskCount = 0;
+      while (pending.runTask() !== DuckDBPendingResultState.RESULT_READY) {
+        taskCount++;
+        if (taskCount > 100) { // arbitrary upper bound on the number of tasks expected for this simple query
+          assert.fail('Unexpectedly large number of tasks');
+        }
+        await sleep(1);
+      }
+      // console.debug('task count: ', taskCount);
+      const result = await pending.getResult();
+      assert.ok(!result.isStreaming, 'result should not be streaming');
+      assertColumns(result, [
+        { name: 'int', type: DuckDBIntegerType.instance },
+      ]);
+      assert.equal(result.rowCount, 3);
+      assert.equal(result.chunkCount, 1);
+      const chunk = result.getChunk(0);
+      assert.equal(chunk.columnCount, 1);
+      assert.equal(chunk.rowCount, 3);
+      assertIntegerValue(chunk, 0, 0, -2147483648);
+      assertIntegerValue(chunk, 0, 1, 2147483647);
+      assertNullValue(chunk, 0, 2);
+      chunk.dispose();
+      result.dispose();
+      pending.dispose();
+      prepared.dispose();
+    });
+  });
+  it('should support streaming results from prepared statements', async () => {
+    await withConnection(async (connection) => {
+      const prepared = await connection.prepare('from range(10000)');
+      const pending = prepared.startStreaming();
+      const result = await pending.getResult();
+      assert.ok(result.isStreaming, 'result should be streaming');
+      assertColumns(result, [
+        { name: 'range', type: DuckDBBigIntType.instance },
+      ]);
+      const chunks: DuckDBDataChunk[] = [];
+      let currentChunk = await result.fetchChunk();
+      while (currentChunk.rowCount > 0) {
+        chunks.push(currentChunk);
+        currentChunk = await result.fetchChunk();
+      }
+      currentChunk.dispose(); // this is the empty chunk that signifies the end of the stream
+      assert.equal(chunks.length, 5); // ceil(10000 / 2048) = 5
+      assert.equal(chunks[0].rowCount, 2048);
+      assert.equal(chunks[1].rowCount, 2048);
+      assert.equal(chunks[2].rowCount, 2048);
+      assert.equal(chunks[3].rowCount, 2048);
+      assert.equal(chunks[4].rowCount, 1808); // 10000 - 2048 * 4 = 1808
+      assertBigIntValue(chunks[4], 0, 0, BigInt(8192)); // 2048 * 4 = 8192
+      assertBigIntValue(chunks[4], 0, 1807, BigInt(9999));
+      for (const chunk of chunks) {
+        chunk.dispose();
+      }
+      result.dispose();
+      pending.dispose();
       prepared.dispose();
     });
   });
