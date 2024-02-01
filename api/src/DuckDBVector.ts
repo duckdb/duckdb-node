@@ -3,6 +3,7 @@ import { DuckDBLogicalType } from './DuckDBLogicalType';
 import {
   DuckDBBigIntType,
   DuckDBBlobType,
+  DuckDBBooleanType,
   DuckDBDoubleType,
   DuckDBFloatType,
   DuckDBIntegerType,
@@ -59,8 +60,8 @@ export abstract class DuckDBVector<T> {
   public static create(vector: ddb.duckdb_vector, itemCount: number, knownType?: DuckDBType): DuckDBVector<any> {
     const vectorType = knownType ? knownType : DuckDBLogicalType.consumeAsType(ddb.duckdb_vector_get_column_type(vector));
     switch (vectorType.typeId) {
-      case DuckDBTypeId.BOOLEAN: // TODO: sizeof(bool) is not guaranteed to be 1
-        throw new Error('not yet implemented');
+      case DuckDBTypeId.BOOLEAN:
+        return DuckDBBooleanVector.fromRawVector(vector, itemCount);
       case DuckDBTypeId.TINYINT:
         return DuckDBTinyIntVector.fromRawVector(vector, itemCount);
       case DuckDBTypeId.SMALLINT:
@@ -137,6 +138,30 @@ export abstract class DuckDBVector<T> {
   public abstract get itemCount(): number;
   public abstract getItem(itemIndex: number): T | null;
   public abstract slice(offset: number, length: number): DuckDBVector<T>;
+}
+
+export class DuckDBBooleanVector extends DuckDBVector<boolean> {
+  private readonly items: readonly (boolean | null)[];
+  constructor(items: readonly (boolean | null)[]) {
+    super();
+    this.items = items
+  }
+  static fromRawVector(vector: ddb.duckdb_vector, itemCount: number): DuckDBBooleanVector {
+    const items = ddb.convert_boolean_vector(vector, itemCount);
+    return new DuckDBBooleanVector(items);
+  }
+  public override get type(): DuckDBBooleanType {
+    return DuckDBBooleanType.instance;
+  }
+  public override get itemCount(): number {
+    return this.items.length;
+  }
+  public override getItem(itemIndex: number): boolean | null {
+    return this.items[itemIndex];
+  }
+  public override slice(offset: number, length: number): DuckDBBooleanVector {
+    return new DuckDBBooleanVector(this.items.slice(offset, offset + length));
+  }
 }
 
 export class DuckDBTinyIntVector extends DuckDBVector<number> {

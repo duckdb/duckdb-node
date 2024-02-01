@@ -3,6 +3,7 @@ import {
   DuckDBBigIntType,
   DuckDBBigIntVector,
   DuckDBBooleanType,
+  DuckDBBooleanVector,
   DuckDBConnection,
   DuckDBDataChunk,
   DuckDBInstance,
@@ -44,6 +45,15 @@ function assertColumns(result: DuckDBResult, expectedColumns: readonly ExpectedC
     assert.equal(result.columnTypeId(i), type.typeId, 'column type id');
     assert.equal(result.columnType(i), type, 'column type');
   }
+}
+
+function assertBooleanValue(chunk: DuckDBDataChunk, columnIndex: number, rowIndex: number, expectedValue: boolean) {
+  const column = chunk.getColumn(columnIndex);
+  if (!(column instanceof DuckDBBooleanVector)) {
+    assert.fail('column not boolean vector');
+  }
+  const value = column.getItem(rowIndex);
+  assert.equal(value, expectedValue);
 }
 
 function assertIntegerValue(chunk: DuckDBDataChunk, columnIndex: number, rowIndex: number, expectedValue: number) {
@@ -130,7 +140,7 @@ describe('api', () => {
       assert.equal(chunk.rowCount, 1);
       assertIntegerValue(chunk, 0, 0, 10);
       assertVarCharValue(chunk, 1, 0, 'abc');
-      // TODO: validate boolean
+      assertBooleanValue(chunk, 2, 0, true);
       assertNullValue(chunk, 3, 0);
       chunk.dispose();
       result.dispose();
