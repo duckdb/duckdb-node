@@ -2,6 +2,7 @@ import * as ddb from '../..';
 import { DuckDBLogicalType } from './DuckDBLogicalType';
 import {
   DuckDBBigIntType,
+  DuckDBBlobType,
   DuckDBDoubleType,
   DuckDBFloatType,
   DuckDBIntegerType,
@@ -17,8 +18,11 @@ import {
   DuckDBUSmallIntType,
   DuckDBUTinyIntType,
   DuckDBUnionType,
+  DuckDBVarCharType,
 } from './DuckDBType';
 import { DuckDBTypeId } from './DuckDBTypeId';
+
+const textDecoder = new TextDecoder();
 
 function vectorData(vector: ddb.duckdb_vector, byteCount: number): Uint8Array {
   const pointer = ddb.duckdb_vector_get_data(vector);
@@ -88,9 +92,9 @@ export abstract class DuckDBVector<T> {
       case DuckDBTypeId.HUGEINT: // Int128
         throw new Error('not yet implemented');
       case DuckDBTypeId.VARCHAR: // string
-        throw new Error('not yet implemented');
+        return DuckDBVarCharVector.fromRawVector(vector, itemCount);
       case DuckDBTypeId.BLOB: // binary
-        throw new Error('not yet implemented');
+        return DuckDBBlobVector.fromRawVector(vector, itemCount);
       case DuckDBTypeId.DECIMAL: // variable: Int8, Int16, Int32, Int64
         throw new Error('not yet implemented');
       case DuckDBTypeId.TIMESTAMP_S:
@@ -119,8 +123,10 @@ export abstract class DuckDBVector<T> {
       case DuckDBTypeId.UUID: // Int128
         throw new Error('not yet implemented');
       case DuckDBTypeId.UNION:
-        throw new Error('not yet implemented');
-      //   return DuckDBUnionVector.fromRawVector(vectorType, vector, itemCount);
+        if (vectorType instanceof DuckDBUnionType) {
+          return DuckDBUnionVector.fromRawVector(vectorType, vector, itemCount);
+        }
+        throw new Error('DuckDBType has UNION type id but is not an instance of DuckDBUnionType');
       case DuckDBTypeId.BIT: // binary
         throw new Error('not yet implemented');
       default:
@@ -410,6 +416,55 @@ export class DuckDBDoubleVector extends DuckDBVector<number> {
   }
   public override slice(offset: number, length: number): DuckDBDoubleVector {
     return new DuckDBDoubleVector(this.items.slice(offset, offset + length), this.validity.slice(offset));
+  }
+}
+
+export class DuckDBVarCharVector extends DuckDBVector<string> {
+  private readonly items: readonly (string | null)[];
+  constructor(items: readonly (string | null)[]) {
+    super();
+    this.items = items;
+  }
+  static fromRawVector(vector: ddb.duckdb_vector, itemCount: number): DuckDBVarCharVector {
+    const byteArrays = ddb.convert_string_vector(vector, itemCount);
+    const items = byteArrays.map((byteArray) => byteArray ? textDecoder.decode(byteArray) : null);
+    return new DuckDBVarCharVector(items);
+  }
+  public override get type(): DuckDBVarCharType {
+    return DuckDBVarCharType.instance;
+  }
+  public override get itemCount(): number {
+    return this.items.length;
+  }
+  public override getItem(itemIndex: number): string | null {
+    return this.items[itemIndex];
+  }
+  public override slice(offset: number, length: number): DuckDBVarCharVector {
+    return new DuckDBVarCharVector(this.items.slice(offset, offset + length));
+  }
+}
+
+export class DuckDBBlobVector extends DuckDBVector<Uint8Array> {
+  private readonly items: readonly (Uint8Array | null)[];
+  constructor(items: readonly (Uint8Array | null)[]) {
+    super();
+    this.items = items;
+  }
+  static fromRawVector(vector: ddb.duckdb_vector, itemCount: number): DuckDBBlobVector {
+    const items = ddb.convert_string_vector(vector, itemCount);
+    return new DuckDBBlobVector(items);
+  }
+  public override get type(): DuckDBBlobType {
+    return DuckDBBlobType.instance;
+  }
+  public override get itemCount(): number {
+    return this.items.length;
+  }
+  public override getItem(itemIndex: number): Uint8Array | null {
+    return this.items[itemIndex];
+  }
+  public override slice(offset: number, length: number): DuckDBBlobVector {
+    return new DuckDBBlobVector(this.items.slice(offset, offset + length));
   }
 }
 

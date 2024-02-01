@@ -12,6 +12,7 @@ import {
   DuckDBResult,
   DuckDBType,
   DuckDBVarCharType,
+  DuckDBVarCharVector,
   configurationOptionDescriptions,
   version
 } from '../src';
@@ -58,6 +59,15 @@ function assertBigIntValue(chunk: DuckDBDataChunk, columnIndex: number, rowIndex
   const column = chunk.getColumn(columnIndex);
   if (!(column instanceof DuckDBBigIntVector)) {
     assert.fail('column not bigint vector');
+  }
+  const value = column.getItem(rowIndex);
+  assert.equal(value, expectedValue);
+}
+
+function assertVarCharValue(chunk: DuckDBDataChunk, columnIndex: number, rowIndex: number, expectedValue: string) {
+  const column = chunk.getColumn(columnIndex);
+  if (!(column instanceof DuckDBVarCharVector)) {
+    assert.fail('column not varchar vector');
   }
   const value = column.getItem(rowIndex);
   assert.equal(value, expectedValue);
@@ -119,7 +129,7 @@ describe('api', () => {
       assert.equal(chunk.columnCount, 4);
       assert.equal(chunk.rowCount, 1);
       assertIntegerValue(chunk, 0, 0, 10);
-      // TODO: validate varchar
+      assertVarCharValue(chunk, 1, 0, 'abc');
       // TODO: validate boolean
       assertNullValue(chunk, 3, 0);
       chunk.dispose();
