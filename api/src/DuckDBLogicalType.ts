@@ -8,6 +8,7 @@ import {
   DuckDBDecimalType,
   DuckDBDoubleType,
   DuckDBEnumType,
+  DuckDBFloatType,
   DuckDBHugeIntType,
   DuckDBIntegerType,
   DuckDBIntervalType,
@@ -109,6 +110,8 @@ export class DuckDBLogicalType {
       case DuckDBTypeId.UBIGINT:
         return DuckDBUBigIntType.instance;
       case DuckDBTypeId.FLOAT:
+        return DuckDBFloatType.instance;
+      case DuckDBTypeId.DOUBLE:
         return DuckDBDoubleType.instance;
       case DuckDBTypeId.TIMESTAMP:
         return DuckDBTimestampType.instance;
@@ -147,7 +150,7 @@ export class DuckDBLogicalType {
       case DuckDBTypeId.BIT:
         return DuckDBBitType.instance;
       default:
-        throw new Error('Unexpected type id');
+        throw new Error(`Unexpected type id: ${this.typeId}`);
     }
   }
 }

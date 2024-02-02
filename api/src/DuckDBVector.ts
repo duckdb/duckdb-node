@@ -37,7 +37,14 @@ const littleEndian = os.endianness() === 'LE';
 function getInt128(dataView: DataView, offset: number): bigint {
   const lower = dataView.getBigUint64(offset, littleEndian);
   const upper = dataView.getBigInt64(offset + 8, littleEndian);
-  return upper << BigInt(64) + lower;
+  return (upper << BigInt(64)) + lower;
+}
+
+function getUInt128(dataView: DataView, offset: number): bigint {
+  const lower = dataView.getBigUint64(offset, littleEndian);
+  const upper = dataView.getBigUint64(offset + 8, littleEndian);
+  console.log(lower, upper);
+  return BigInt.asUintN(64, upper) << BigInt(64) | BigInt.asUintN(64, lower);
 }
 
 const textDecoder = new TextDecoder();
