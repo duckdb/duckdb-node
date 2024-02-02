@@ -1,27 +1,44 @@
+import os from 'os';
 import * as ddb from '../..';
 import { DuckDBLogicalType } from './DuckDBLogicalType';
 import {
   DuckDBBigIntType,
   DuckDBBlobType,
   DuckDBBooleanType,
+  DuckDBDateType,
   DuckDBDoubleType,
   DuckDBFloatType,
+  DuckDBHugeIntType,
   DuckDBIntegerType,
   DuckDBListType,
   DuckDBMapType,
   DuckDBSmallIntType,
   DuckDBStructEntryType,
   DuckDBStructType,
+  DuckDBTimeType,
+  DuckDBTimestampMillisecondsType,
+  DuckDBTimestampNanosecondsType,
+  DuckDBTimestampSecondsType,
+  DuckDBTimestampType,
   DuckDBTinyIntType,
   DuckDBType,
   DuckDBUBigIntType,
   DuckDBUIntegerType,
   DuckDBUSmallIntType,
   DuckDBUTinyIntType,
+  DuckDBUUIDType,
   DuckDBUnionType,
   DuckDBVarCharType,
 } from './DuckDBType';
 import { DuckDBTypeId } from './DuckDBTypeId';
+
+const littleEndian = os.endianness() === 'LE';
+
+function getInt128(dataView: DataView, offset: number): bigint {
+  const lower = dataView.getBigUint64(offset, littleEndian);
+  const upper = dataView.getBigInt64(offset + 8, littleEndian);
+  return upper << BigInt(64) + lower;
+}
 
 const textDecoder = new TextDecoder();
 
@@ -83,27 +100,27 @@ export abstract class DuckDBVector<T> {
       case DuckDBTypeId.DOUBLE:
         return DuckDBDoubleVector.fromRawVector(vector, itemCount);
       case DuckDBTypeId.TIMESTAMP:
-        throw new Error('not yet implemented');
+        return DuckDBTimestampVector.fromRawVector(vector, itemCount);
       case DuckDBTypeId.DATE:
-        throw new Error('not yet implemented');
+        return DuckDBDateVector.fromRawVector(vector, itemCount);
       case DuckDBTypeId.TIME:
-        throw new Error('not yet implemented');
+        return DuckDBTimeVector.fromRawVector(vector, itemCount);
       case DuckDBTypeId.INTERVAL: // Int32, Int32, Int64
         throw new Error('not yet implemented');
-      case DuckDBTypeId.HUGEINT: // Int128
-        throw new Error('not yet implemented');
-      case DuckDBTypeId.VARCHAR: // string
+      case DuckDBTypeId.HUGEINT:
+        return DuckDBHugeIntVector.fromRawVector(vector, itemCount);
+      case DuckDBTypeId.VARCHAR:
         return DuckDBVarCharVector.fromRawVector(vector, itemCount);
-      case DuckDBTypeId.BLOB: // binary
+      case DuckDBTypeId.BLOB:
         return DuckDBBlobVector.fromRawVector(vector, itemCount);
       case DuckDBTypeId.DECIMAL: // variable: Int8, Int16, Int32, Int64
         throw new Error('not yet implemented');
       case DuckDBTypeId.TIMESTAMP_S:
-        throw new Error('not yet implemented');
+        return DuckDBTimestampSecondsVector.fromRawVector(vector, itemCount);
       case DuckDBTypeId.TIMESTAMP_MS:
-        throw new Error('not yet implemented');
+        return DuckDBTimestampMillisecondsVector.fromRawVector(vector, itemCount);
       case DuckDBTypeId.TIMESTAMP_NS:
-        throw new Error('not yet implemented');
+        return DuckDBTimestampNanosecondsVector.fromRawVector(vector, itemCount);
       case DuckDBTypeId.ENUM: // variable: Uint8, Uint16, Uint32, Uint64
         throw new Error('not yet implemented');
       case DuckDBTypeId.LIST:
@@ -121,8 +138,8 @@ export abstract class DuckDBVector<T> {
           return DuckDBMapVector.fromRawVector(vectorType, vector, itemCount);
         }
         throw new Error('DuckDBType has MAP type id but is not an instance of DuckDBMapType');
-      case DuckDBTypeId.UUID: // Int128
-        throw new Error('not yet implemented');
+      case DuckDBTypeId.UUID:
+        return DuckDBUUIDVector.fromRawVector(vector, itemCount);
       case DuckDBTypeId.UNION:
         if (vectorType instanceof DuckDBUnionType) {
           return DuckDBUnionVector.fromRawVector(vectorType, vector, itemCount);
@@ -444,6 +461,123 @@ export class DuckDBDoubleVector extends DuckDBVector<number> {
   }
 }
 
+export class DuckDBTimestampVector extends DuckDBVector<bigint> {
+  private readonly items: BigInt64Array;
+  private readonly validity: DuckDBValidity;
+  constructor(items: BigInt64Array, validity: DuckDBValidity) {
+    super();
+    this.items = items;
+    this.validity = validity;
+  }
+  static fromRawVector(vector: ddb.duckdb_vector, itemCount: number): DuckDBTimestampVector {
+    const data = vectorData(vector, itemCount * BigInt64Array.BYTES_PER_ELEMENT);
+    const items = new BigInt64Array(data.buffer, data.byteOffset, itemCount);
+    const validity = DuckDBValidity.fromVector(vector);
+    return new DuckDBTimestampVector(items, validity);
+  }
+  public override get type(): DuckDBTimestampType {
+    return DuckDBTimestampType.instance;
+  }
+  public override get itemCount(): number {
+    return this.items.length;
+  }
+  public override getItem(itemIndex: number): bigint | null { // microseconds
+    return this.validity.itemValid(itemIndex) ? this.items[itemIndex] : null;
+  }
+  public override slice(offset: number, length: number): DuckDBTimestampVector {
+    return new DuckDBTimestampVector(this.items.slice(offset, offset + length), this.validity.slice(offset));
+  }
+}
+
+export class DuckDBDateVector extends DuckDBVector<number> {
+  private readonly items: Int32Array;
+  private readonly validity: DuckDBValidity;
+  constructor(items: Int32Array, validity: DuckDBValidity) {
+    super();
+    this.items = items;
+    this.validity = validity;
+  }
+  static fromRawVector(vector: ddb.duckdb_vector, itemCount: number): DuckDBDateVector {
+    const data = vectorData(vector, itemCount * Int32Array.BYTES_PER_ELEMENT);
+    const items = new Int32Array(data.buffer, data.byteOffset, itemCount);
+    const validity = DuckDBValidity.fromVector(vector);
+    return new DuckDBDateVector(items, validity);
+  }
+  public override get type(): DuckDBDateType {
+    return DuckDBDateType.instance;
+  }
+  public override get itemCount(): number {
+    return this.items.length;
+  }
+  public override getItem(itemIndex: number): number | null { // days
+    return this.validity.itemValid(itemIndex) ? this.items[itemIndex] : null;
+  }
+  public override slice(offset: number, length: number): DuckDBDateVector {
+    return new DuckDBDateVector(this.items.slice(offset, offset + length), this.validity.slice(offset));
+  }
+}
+
+export class DuckDBTimeVector extends DuckDBVector<bigint> {
+  private readonly items: BigInt64Array;
+  private readonly validity: DuckDBValidity;
+  constructor(items: BigInt64Array, validity: DuckDBValidity) {
+    super();
+    this.items = items;
+    this.validity = validity;
+  }
+  static fromRawVector(vector: ddb.duckdb_vector, itemCount: number): DuckDBTimeVector {
+    const data = vectorData(vector, itemCount * BigInt64Array.BYTES_PER_ELEMENT);
+    const items = new BigInt64Array(data.buffer, data.byteOffset, itemCount);
+    const validity = DuckDBValidity.fromVector(vector);
+    return new DuckDBTimeVector(items, validity);
+  }
+  public override get type(): DuckDBTimeType {
+    return DuckDBTimeType.instance;
+  }
+  public override get itemCount(): number {
+    return this.items.length;
+  }
+  public override getItem(itemIndex: number): bigint | null { // microseconds
+    return this.validity.itemValid(itemIndex) ? this.items[itemIndex] : null;
+  }
+  public override slice(offset: number, length: number): DuckDBTimeVector {
+    return new DuckDBTimeVector(this.items.slice(offset, offset + length), this.validity.slice(offset));
+  }
+}
+
+// TODO: INTERVAL
+
+export class DuckDBHugeIntVector extends DuckDBVector<bigint> {
+  private readonly dataView: DataView;
+  private readonly validity: DuckDBValidity;
+  constructor(dataView: DataView, validity: DuckDBValidity) {
+    super();
+    this.dataView = dataView;
+    this.validity = validity;
+  }
+  static fromRawVector(vector: ddb.duckdb_vector, itemCount: number): DuckDBHugeIntVector {
+    const data = vectorData(vector, itemCount << 4);
+    const dataView = new DataView(data.buffer, data.byteOffset, data.byteLength);
+    const validity = DuckDBValidity.fromVector(vector);
+    return new DuckDBHugeIntVector(dataView, validity);
+  }
+  public override get type(): DuckDBHugeIntType {
+    return DuckDBHugeIntType.instance;
+  }
+  public override get itemCount(): number {
+    return this.dataView.byteLength >> 4;
+  }
+  public override getItem(itemIndex: number): bigint | null {
+    return this.validity.itemValid(itemIndex) ? getInt128(this.dataView, itemIndex << 4) : null;
+  }
+  public override slice(offset: number, length: number): DuckDBHugeIntVector {
+    return new DuckDBHugeIntVector(
+      new DataView(this.dataView.buffer, offset << 4, length << 4),
+      this.validity.slice(offset),
+    );
+  }
+}
+
 export class DuckDBVarCharVector extends DuckDBVector<string> {
   private readonly items: readonly (string | null)[];
   constructor(items: readonly (string | null)[]) {
@@ -492,6 +626,94 @@ export class DuckDBBlobVector extends DuckDBVector<Uint8Array> {
     return new DuckDBBlobVector(this.items.slice(offset, offset + length));
   }
 }
+
+// TODO: DECIMAL
+
+export class DuckDBTimestampSecondsVector extends DuckDBVector<bigint> {
+  private readonly items: BigInt64Array;
+  private readonly validity: DuckDBValidity;
+  constructor(items: BigInt64Array, validity: DuckDBValidity) {
+    super();
+    this.items = items;
+    this.validity = validity;
+  }
+  static fromRawVector(vector: ddb.duckdb_vector, itemCount: number): DuckDBTimestampSecondsVector {
+    const data = vectorData(vector, itemCount * BigInt64Array.BYTES_PER_ELEMENT);
+    const items = new BigInt64Array(data.buffer, data.byteOffset, itemCount);
+    const validity = DuckDBValidity.fromVector(vector);
+    return new DuckDBTimestampSecondsVector(items, validity);
+  }
+  public override get type(): DuckDBTimestampSecondsType {
+    return DuckDBTimestampSecondsType.instance;
+  }
+  public override get itemCount(): number {
+    return this.items.length;
+  }
+  public override getItem(itemIndex: number): bigint | null { // seconds
+    return this.validity.itemValid(itemIndex) ? this.items[itemIndex] : null;
+  }
+  public override slice(offset: number, length: number): DuckDBTimestampSecondsVector {
+    return new DuckDBTimestampSecondsVector(this.items.slice(offset, offset + length), this.validity.slice(offset));
+  }
+}
+
+export class DuckDBTimestampMillisecondsVector extends DuckDBVector<bigint> {
+  private readonly items: BigInt64Array;
+  private readonly validity: DuckDBValidity;
+  constructor(items: BigInt64Array, validity: DuckDBValidity) {
+    super();
+    this.items = items;
+    this.validity = validity;
+  }
+  static fromRawVector(vector: ddb.duckdb_vector, itemCount: number): DuckDBTimestampMillisecondsVector {
+    const data = vectorData(vector, itemCount * BigInt64Array.BYTES_PER_ELEMENT);
+    const items = new BigInt64Array(data.buffer, data.byteOffset, itemCount);
+    const validity = DuckDBValidity.fromVector(vector);
+    return new DuckDBTimestampMillisecondsVector(items, validity);
+  }
+  public override get type(): DuckDBTimestampMillisecondsType {
+    return DuckDBTimestampMillisecondsType.instance;
+  }
+  public override get itemCount(): number {
+    return this.items.length;
+  }
+  public override getItem(itemIndex: number): bigint | null { // milliseconds
+    return this.validity.itemValid(itemIndex) ? this.items[itemIndex] : null;
+  }
+  public override slice(offset: number, length: number): DuckDBTimestampMillisecondsVector {
+    return new DuckDBTimestampMillisecondsVector(this.items.slice(offset, offset + length), this.validity.slice(offset));
+  }
+}
+
+export class DuckDBTimestampNanosecondsVector extends DuckDBVector<bigint> {
+  private readonly items: BigInt64Array;
+  private readonly validity: DuckDBValidity;
+  constructor(items: BigInt64Array, validity: DuckDBValidity) {
+    super();
+    this.items = items;
+    this.validity = validity;
+  }
+  static fromRawVector(vector: ddb.duckdb_vector, itemCount: number): DuckDBTimestampNanosecondsVector {
+    const data = vectorData(vector, itemCount * BigInt64Array.BYTES_PER_ELEMENT);
+    const items = new BigInt64Array(data.buffer, data.byteOffset, itemCount);
+    const validity = DuckDBValidity.fromVector(vector);
+    return new DuckDBTimestampNanosecondsVector(items, validity);
+  }
+  public override get type(): DuckDBTimestampNanosecondsType {
+    return DuckDBTimestampNanosecondsType.instance;
+  }
+  public override get itemCount(): number {
+    return this.items.length;
+  }
+  public override getItem(itemIndex: number): bigint | null { // nanoseconds
+    return this.validity.itemValid(itemIndex) ? this.items[itemIndex] : null;
+  }
+  public override slice(offset: number, length: number): DuckDBTimestampNanosecondsVector {
+    return new DuckDBTimestampNanosecondsVector(this.items.slice(offset, offset + length), this.validity.slice(offset));
+  }
+}
+
+// TODO: ENUM
 
 export class DuckDBListVector extends DuckDBVector<DuckDBVector<any>> {
   private readonly listType: DuckDBListType;
@@ -663,6 +885,37 @@ export class DuckDBMapVector extends DuckDBVector<readonly DuckDBMapEntry[]> {
   }
 }
 
+export class DuckDBUUIDVector extends DuckDBVector<bigint> {
+  private readonly dataView: DataView;
+  private readonly validity: DuckDBValidity;
+  constructor(dataView: DataView, validity: DuckDBValidity) {
+    super();
+    this.dataView = dataView;
+    this.validity = validity;
+  }
+  static fromRawVector(vector: ddb.duckdb_vector, itemCount: number): DuckDBUUIDVector {
+    const data = vectorData(vector, itemCount << 4);
+    const dataView = new DataView(data.buffer, data.byteOffset, data.byteLength);
+    const validity = DuckDBValidity.fromVector(vector);
+    return new DuckDBUUIDVector(dataView, validity);
+  }
+  public override get type(): DuckDBUUIDType {
+    return DuckDBUUIDType.instance;
+  }
+  public override get itemCount(): number {
+    return this.dataView.byteLength >> 4;
+  }
+  public override getItem(itemIndex: number): bigint | null {
+    return this.validity.itemValid(itemIndex) ? getInt128(this.dataView, itemIndex << 4) : null;
+  }
+  public override slice(offset: number, length: number): DuckDBUUIDVector {
+    return new DuckDBUUIDVector(
+      new DataView(this.dataView.buffer, offset << 4, length << 4),
+      this.validity.slice(offset),
+    );
+  }
+}
+
 export interface DuckDBUnionAlternative {
   readonly tag: string;
   readonly value: any;
@@ -709,3 +962,5 @@ export class DuckDBUnionVector extends DuckDBVector<DuckDBUnionAlternative> {
     );
   }
 }
+
+// TODO: BIT
