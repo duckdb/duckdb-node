@@ -133,11 +133,14 @@ async function sleep(ms: number): Promise<void> {
 
 async function withConnection(fn: (connection: DuckDBConnection) => Promise<void>) {
   const instance = await DuckDBInstance.create();
-  const connection = await instance.connect();
   try {
-    await fn(connection);
+    const connection = await instance.connect();
+    try {
+      await fn(connection);
+    } finally {
+      connection.dispose();
+    }
   } finally {
-    connection.dispose();
     instance.dispose();
   }
 }
@@ -310,38 +313,41 @@ describe('api', () => {
   it('should support starting prepared statements and running them incrementally', async () => {
     await withConnection(async (connection) => {
       const prepared = await connection.prepare('select int from test_all_types()');
-      const pending = prepared.start();
       try {
-        let taskCount = 0;
-        while (pending.runTask() !== DuckDBPendingResultState.RESULT_READY) {
-          taskCount++;
-          if (taskCount > 100) { // arbitrary upper bound on the number of tasks expected for this simple query
-            assert.fail('Unexpectedly large number of tasks');
-          }
-          await sleep(1);
-        }
-        // console.debug('task count: ', taskCount);
-        const result = await pending.getResult();
+        const pending = prepared.start();
         try {
-          assert.ok(!result.isStreaming, 'result should not be streaming');
-          assertColumns(result, [
-            { name: 'int', type: DuckDBIntegerType.instance },
-          ]);
-          assert.strictEqual(result.rowCount, 3);
-          assert.strictEqual(result.chunkCount, 1);
-          const chunk = result.getChunk(0);
+          let taskCount = 0;
+          while (pending.runTask() !== DuckDBPendingResultState.RESULT_READY) {
+            taskCount++;
+            if (taskCount > 100) { // arbitrary upper bound on the number of tasks expected for this simple query
+              assert.fail('Unexpectedly large number of tasks');
+            }
+            await sleep(1);
+          }
+          // console.debug('task count: ', taskCount);
+          const result = await pending.getResult();
           try {
-            assert.strictEqual(chunk.columnCount, 1);
-            assert.strictEqual(chunk.rowCount, 3);
-            assertValues(chunk, 0, DuckDBIntegerVector, [MinInt32, MaxInt32, null]);
+            assert.ok(!result.isStreaming, 'result should not be streaming');
+            assertColumns(result, [
+              { name: 'int', type: DuckDBIntegerType.instance },
+            ]);
+            assert.strictEqual(result.rowCount, 3);
+            assert.strictEqual(result.chunkCount, 1);
+            const chunk = result.getChunk(0);
+            try {
+              assert.strictEqual(chunk.columnCount, 1);
+              assert.strictEqual(chunk.rowCount, 3);
+              assertValues(chunk, 0, DuckDBIntegerVector, [MinInt32, MaxInt32, null]);
+            } finally {
+              chunk.dispose();
+            }
           } finally {
-            chunk.dispose();
+            result.dispose();
           }
         } finally {
-          result.dispose();
+          pending.dispose();
         }
       } finally {
-        pending.dispose();
         prepared.dispose();
       }
     });
@@ -349,35 +355,46 @@ describe('api', () => {
   it('should support streaming results from prepared statements', async () => {
     await withConnection(async (connection) => {
       const prepared = await connection.prepare('from range(10000)');
-      const pending = prepared.startStreaming();
-      const result = await pending.getResult();
       try {
-        assert.ok(result.isStreaming, 'result should be streaming');
-        assertColumns(result, [
-          { name: 'range', type: DuckDBBigIntType.instance },
-        ]);
-        const chunks: DuckDBDataChunk[] = [];
+        const pending = prepared.startStreaming();
         try {
-          let currentChunk = await result.fetchChunk();
-          while (currentChunk.rowCount > 0) {
-            chunks.push(currentChunk);
-            currentChunk = await result.fetchChunk();
+          const result = await pending.getResult();
+          try {
+            assert.ok(result.isStreaming, 'result should be streaming');
+            assertColumns(result, [
+              { name: 'range', type: DuckDBBigIntType.instance },
+            ]);
+            const chunks: DuckDBDataChunk[] = [];
+            let currentChunk: DuckDBDataChunk | null = null;
+            try {
+              currentChunk = await result.fetchChunk();
+              while (currentChunk.rowCount > 0) {
+                chunks.push(currentChunk);
+                currentChunk = await result.fetchChunk();
+              }
+              currentChunk.dispose(); // this is the empty chunk that signifies the end of the stream
+              currentChunk = null;
+              assert.strictEqual(chunks.length, 5); // ceil(10000 / 2048) = 5
+              assertValues(chunks[0], 0, DuckDBBigIntVector, bigints(BigInt(0), BigInt(2048-1)));
+              assertValues(chunks[1], 0, DuckDBBigIntVector, bigints(BigInt(2048), BigInt(2048*2-1)));
+              assertValues(chunks[2], 0, DuckDBBigIntVector, bigints(BigInt(2048*2), BigInt(2048*3-1)));
+              assertValues(chunks[3], 0, DuckDBBigIntVector, bigints(BigInt(2048*3), BigInt(2048*4-1)));
+              assertValues(chunks[4], 0, DuckDBBigIntVector, bigints(BigInt(2048*4), BigInt(9999)));
+            } finally {
+              if (currentChunk) {
+                currentChunk.dispose();
+              }
+              for (const chunk of chunks) {
+                chunk.dispose();
+              }
+            }
+          } finally {
+            result.dispose();
           }
-          currentChunk.dispose(); // this is the empty chunk that signifies the end of the stream
-          assert.strictEqual(chunks.length, 5); // ceil(10000 / 2048) = 5
-          assertValues(chunks[0], 0, DuckDBBigIntVector, bigints(BigInt(0), BigInt(2048-1)));
-          assertValues(chunks[1], 0, DuckDBBigIntVector, bigints(BigInt(2048), BigInt(2048*2-1)));
-          assertValues(chunks[2], 0, DuckDBBigIntVector, bigints(BigInt(2048*2), BigInt(2048*3-1)));
-          assertValues(chunks[3], 0, DuckDBBigIntVector, bigints(BigInt(2048*3), BigInt(2048*4-1)));
-          assertValues(chunks[4], 0, DuckDBBigIntVector, bigints(BigInt(2048*4), BigInt(9999)));
         } finally {
-          for (const chunk of chunks) {
-            chunk.dispose();
-          }
+          pending.dispose();
         }
       } finally {
-        result.dispose();
-        pending.dispose();
         prepared.dispose();
       }
     });
