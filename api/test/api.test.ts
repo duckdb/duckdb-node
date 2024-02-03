@@ -25,12 +25,16 @@ import {
   DuckDBIntervalType,
   DuckDBListType,
   DuckDBListVector,
+  DuckDBMapEntry,
   DuckDBMapType,
+  DuckDBMapVector,
   DuckDBPendingResultState,
   DuckDBResult,
   DuckDBSmallIntType,
   DuckDBSmallIntVector,
+  DuckDBStructEntry,
   DuckDBStructType,
+  DuckDBStructVector,
   DuckDBTimeType,
   DuckDBTimeVector,
   DuckDBTimestampMillisecondsType,
@@ -55,6 +59,7 @@ import {
   DuckDBUUIDType,
   DuckDBUUIDVector,
   DuckDBUnionType,
+  DuckDBUnionVector,
   DuckDBVarCharType,
   DuckDBVarCharVector,
   DuckDBVector,
@@ -149,13 +154,20 @@ function assertColumns(result: DuckDBResult, expectedColumns: readonly ExpectedC
   }
 }
 
+function isVectorType<TValue, TVector extends DuckDBVector<TValue>>(
+  vector: DuckDBVector<any> | null,
+  vectorType: new (...args: any[]) => TVector,
+): vector is TVector {
+  return vector instanceof vectorType;
+}
+
 function getColumnVector<TValue, TVector extends DuckDBVector<TValue>>(
   chunk: DuckDBDataChunk,
   columnIndex: number,
   vectorType: new (...args: any[]) => TVector
 ): TVector {
   const column = chunk.getColumn(columnIndex);
-  if (!(column instanceof vectorType)) {
+  if (!isVectorType<TValue, TVector>(column, vectorType)) {
     assert.fail(`expected column ${columnIndex} to be a ${vectorType}`);
   }
   return column;
@@ -400,6 +412,7 @@ describe('api', () => {
       ]);
       assert.strictEqual(result.rowCount, 3);
       assert.strictEqual(result.chunkCount, 1);
+
       const chunk = result.getChunk(0);
       assert.strictEqual(chunk.columnCount, 44);
       assert.strictEqual(chunk.rowCount, 3);
@@ -430,17 +443,16 @@ describe('api', () => {
       // TODO: DECIMAL (int128)
       assertValues(chunk, 24, DuckDBUUIDVector, [MinUUID, MaxUUID, null]);
       // TODO: INTERVAL
-      assertValues(chunk, 26, DuckDBVarCharVector, ["🦆🦆🦆🦆🦆🦆", "goo\0se", null]);
+      assertValues(chunk, 26, DuckDBVarCharVector, ['🦆🦆🦆🦆🦆🦆', 'goo\0se', null]);
       assertValues(chunk, 27, DuckDBBlobVector, [
-        blobFromString("thisisalongblob\x00withnullbytes"),
-        blobFromString("\x00\x00\x00a"),
+        blobFromString('thisisalongblob\x00withnullbytes'),
+        blobFromString('\x00\x00\x00a'),
         null,
       ]);
       // TODO: BIT
       // TODO: ENUM (small)
       // TODO: ENUM (medium)
       // TODO: ENUM (large)
-      // TODO: LISTs <-
       assertNestedValues<DuckDBVector<number>, DuckDBListVector<number>>(chunk, 32, DuckDBListVector, [
         (v, n) => assertVectorValues(v, [], n),
         (v, n) => assertVectorValues(v, [42, 999, null, null, -42], n),
@@ -469,10 +481,10 @@ describe('api', () => {
         (v, n) => assertVectorValues(v, [BI_0, TS_US_Inf, -TS_US_Inf, null, BigInt(1652397825)*BI_1000*BI_1000], n),
         (v, n) => assert.strictEqual(v, null, n),
       ]);
-      // Note that the string "goose" in varchar_array does NOT have an embedded null character.
+      // Note that the string 'goose' in varchar_array does NOT have an embedded null character.
       assertNestedValues<DuckDBVector<string>, DuckDBListVector<string>>(chunk, 37, DuckDBListVector, [
         (v, n) => assertVectorValues(v, [], n),
-        (v, n) => assertVectorValues(v, ["🦆🦆🦆🦆🦆🦆", "goose", null, ""], n),
+        (v, n) => assertVectorValues(v, ['🦆🦆🦆🦆🦆🦆', 'goose', null, ''], n),
         (v, n) => assert.strictEqual(v, null, n),
       ]);
       assertNestedValues<DuckDBVector<DuckDBVector<number>>, DuckDBListVector<DuckDBVector<number>>>(chunk, 38, DuckDBListVector, [
@@ -489,11 +501,44 @@ describe('api', () => {
         ], n),
         (v, n) => assert.strictEqual(v, null, n),
       ]);
-      // TODO: STRUCT <-
-      // TODO: struct_of_arrays <-
-      // TODO: array_of_structs <-
-      // TODO: MAP <-
-      // TODO: UNION <-
+      assertValues(chunk, 39, DuckDBStructVector, [
+        [{ name: 'a', value: null }, { name: 'b', value: null }],
+        [{ name: 'a', value: 42 }, { name: 'b', value: '🦆🦆🦆🦆🦆🦆' }],
+        null,
+      ] as (readonly DuckDBStructEntry[])[]);
+      assertNestedValues<readonly DuckDBStructEntry[], DuckDBStructVector>(chunk, 40, DuckDBStructVector, [
+        (entries, n) => assert.deepStrictEqual(entries, [{ name: 'a', value: null }, { name: 'b', value: null }], n),
+        (entries, n) => {
+          assert.ok(entries, `${n} unexpectedly null`);
+          assert.strictEqual(entries.length, 2, n);
+          assert.strictEqual(entries[0].name, 'a', n);
+          assert.ok(isVectorType(entries[0].value, DuckDBIntegerVector));
+          assertVectorValues(entries[0].value, [42, 999, null, null, -42], n);
+          assert.strictEqual(entries[1].name, 'b', n);
+          assert.ok(isVectorType(entries[1].value, DuckDBVarCharVector));
+          assertVectorValues(entries[1].value, ['🦆🦆🦆🦆🦆🦆', 'goose', null, ''], n);
+        },
+        (entries, n) => assert.strictEqual(entries, null, n),
+      ]);
+      assertNestedValues<DuckDBVector<readonly DuckDBStructEntry[]>, DuckDBListVector<readonly DuckDBStructEntry[]>>(chunk, 41, DuckDBListVector, [
+        (v, n) => assertVectorValues(v, [], n),
+        (v, n) => assertVectorValues(v, [
+          [{ name: 'a', value: null }, { name: 'b', value: null }],
+          [{ name: 'a', value: 42 }, { name: 'b', value: '🦆🦆🦆🦆🦆🦆' }],
+          null,
+        ], n),
+        (v, n) => assert.strictEqual(v, null, n),
+      ]);
+      assertValues(chunk, 42, DuckDBMapVector, [
+        [],
+        [{ key: 'key1', value: '🦆🦆🦆🦆🦆🦆' }, { key: 'key2', value: 'goose' }],
+        null,
+      ] as (readonly DuckDBMapEntry[])[]);
+      assertValues(chunk, 43, DuckDBUnionVector, [
+        { tag: 'name', value: 'Frank' },
+        { tag: 'age', value: 5 },
+        null,
+      ]);
 
       chunk.dispose();
       result.dispose();
