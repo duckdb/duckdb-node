@@ -24,6 +24,7 @@ import {
   DuckDBIntegerVector,
   DuckDBIntervalType,
   DuckDBListType,
+  DuckDBListVector,
   DuckDBMapType,
   DuckDBPendingResultState,
   DuckDBResult,
@@ -56,9 +57,68 @@ import {
   DuckDBUnionType,
   DuckDBVarCharType,
   DuckDBVarCharVector,
+  DuckDBVector,
   configurationOptionDescriptions,
   version
 } from '../src';
+
+const N_2_7 = 2 ** 7;
+const N_2_8 = 2 ** 8;
+const N_2_15 = 2 ** 15;
+const N_2_16 = 2 ** 16;
+const N_2_31 = 2 ** 31;
+const N_2_32 = 2 ** 32;
+
+const BI_0 = BigInt(0);
+const BI_1 = BigInt(1);
+// const BI_2 = BigInt(2);
+const BI_24 = BigInt(24);
+const BI_60 = BigInt(60);
+const BI_1000 = BigInt(1000);
+const BI_2_63 = BI_1 << BigInt(63);
+const BI_2_64 = BI_1 << BigInt(64);
+const BI_2_127 = BI_1 << BigInt(127);
+// const BI_2_128 = BI_1 << BigInt(128);
+
+const MinInt8 = -N_2_7;
+const MaxInt8 = N_2_7 - 1;
+const MinUInt8 = 0;
+const MaxUInt8 = N_2_8 - 1;
+const MinInt16 = -N_2_15;
+const MaxInt16 = N_2_15 - 1;
+const MinUInt16 = 0;
+const MaxUInt16 = N_2_16 - 1;
+const MinInt32 = -N_2_31;
+const MaxInt32 = N_2_31 - 1;
+const MinUInt32 = 0;
+const MaxUInt32 = N_2_32 - 1;
+const MinInt64 = -BI_2_63;
+const MaxInt64 = BI_2_63 - BI_1;
+const MinUInt64 = BI_0;
+const MaxUInt64 = BI_2_64 - BI_1;
+const MinInt128 = -BI_2_127;
+const MaxInt128 = BI_2_127 - BI_1;
+const MinHugeInt = MinInt128 + BI_1; // This oddness was fixed in https://github.com/duckdb/duckdb/pull/9441, but we don't have that yet here
+const MinDate = MinInt32 + 2;
+const MaxDate = MaxInt32 - 1;
+const DateInf = MaxInt32;
+const MinTime = BI_0;
+const MaxTime = BI_24 * BI_60 * BI_60 * BI_1000 * BI_1000 - BI_1; // 86399999999
+const MinTS_S = BigInt(-9223372022400); // from test_all_types() select epoch(timestamp_s)::bigint;
+const MaxTS_S = BigInt(9223372036854);
+const MinTS_MS = MinTS_S * BI_1000;
+const MaxTS_MS = (MaxInt64 - BI_1) / BI_1000;
+const MinTS_US = MinTS_MS * BI_1000;
+const MaxTS_US = MaxInt64 - BI_1;
+const TS_US_Inf = MaxInt64;
+const MinTS_NS = MinInt64;
+const MaxTS_NS = MaxInt64 - BI_1;
+const MinFloat32 = Math.fround(-3.4028235e+38);
+const MaxFloat32 = Math.fround(3.4028235e+38);
+const MinFloat64 = -Number.MAX_VALUE;
+const MaxFloat64 = Number.MAX_VALUE;
+const MinUUID = MinInt128 + BI_1;
+const MaxUUID = MaxInt128;
 
 async function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => {
@@ -83,223 +143,81 @@ function assertColumns(result: DuckDBResult, expectedColumns: readonly ExpectedC
   assert.strictEqual(result.columnCount, expectedColumns.length, 'column count');
   for (let i = 0; i < expectedColumns.length; i++) {
     const { name, type } = expectedColumns[i];
-    // console.log(`${result.columnName(i)} ${result.columnTypeId(i)}`);
     assert.strictEqual(result.columnName(i), name, 'column name');
     assert.strictEqual(result.columnTypeId(i), type.typeId, `column type id (column: ${name})`);
     assert.deepStrictEqual(result.columnType(i), type, `column type (column: ${name})`);
   }
 }
 
-function assertNullValue(chunk: DuckDBDataChunk, columnIndex: number, rowIndex: number) {
+function getColumnVector<TValue, TVector extends DuckDBVector<TValue>>(
+  chunk: DuckDBDataChunk,
+  columnIndex: number,
+  vectorType: new (...args: any[]) => TVector
+): TVector {
   const column = chunk.getColumn(columnIndex);
-  const value = column.getItem(rowIndex);
-  assert.strictEqual(value, null);
-}
-
-function assertBooleanValue(chunk: DuckDBDataChunk, columnIndex: number, rowIndex: number, expectedValue: boolean) {
-  const column = chunk.getColumn(columnIndex);
-  if (!(column instanceof DuckDBBooleanVector)) {
-    assert.fail('column not boolean vector');
+  if (!(column instanceof vectorType)) {
+    assert.fail(`expected column ${columnIndex} to be a ${vectorType}`);
   }
-  const value = column.getItem(rowIndex);
-  assert.strictEqual(value, expectedValue);
+  return column;
 }
 
-function assertTinyIntValue(chunk: DuckDBDataChunk, columnIndex: number, rowIndex: number, expectedValue: number) {
-  const column = chunk.getColumn(columnIndex);
-  if (!(column instanceof DuckDBTinyIntVector)) {
-    assert.fail('column not tinyint vector');
+function assertVectorValues<T>(vector: DuckDBVector<T> | null, values: readonly T[], vectorName: string) {
+  if (!vector) {
+    assert.fail(`${vectorName} unexpectedly null`);
   }
-  const value = column.getItem(rowIndex);
-  assert.strictEqual(value, expectedValue);
-}
-
-function assertSmallIntValue(chunk: DuckDBDataChunk, columnIndex: number, rowIndex: number, expectedValue: number) {
-  const column = chunk.getColumn(columnIndex);
-  if (!(column instanceof DuckDBSmallIntVector)) {
-    assert.fail('column not smallint vector');
+  assert.strictEqual(vector.itemCount, values.length,
+      `expected vector ${vectorName} item count to be ${values.length} but found ${vector.itemCount}`);
+  for (let i = 0; i < values.length; i++) {
+    const actual: T | null = vector.getItem(i);
+    const expected = values[i];
+    assert.deepStrictEqual(actual, expected,
+      `expected vector ${vectorName}[${i}] to be ${expected} but found ${actual}`);
   }
-  const value = column.getItem(rowIndex);
-  assert.strictEqual(value, expectedValue);
 }
 
-function assertIntegerValue(chunk: DuckDBDataChunk, columnIndex: number, rowIndex: number, expectedValue: number) {
-  const column = chunk.getColumn(columnIndex);
-  if (!(column instanceof DuckDBIntegerVector)) {
-    assert.fail('column not integer vector');
+function assertNestedVectorValues<T>(
+  vector: DuckDBVector<T> | null,
+  checkVectorValueFns: ((value: T | null, valueName: string) => void)[],
+  vectorName: string,
+) {
+  if (!vector) {
+    assert.fail(`${vectorName} unexpectedly null`);
   }
-  const value = column.getItem(rowIndex);
-  assert.strictEqual(value, expectedValue);
-}
-
-function assertBigIntValue(chunk: DuckDBDataChunk, columnIndex: number, rowIndex: number, expectedValue: bigint) {
-  const column = chunk.getColumn(columnIndex);
-  if (!(column instanceof DuckDBBigIntVector)) {
-    assert.fail('column not bigint vector');
+  assert.strictEqual(vector.itemCount, checkVectorValueFns.length,
+      `expected vector ${vectorName} item count to be ${checkVectorValueFns.length} but found ${vector.itemCount}`);
+  for (let i = 0; i < vector.itemCount; i++) {
+    checkVectorValueFns[i](vector.getItem(i), `${vectorName}[${i}]`)
   }
-  const value = column.getItem(rowIndex);
-  assert.strictEqual(value, expectedValue);
 }
 
-function assertUTinyIntValue(chunk: DuckDBDataChunk, columnIndex: number, rowIndex: number, expectedValue: number) {
-  const column = chunk.getColumn(columnIndex);
-  if (!(column instanceof DuckDBUTinyIntVector)) {
-    assert.fail('column not utinyint vector');
-  }
-  const value = column.getItem(rowIndex);
-  assert.strictEqual(value, expectedValue);
+function assertValues<TValue, TVector extends DuckDBVector<TValue>>(
+  chunk: DuckDBDataChunk,
+  columnIndex: number,
+  vectorType: new (...args: any[]) => TVector,
+  values: readonly (TValue | null)[],
+) {
+  const vector = getColumnVector(chunk, columnIndex, vectorType);
+  assertVectorValues(vector, values, `${columnIndex}`);
 }
 
-function assertUSmallIntValue(chunk: DuckDBDataChunk, columnIndex: number, rowIndex: number, expectedValue: number) {
-  const column = chunk.getColumn(columnIndex);
-  if (!(column instanceof DuckDBUSmallIntVector)) {
-    assert.fail('column not usmallint vector');
-  }
-  const value = column.getItem(rowIndex);
-  assert.strictEqual(value, expectedValue);
+function assertNestedValues<TValue, TVector extends DuckDBVector<TValue>>(
+  chunk: DuckDBDataChunk,
+  columnIndex: number,
+  vectorType: new (...args: any[]) => TVector,
+  checkVectorValueFns: ((value: TValue | null, valueName: string) => void)[],
+) {
+  const vector = getColumnVector(chunk, columnIndex, vectorType);
+  assertNestedVectorValues(vector, checkVectorValueFns, `col${columnIndex}`);
 }
 
-function assertUIntegerValue(chunk: DuckDBDataChunk, columnIndex: number, rowIndex: number, expectedValue: number) {
-  const column = chunk.getColumn(columnIndex);
-  if (!(column instanceof DuckDBUIntegerVector)) {
-    assert.fail('column not uinteger vector');
-  }
-  const value = column.getItem(rowIndex);
-  assert.strictEqual(value, expectedValue);
+const textEncoder = new TextEncoder();
+function blobFromString(str: string): Uint8Array {
+  return Buffer.from(textEncoder.encode(str));
 }
 
-function assertUBigIntValue(chunk: DuckDBDataChunk, columnIndex: number, rowIndex: number, expectedValue: bigint) {
-  const column = chunk.getColumn(columnIndex);
-  if (!(column instanceof DuckDBUBigIntVector)) {
-    assert.fail('column not ubigint vector');
-  }
-  const value = column.getItem(rowIndex);
-  assert.strictEqual(value, expectedValue);
+function bigints(start: bigint, end: bigint) {
+  return Array.from({ length: Number(end - start) + 1 }).map((_, i) => start + BigInt(i));
 }
-
-function assertFloatValue(chunk: DuckDBDataChunk, columnIndex: number, rowIndex: number, expectedValue: number) {
-  const column = chunk.getColumn(columnIndex);
-  if (!(column instanceof DuckDBFloatVector)) {
-    assert.fail('column not float vector');
-  }
-  const value = column.getItem(rowIndex);
-  assert.strictEqual(value, expectedValue);
-}
-
-function assertDoubleValue(chunk: DuckDBDataChunk, columnIndex: number, rowIndex: number, expectedValue: number) {
-  const column = chunk.getColumn(columnIndex);
-  if (!(column instanceof DuckDBDoubleVector)) {
-    assert.fail('column not double vector');
-  }
-  const value = column.getItem(rowIndex);
-  assert.strictEqual(value, expectedValue);
-}
-
-function assertTimestampValue(chunk: DuckDBDataChunk, columnIndex: number, rowIndex: number, expectedValue: bigint) {
-  const column = chunk.getColumn(columnIndex);
-  if (!(column instanceof DuckDBTimestampVector)) {
-    assert.fail('column not timestamp vector');
-  }
-  const value = column.getItem(rowIndex);
-  assert.strictEqual(value, expectedValue);
-}
-
-function assertDateValue(chunk: DuckDBDataChunk, columnIndex: number, rowIndex: number, expectedValue: number) {
-  const column = chunk.getColumn(columnIndex);
-  if (!(column instanceof DuckDBDateVector)) {
-    assert.fail('column not date vector');
-  }
-  const value = column.getItem(rowIndex);
-  assert.strictEqual(value, expectedValue);
-}
-
-function assertTimeValue(chunk: DuckDBDataChunk, columnIndex: number, rowIndex: number, expectedValue: bigint) {
-  const column = chunk.getColumn(columnIndex);
-  if (!(column instanceof DuckDBTimeVector)) {
-    assert.fail('column not time vector');
-  }
-  const value = column.getItem(rowIndex);
-  assert.strictEqual(value, expectedValue);
-}
-
-// TODO: INTERVAL
-
-function assertHugeIntValue(chunk: DuckDBDataChunk, columnIndex: number, rowIndex: number, expectedValue: bigint) {
-  const column = chunk.getColumn(columnIndex);
-  if (!(column instanceof DuckDBHugeIntVector)) {
-    assert.fail('column not hugeint vector');
-  }
-  const value = column.getItem(rowIndex);
-  assert.strictEqual(value, expectedValue);
-}
-
-function assertVarCharValue(chunk: DuckDBDataChunk, columnIndex: number, rowIndex: number, expectedValue: string) {
-  const column = chunk.getColumn(columnIndex);
-  if (!(column instanceof DuckDBVarCharVector)) {
-    assert.fail('column not varchar vector');
-  }
-  const value = column.getItem(rowIndex);
-  assert.strictEqual(value, expectedValue);
-}
-
-function assertBlobValue(chunk: DuckDBDataChunk, columnIndex: number, rowIndex: number, expectedValue: Uint8Array) {
-  const column = chunk.getColumn(columnIndex);
-  if (!(column instanceof DuckDBBlobVector)) {
-    assert.fail('column not blob vector');
-  }
-  const value = column.getItem(rowIndex);
-  assert.deepStrictEqual(value, expectedValue);
-}
-
-// TODO: DECIMAL
-
-function assertTimestampSecondsValue(chunk: DuckDBDataChunk, columnIndex: number, rowIndex: number, expectedValue: bigint) {
-  const column = chunk.getColumn(columnIndex);
-  if (!(column instanceof DuckDBTimestampSecondsVector)) {
-    assert.fail('column not timestamp seconds vector');
-  }
-  const value = column.getItem(rowIndex);
-  assert.strictEqual(value, expectedValue);
-}
-
-function assertTimestampMillisecondsValue(chunk: DuckDBDataChunk, columnIndex: number, rowIndex: number, expectedValue: bigint) {
-  const column = chunk.getColumn(columnIndex);
-  if (!(column instanceof DuckDBTimestampMillisecondsVector)) {
-    assert.fail('column not timestamp milliseconds vector');
-  }
-  const value = column.getItem(rowIndex);
-  assert.strictEqual(value, expectedValue);
-}
-
-function assertTimestampNanosecondsValue(chunk: DuckDBDataChunk, columnIndex: number, rowIndex: number, expectedValue: bigint) {
-  const column = chunk.getColumn(columnIndex);
-  if (!(column instanceof DuckDBTimestampNanosecondsVector)) {
-    assert.fail('column not timestamp nanoseconds vector');
-  }
-  const value = column.getItem(rowIndex);
-  assert.strictEqual(value, expectedValue);
-}
-
-// TODO: ENUM
-
-// TODO: LIST
-
-// TODO: STRUCT
-
-// TODO: MAP
-
-function assertUUIDValue(chunk: DuckDBDataChunk, columnIndex: number, rowIndex: number, expectedValue: bigint) {
-  const column = chunk.getColumn(columnIndex);
-  if (!(column instanceof DuckDBUUIDVector)) {
-    assert.fail('column not uuid vector');
-  }
-  const value = column.getItem(rowIndex);
-  assert.strictEqual(value, expectedValue);
-}
-
-// TODO: UNION
-
-// TODO: BIT
 
 describe('api', () => {
   it('should expose version', () => {
@@ -320,7 +238,7 @@ describe('api', () => {
     const chunk = result.getChunk(0);
     assert.strictEqual(chunk.columnCount, 1);
     assert.strictEqual(chunk.rowCount, 1);
-    assertIntegerValue(chunk, 0, 0, 42);
+    assertValues(chunk, 0, DuckDBIntegerVector, [42]);
     chunk.dispose();
     result.dispose();
     connection.dispose();
@@ -350,10 +268,10 @@ describe('api', () => {
       const chunk = result.getChunk(0);
       assert.strictEqual(chunk.columnCount, 4);
       assert.strictEqual(chunk.rowCount, 1);
-      assertIntegerValue(chunk, 0, 0, 10);
-      assertVarCharValue(chunk, 1, 0, 'abc');
-      assertBooleanValue(chunk, 2, 0, true);
-      assertNullValue(chunk, 3, 0);
+      assertValues(chunk, 0, DuckDBIntegerVector, [10]);
+      assertValues(chunk, 1, DuckDBVarCharVector, ['abc']);
+      assertValues(chunk, 2, DuckDBBooleanVector, [true]);
+      assertValues<number, DuckDBIntegerVector>(chunk, 3, DuckDBIntegerVector, [null]);
       chunk.dispose();
       result.dispose();
       prepared.dispose();
@@ -382,9 +300,7 @@ describe('api', () => {
       const chunk = result.getChunk(0);
       assert.strictEqual(chunk.columnCount, 1);
       assert.strictEqual(chunk.rowCount, 3);
-      assertIntegerValue(chunk, 0, 0, -2147483648);
-      assertIntegerValue(chunk, 0, 1, 2147483647);
-      assertNullValue(chunk, 0, 2);
+      assertValues(chunk, 0, DuckDBIntegerVector, [MinInt32, MaxInt32, null]);
       chunk.dispose();
       result.dispose();
       pending.dispose();
@@ -408,13 +324,11 @@ describe('api', () => {
       }
       currentChunk.dispose(); // this is the empty chunk that signifies the end of the stream
       assert.strictEqual(chunks.length, 5); // ceil(10000 / 2048) = 5
-      assert.strictEqual(chunks[0].rowCount, 2048);
-      assert.strictEqual(chunks[1].rowCount, 2048);
-      assert.strictEqual(chunks[2].rowCount, 2048);
-      assert.strictEqual(chunks[3].rowCount, 2048);
-      assert.strictEqual(chunks[4].rowCount, 1808); // 10000 - 2048 * 4 = 1808
-      assertBigIntValue(chunks[4], 0, 0, BigInt(8192)); // 2048 * 4 = 8192
-      assertBigIntValue(chunks[4], 0, 1807, BigInt(9999));
+      assertValues(chunks[0], 0, DuckDBBigIntVector, bigints(BigInt(0), BigInt(2048-1)));
+      assertValues(chunks[1], 0, DuckDBBigIntVector, bigints(BigInt(2048), BigInt(2048*2-1)));
+      assertValues(chunks[2], 0, DuckDBBigIntVector, bigints(BigInt(2048*2), BigInt(2048*3-1)));
+      assertValues(chunks[3], 0, DuckDBBigIntVector, bigints(BigInt(2048*3), BigInt(2048*4-1)));
+      assertValues(chunks[4], 0, DuckDBBigIntVector, bigints(BigInt(2048*4), BigInt(9999)));
       for (const chunk of chunks) {
         chunk.dispose();
       }
@@ -490,81 +404,97 @@ describe('api', () => {
       assert.strictEqual(chunk.columnCount, 44);
       assert.strictEqual(chunk.rowCount, 3);
 
-      assertBooleanValue(chunk, 0, 0, false);
-      assertBooleanValue(chunk, 0, 1, true);
-      assertNullValue(chunk, 0, 2);
-      assertTinyIntValue(chunk, 1, 0, -128);
-      assertTinyIntValue(chunk, 1, 1, 127);
-      assertNullValue(chunk, 1, 2);
-      assertSmallIntValue(chunk, 2, 0, -32768);
-      assertSmallIntValue(chunk, 2, 1, 32767);
-      assertNullValue(chunk, 2, 2);
-      assertIntegerValue(chunk, 3, 0, -2147483648);
-      assertIntegerValue(chunk, 3, 1, 2147483647);
-      assertNullValue(chunk, 3, 2);
-      assertBigIntValue(chunk, 4, 0, -(BigInt(1)<<BigInt(63)));
-      assertBigIntValue(chunk, 4, 1, (BigInt(1)<<BigInt(63))-BigInt(1));
-      assertNullValue(chunk, 4, 2);
-      assertHugeIntValue(chunk, 5, 0, -((BigInt(1)<<BigInt(127))-BigInt(1)));
-      assertHugeIntValue(chunk, 5, 1, (BigInt(1)<<BigInt(127))-BigInt(1));
-      assertNullValue(chunk, 5, 2);
-      assertUTinyIntValue(chunk, 6, 0, 0);
-      assertUTinyIntValue(chunk, 6, 1, 255);
-      assertNullValue(chunk, 6, 2);
-      assertUSmallIntValue(chunk, 7, 0, 0);
-      assertUSmallIntValue(chunk, 7, 1, 65535);
-      assertNullValue(chunk, 7, 2);
-      assertUIntegerValue(chunk, 8, 0, 0);
-      assertUIntegerValue(chunk, 8, 1, 4294967295);
-      assertNullValue(chunk, 8, 2);
-      assertUBigIntValue(chunk, 9, 0, BigInt(0));
-      assertUBigIntValue(chunk, 9, 1, (BigInt(1)<<BigInt(64))-BigInt(1));
-      assertNullValue(chunk, 9, 2);
-      assertDateValue(chunk, 10, 0, -(2 ** 31) + 2);
-      assertDateValue(chunk, 10, 1, 2 ** 31 - 2);
-      assertNullValue(chunk, 10, 2);
-      assertTimeValue(chunk, 11, 0, BigInt(0));
-      assertTimeValue(chunk, 11, 1, BigInt(86399999999));
-      assertNullValue(chunk, 11, 2);
-      assertTimestampValue(chunk, 12, 0, BigInt(-9223372022400)*BigInt(1000000));
-      assertTimestampValue(chunk, 12, 1, (BigInt(1)<<BigInt(63))-BigInt(2));
-      assertNullValue(chunk, 12, 2);
-      assertTimestampSecondsValue(chunk, 13, 0, BigInt(-9223372022400));
-      assertTimestampSecondsValue(chunk, 13, 1, BigInt(9223372036854));
-      assertNullValue(chunk, 13, 2);
-      assertTimestampMillisecondsValue(chunk, 14, 0, BigInt(-9223372022400)*BigInt(1000));
-      assertTimestampMillisecondsValue(chunk, 14, 1, ((BigInt(1)<<BigInt(63))-BigInt(2)) / BigInt(1000));
-      assertNullValue(chunk, 14, 2);
-      assertTimestampNanosecondsValue(chunk, 15, 0, -(BigInt(1)<<BigInt(63)));
-      assertTimestampNanosecondsValue(chunk, 15, 1, (BigInt(1)<<BigInt(63))-BigInt(2));
-      assertNullValue(chunk, 15, 2);
+      assertValues(chunk, 0, DuckDBBooleanVector, [false, true, null]);
+      assertValues(chunk, 1, DuckDBTinyIntVector, [MinInt8, MaxInt8, null]);
+      assertValues(chunk, 2, DuckDBSmallIntVector, [MinInt16, MaxInt16, null]);
+      assertValues(chunk, 3, DuckDBIntegerVector, [MinInt32, MaxInt32, null]);
+      assertValues(chunk, 4, DuckDBBigIntVector, [MinInt64, MaxInt64, null]);
+      assertValues(chunk, 5, DuckDBHugeIntVector, [MinHugeInt, MaxInt128, null]);
+      assertValues(chunk, 6, DuckDBUTinyIntVector, [MinUInt8, MaxUInt8, null]);
+      assertValues(chunk, 7, DuckDBUSmallIntVector, [MinUInt16, MaxUInt16, null]);
+      assertValues(chunk, 8, DuckDBUIntegerVector, [MinUInt32, MaxUInt32, null]);
+      assertValues(chunk, 9, DuckDBUBigIntVector, [MinUInt64, MaxUInt64, null]);
+      assertValues(chunk, 10, DuckDBDateVector, [MinDate, MaxDate, null]);
+      assertValues(chunk, 11, DuckDBTimeVector, [MinTime, MaxTime, null]);
+      assertValues(chunk, 12, DuckDBTimestampVector, [MinTS_US, MaxTS_US, null]);
+      assertValues(chunk, 13, DuckDBTimestampSecondsVector, [MinTS_S, MaxTS_S, null]);
+      assertValues(chunk, 14, DuckDBTimestampMillisecondsVector, [MinTS_MS, MaxTS_MS, null]);
+      assertValues(chunk, 15, DuckDBTimestampNanosecondsVector, [MinTS_NS, MaxTS_NS, null]);
       // TODO: TIME_TZ
-      assertTimestampValue(chunk, 17, 0, BigInt(-9223372022400)*BigInt(1000000));
-      assertTimestampValue(chunk, 17, 1, (BigInt(1)<<BigInt(63))-BigInt(2));
-      assertNullValue(chunk, 17, 2);
-      assertFloatValue(chunk, 18, 0, Math.fround(-3.4028235e+38));
-      assertFloatValue(chunk, 18, 1, Math.fround(3.4028235e+38));
-      assertNullValue(chunk, 18, 2);
-      assertDoubleValue(chunk, 19, 0, -Number.MAX_VALUE);
-      assertDoubleValue(chunk, 19, 1, Number.MAX_VALUE);
-      assertNullValue(chunk, 19, 2);
-      // TODO: DECIMAL
-      assertUUIDValue(chunk, 24, 0, -((BigInt(1)<<BigInt(127))-BigInt(1)));
-      assertUUIDValue(chunk, 24, 1, (BigInt(1)<<BigInt(127))-BigInt(1));
-      assertNullValue(chunk, 24, 2);
+      assertValues(chunk, 17, DuckDBTimestampVector, [MinTS_US, MaxTS_US, null]);
+      assertValues(chunk, 18, DuckDBFloatVector, [MinFloat32, MaxFloat32, null]);
+      assertValues(chunk, 19, DuckDBDoubleVector, [MinFloat64, MaxFloat64, null]);
+      // TODO: DECIMAL (int16)
+      // TODO: DECIMAL (int32)
+      // TODO: DECIMAL (int64)
+      // TODO: DECIMAL (int128)
+      assertValues(chunk, 24, DuckDBUUIDVector, [MinUUID, MaxUUID, null]);
       // TODO: INTERVAL
-      assertVarCharValue(chunk, 26, 0, "🦆🦆🦆🦆🦆🦆");
-      assertVarCharValue(chunk, 26, 1, "goo\0se");
-      assertNullValue(chunk, 26, 2);
-      assertBlobValue(chunk, 27, 0, Buffer.from(new TextEncoder().encode("thisisalongblob\x00withnullbytes")));
-      assertBlobValue(chunk, 27, 1, Buffer.from(new TextEncoder().encode("\x00\x00\x00a")));
-      assertNullValue(chunk, 27, 2);
+      assertValues(chunk, 26, DuckDBVarCharVector, ["🦆🦆🦆🦆🦆🦆", "goo\0se", null]);
+      assertValues(chunk, 27, DuckDBBlobVector, [
+        blobFromString("thisisalongblob\x00withnullbytes"),
+        blobFromString("\x00\x00\x00a"),
+        null,
+      ]);
       // TODO: BIT
-      // TODO: ENUMs
+      // TODO: ENUM (small)
+      // TODO: ENUM (medium)
+      // TODO: ENUM (large)
       // TODO: LISTs <-
-      // TODO: STRUCTs <-
+      assertNestedValues<DuckDBVector<number>, DuckDBListVector<number>>(chunk, 32, DuckDBListVector, [
+        (v, n) => assertVectorValues(v, [], n),
+        (v, n) => assertVectorValues(v, [42, 999, null, null, -42], n),
+        (v, n) => assert.strictEqual(v, null, n),
+      ]);
+      assertNestedValues<DuckDBVector<number>, DuckDBListVector<number>>(chunk, 33, DuckDBListVector, [
+        (v, n) => assertVectorValues(v, [], n),
+        (v, n) => assertVectorValues(v, [42.0, NaN, Infinity, -Infinity, null, -42.0], n),
+        (v, n) => assert.strictEqual(v, null, n),
+      ]);
+      assertNestedValues<DuckDBVector<number>, DuckDBListVector<number>>(chunk, 34, DuckDBListVector, [
+        (v, n) => assertVectorValues(v, [], n),
+        (v, n) => assertVectorValues(v, [0, DateInf, -DateInf, null, 19124], n),
+        (v, n) => assert.strictEqual(v, null, n),
+      ]);
+      // 1652372625 is 2022-05-12 16:23:45
+      assertNestedValues<DuckDBVector<bigint>, DuckDBListVector<bigint>>(chunk, 35, DuckDBListVector, [
+        (v, n) => assertVectorValues(v, [], n),
+        (v, n) => assertVectorValues(v, [BI_0, TS_US_Inf, -TS_US_Inf, null, BigInt(1652372625)*BI_1000*BI_1000], n),
+        (v, n) => assert.strictEqual(v, null, n),
+      ]);
+      // 1652397825 = 1652372625 + 25200, 25200 = 7 * 60 * 60 = 7 hours in seconds
+      // This 7 hour difference is hard coded into test_all_types (value is 2022-05-12 16:23:45-07)
+      assertNestedValues<DuckDBVector<bigint>, DuckDBListVector<bigint>>(chunk, 36, DuckDBListVector, [
+        (v, n) => assertVectorValues(v, [], n),
+        (v, n) => assertVectorValues(v, [BI_0, TS_US_Inf, -TS_US_Inf, null, BigInt(1652397825)*BI_1000*BI_1000], n),
+        (v, n) => assert.strictEqual(v, null, n),
+      ]);
+      // Note that the string "goose" in varchar_array does NOT have an embedded null character.
+      assertNestedValues<DuckDBVector<string>, DuckDBListVector<string>>(chunk, 37, DuckDBListVector, [
+        (v, n) => assertVectorValues(v, [], n),
+        (v, n) => assertVectorValues(v, ["🦆🦆🦆🦆🦆🦆", "goose", null, ""], n),
+        (v, n) => assert.strictEqual(v, null, n),
+      ]);
+      assertNestedValues<DuckDBVector<DuckDBVector<number>>, DuckDBListVector<DuckDBVector<number>>>(chunk, 38, DuckDBListVector, [
+        (v, n) => {
+          assert.ok(v, `${n} unexpectedly null`);
+          assert.strictEqual(v.itemCount, 0, `${n} not empty`);
+        },
+        (v, n) => assertNestedVectorValues(v, [
+          (vv, nn) => assertVectorValues(vv, [], nn),
+          (vv, nn) => assertVectorValues(vv, [42, 999, null, null, -42], nn),
+          (vv, nn) => assert.strictEqual(vv, null, nn),
+          (vv, nn) => assertVectorValues(vv, [], nn),
+          (vv, nn) => assertVectorValues(vv, [42, 999, null, null, -42], nn),
+        ], n),
+        (v, n) => assert.strictEqual(v, null, n),
+      ]);
+      // TODO: STRUCT <-
+      // TODO: struct_of_arrays <-
+      // TODO: array_of_structs <-
       // TODO: MAP <-
       // TODO: UNION <-
+
       chunk.dispose();
       result.dispose();
     });

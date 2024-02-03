@@ -69,7 +69,7 @@ class DuckDBValidity {
     return new DuckDBValidity(validity_pointer, offset);
   }
   public itemValid(itemIndex: number): boolean {
-    return ddb.duckdb_validity_row_is_valid(this.validity_pointer, itemIndex - this.offset);
+    return ddb.duckdb_validity_row_is_valid(this.validity_pointer, this.offset + itemIndex);
   }
   public slice(offset: number): DuckDBValidity {
     return new DuckDBValidity(this.validity_pointer, this.offset + offset);
@@ -556,30 +556,33 @@ export class DuckDBTimeVector extends DuckDBVector<bigint> {
 export class DuckDBHugeIntVector extends DuckDBVector<bigint> {
   private readonly dataView: DataView;
   private readonly validity: DuckDBValidity;
-  constructor(dataView: DataView, validity: DuckDBValidity) {
+  private readonly _itemCount: number;
+  constructor(dataView: DataView, validity: DuckDBValidity, itemCount: number) {
     super();
     this.dataView = dataView;
     this.validity = validity;
+    this._itemCount = itemCount;
   }
   static fromRawVector(vector: ddb.duckdb_vector, itemCount: number): DuckDBHugeIntVector {
-    const data = vectorData(vector, itemCount << 4);
+    const data = vectorData(vector, itemCount * 16);
     const dataView = new DataView(data.buffer, data.byteOffset, data.byteLength);
     const validity = DuckDBValidity.fromVector(vector);
-    return new DuckDBHugeIntVector(dataView, validity);
+    return new DuckDBHugeIntVector(dataView, validity, itemCount);
   }
   public override get type(): DuckDBHugeIntType {
     return DuckDBHugeIntType.instance;
   }
   public override get itemCount(): number {
-    return this.dataView.byteLength >> 4;
+    return this._itemCount;
   }
   public override getItem(itemIndex: number): bigint | null {
-    return this.validity.itemValid(itemIndex) ? getInt128(this.dataView, itemIndex << 4) : null;
+    return this.validity.itemValid(itemIndex) ? getInt128(this.dataView, itemIndex * 16) : null;
   }
   public override slice(offset: number, length: number): DuckDBHugeIntVector {
     return new DuckDBHugeIntVector(
-      new DataView(this.dataView.buffer, offset << 4, length << 4),
+      new DataView(this.dataView.buffer, offset * 16, length * 16),
       this.validity.slice(offset),
+      length,
     );
   }
 }
@@ -721,17 +724,25 @@ export class DuckDBTimestampNanosecondsVector extends DuckDBVector<bigint> {
 
 // TODO: ENUM
 
-export class DuckDBListVector extends DuckDBVector<DuckDBVector<any>> {
+export class DuckDBListVector<TValue = any> extends DuckDBVector<DuckDBVector<TValue>> {
   private readonly listType: DuckDBListType;
   private readonly entryData: BigUint64Array;
   private readonly validity: DuckDBValidity;
-  private readonly childData: DuckDBVector<any>;
-  constructor(listType: DuckDBListType, entryData: BigUint64Array, validity: DuckDBValidity, childData: DuckDBVector<any>) {
+  private readonly childData: DuckDBVector<TValue>;
+  private readonly _itemCount: number;
+  constructor(
+    listType: DuckDBListType,
+    entryData: BigUint64Array,
+    validity: DuckDBValidity,
+    childData: DuckDBVector<TValue>,
+    itemCount: number,
+  ) {
     super();
     this.listType = listType;
     this.entryData = entryData;
     this.validity = validity;
     this.childData = childData;
+    this._itemCount = itemCount;
   }
   static fromRawVector(listType: DuckDBListType, vector: ddb.duckdb_vector, itemCount: number): DuckDBListVector {
     const data = vectorData(vector, itemCount * BigUint64Array.BYTES_PER_ELEMENT * 2);
@@ -743,15 +754,15 @@ export class DuckDBListVector extends DuckDBVector<DuckDBVector<any>> {
     const child_vector_size = ddb.duckdb_list_vector_get_size(vector);
     const childData = DuckDBVector.create(child_vector, child_vector_size, listType.valueType);
 
-    return new DuckDBListVector(listType, entryData, validity, childData);
+    return new DuckDBListVector(listType, entryData, validity, childData, itemCount);
   }
   public override get type(): DuckDBListType {
     return this.listType;
   }
   public override get itemCount(): number {
-    return this.entryData.length >> 1;
+    return this._itemCount;
   }
-  public override getItem(itemIndex: number): DuckDBVector<any> | null {
+  public override getItem(itemIndex: number): DuckDBVector<TValue> | null {
     if (!this.validity.itemValid(itemIndex)) {
       return null;
     }
@@ -760,13 +771,14 @@ export class DuckDBListVector extends DuckDBVector<DuckDBVector<any>> {
     const length = Number(this.entryData[entryDataStartIndex + 1]);
     return this.childData.slice(offset, length);
   }
-  public override slice(offset: number, length: number): DuckDBListVector {
+  public override slice(offset: number, length: number): DuckDBListVector<TValue> {
     const entryDataStartIndex = offset * 2;
-    return new DuckDBListVector(
+    return new DuckDBListVector<TValue>(
       this.listType,
       this.entryData.slice(entryDataStartIndex, entryDataStartIndex + length * 2),
       this.validity.slice(offset),
-      this.childData.slice(offset, offset + length),
+      this.childData,
+      length,
     );
   }
 }
@@ -894,30 +906,33 @@ export class DuckDBMapVector extends DuckDBVector<readonly DuckDBMapEntry[]> {
 export class DuckDBUUIDVector extends DuckDBVector<bigint> {
   private readonly dataView: DataView;
   private readonly validity: DuckDBValidity;
-  constructor(dataView: DataView, validity: DuckDBValidity) {
+  private readonly _itemCount: number;
+  constructor(dataView: DataView, validity: DuckDBValidity, itemCount: number) {
     super();
     this.dataView = dataView;
     this.validity = validity;
+    this._itemCount = itemCount;
   }
   static fromRawVector(vector: ddb.duckdb_vector, itemCount: number): DuckDBUUIDVector {
-    const data = vectorData(vector, itemCount << 4);
+    const data = vectorData(vector, itemCount * 16);
     const dataView = new DataView(data.buffer, data.byteOffset, data.byteLength);
     const validity = DuckDBValidity.fromVector(vector);
-    return new DuckDBUUIDVector(dataView, validity);
+    return new DuckDBUUIDVector(dataView, validity, itemCount);
   }
   public override get type(): DuckDBUUIDType {
     return DuckDBUUIDType.instance;
   }
   public override get itemCount(): number {
-    return this.dataView.byteLength >> 4;
+    return this._itemCount;
   }
   public override getItem(itemIndex: number): bigint | null {
-    return this.validity.itemValid(itemIndex) ? getInt128(this.dataView, itemIndex << 4) : null;
+    return this.validity.itemValid(itemIndex) ? getInt128(this.dataView, itemIndex * 16) : null;
   }
   public override slice(offset: number, length: number): DuckDBUUIDVector {
     return new DuckDBUUIDVector(
-      new DataView(this.dataView.buffer, offset << 4, length << 4),
+      new DataView(this.dataView.buffer, offset * 16, length * 16),
       this.validity.slice(offset),
+      length,
     );
   }
 }
