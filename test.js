@@ -17,8 +17,18 @@ function convert_validity(vector, n) {
     return res;
 }
 
+function convert_validity_native(vector, n) {
+    const validity = duckdb_native.duckdb_vector_get_validity(vector);
+    const res = Array.from({ length: n }).fill(true);
+    for (let row_idx = 0; row_idx < n; row_idx++) {
+        res[row_idx] = duckdb_native.duckdb_validity_row_is_valid(validity, row_idx);
+    }
+    return res;
+}
+
+
 function convert_primitive_vector(vector, n, array_type) {
-    const validity = convert_validity(vector, n);
+    const validity = convert_validity_native(vector, n);
     const data_buf =
         duckdb_native.copy_buffer(duckdb_native.duckdb_vector_get_data(vector), array_type.BYTES_PER_ELEMENT * n);
     const typed_data_arr = data_buf ? new array_type(data_buf.buffer) : null;
@@ -217,14 +227,14 @@ async function test() {
     //
 
     const prepare_status =
-        await duckdb_native.duckdb_prepare(con, "SELECT range::DECIMAL(10,4) asdf FROM range(?)", prepared_statement);
+        await duckdb_native.duckdb_prepare(con, "SELECT CASE WHEN range % 2 = 0 THEN range ELSE NULL END asdf FROM range(?)", prepared_statement);
 
     if (prepare_status != duckdb_native.duckdb_state.DuckDBSuccess) {
         console.error(duckdb_native.duckdb_prepare_error(prepared_statement));
         duckdb_native.duckdb_destroy_prepare(prepared_statement);
         return;
     }
-    const bind_state = duckdb_native.duckdb_bind_int64(prepared_statement, 1, 4000);
+    const bind_state = duckdb_native.duckdb_bind_int64(prepared_statement, 1, 1000000);
     if (bind_state != duckdb_native.duckdb_state.DuckDBSuccess) {
         console.error("Failed to bind parameter");
         return;
@@ -266,6 +276,10 @@ async function test() {
         console.log(colname, ':', duckdb_native.duckdb_column_type(result, col_idx));
     }
 
+    const start = Date.now();
+
+    var sum = BigInt(0);
+
     // now consume result set stream
     while (true) {
         const chunk = await duckdb_native.duckdb_stream_fetch_chunk(result);
@@ -277,11 +291,17 @@ async function test() {
 
         // loop over columns and interpret vector bytes
         for (let col_idx = 0; col_idx < duckdb_native.duckdb_data_chunk_get_column_count(chunk); col_idx++) {
-            console.log(convert_vector(duckdb_native.duckdb_data_chunk_get_vector(chunk, col_idx), n));
+           const vec = convert_vector(duckdb_native.duckdb_data_chunk_get_vector(chunk, col_idx), n);
+           sum += vec[0];
         }
 
         duckdb_native.duckdb_destroy_data_chunk(chunk);
     }
+
+    const end = Date.now();
+    console.log(sum);
+    console.log(`Execution time: ${end - start} ms`);
+
 
     // clean up again
     duckdb_native.duckdb_destroy_result(result);

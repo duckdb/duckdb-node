@@ -25,6 +25,31 @@ static Napi::Value OutGetString(const Napi::CallbackInfo &info) {
 	return duckdb_node::ValueConversion::ToJS(env, *pp);
 }
 
+
+static Napi::Value AddFinalizer(const Napi::CallbackInfo &info) {
+    Napi::Env env = info.Env();
+    Napi::EscapableHandleScope scope(env);
+    auto obj =  duckdb_node::GetValue(info, 0).As<Napi::Object>();
+    auto fun = duckdb_node::GetValue(info, 1).As<Napi::Function>();
+
+    auto fun_ref = new Napi::FunctionReference();
+    *fun_ref = Napi::Persistent(fun);
+    fun_ref->Ref();
+    fun_ref->SuppressDestruct();
+
+  obj.AddFinalizer(
+                   [](Napi::Env env, Napi::FunctionReference* fun_ref) {
+                        auto val = fun_ref->Call({});
+
+                      // auto fun = wrap_ref->Get("fun").As<Napi::Function>();
+
+                       //ref->Call({});
+    }, fun_ref) ;
+
+}
+
+
+
 // strings are the only types with pointers in them
 static Napi::Value ConvertStringVector(const Napi::CallbackInfo &info) {
 	Napi::Env env = info.Env();
@@ -79,7 +104,10 @@ public:
 		exports.Set(Napi::String::New(env, "out_get_string"), Napi::Function::New<OutGetString>(env));
 		exports.Set(Napi::String::New(env, "convert_string_vector"), Napi::Function::New<ConvertStringVector>(env));
 		exports.Set(Napi::String::New(env, "initialize"), Napi::Function::New<Initialize>(env));
-	}
+
+        exports.Set(Napi::String::New(env, "add_finalizer"), Napi::Function::New<AddFinalizer>(env));
+
+    }
 };
 
 NODE_API_ADDON(DuckDBNodeNative);

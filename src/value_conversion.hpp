@@ -3,6 +3,8 @@
 #include "napi.h"
 #include "duckdb.h"
 
+
+
 namespace duckdb_node {
 
 typedef uint8_t data_t;
@@ -15,6 +17,36 @@ static Napi::Value GetValue(const Napi::CallbackInfo &info, size_t offset) {
 	}
 	return info[offset].As<Napi::Value>();
 }
+
+//
+//
+//class ObjectDestructorWrapper : public Napi::ObjectWrap<ObjectDestructorWrapper> {
+//public:
+//    static Napi::FunctionReference *Init(Napi::Env env) {
+//        // TODO needs a getter
+//        auto func = Napi::ObjectWrap<ObjectDestructorWrapper>::DefineClass(env, "duckdb_object_destructor", {});
+//        auto constructor = new Napi::FunctionReference();
+//        *constructor = Napi::Persistent(func);                     // weird
+//        env.SetInstanceData<Napi::FunctionReference>(constructor); // is this so this is eventually freed?
+//        return constructor;
+//    }
+//
+//    ObjectDestructorWrapper(const Napi::CallbackInfo &info) : Napi::ObjectWrap<ObjectDestructorWrapper>(info) {
+//        object = Persistent(GetValue(info, 0).As<Napi::Object>());
+//        destructor = Persistent(GetValue(info, 1).As<Napi::Function>());
+//    }
+//
+//    void Finalize(Napi::Env env) override {
+//            printf("%p\n", object);
+//
+//    }
+//
+//private:
+//    Napi::ObjectReference object;
+//    Napi::FunctionReference destructor;
+//};
+//
+
 
 template <class T>
 class PointerHolder : public Napi::ObjectWrap<PointerHolder<T>> {
