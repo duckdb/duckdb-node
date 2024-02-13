@@ -20,6 +20,8 @@
 
 #include "extension/json/json_functions/json_valid.cpp"
 
+#include "extension/json/json_functions/json_serialize_plan.cpp"
+
 #include "extension/json/json_functions/json_serialize_sql.cpp"
 
 #include "extension/json/json_functions/read_json.cpp"

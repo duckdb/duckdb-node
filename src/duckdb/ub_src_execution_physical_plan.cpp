@@ -8,6 +8,8 @@
 
 #include "src/execution/physical_plan/plan_comparison_join.cpp"
 
+#include "src/execution/physical_plan/plan_copy_database.cpp"
+
 #include "src/execution/physical_plan/plan_copy_to_file.cpp"
 
 #include "src/execution/physical_plan/plan_create.cpp"
@@ -15,6 +17,8 @@
 #include "src/execution/physical_plan/plan_create_index.cpp"
 
 #include "src/execution/physical_plan/plan_create_table.cpp"
+
+#include "src/execution/physical_plan/plan_create_secret.cpp"
 
 #include "src/execution/physical_plan/plan_cross_product.cpp"
 
@@ -65,8 +69,6 @@
 #include "src/execution/physical_plan/plan_reset.cpp"
 
 #include "src/execution/physical_plan/plan_sample.cpp"
-
-#include "src/execution/physical_plan/plan_show_select.cpp"
 
 #include "src/execution/physical_plan/plan_simple.cpp"
 

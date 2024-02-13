@@ -58,9 +58,9 @@ static unique_ptr<duckdb::PreparedStatement> PrepareManyInternal(Statement &stat
 
 		return connection->Prepare(std::move(statements.back()));
 	} catch (const duckdb::Exception &ex) {
-		return duckdb::make_uniq<duckdb::PreparedStatement>(duckdb::PreservedError(ex));
+		return duckdb::make_uniq<duckdb::PreparedStatement>(duckdb::ErrorData(ex));
 	} catch (std::exception &ex) {
-		return duckdb::make_uniq<duckdb::PreparedStatement>(duckdb::PreservedError(ex));
+		return duckdb::make_uniq<duckdb::PreparedStatement>(duckdb::ErrorData(ex));
 	}
 }
 

@@ -109,7 +109,7 @@ struct JSArgs {
 	duckdb::DataChunk *args;
 	duckdb::Vector *result;
 	bool done;
-	duckdb::PreservedError error;
+	duckdb::ErrorData error;
 };
 
 void DuckDBNodeUDFLauncher(Napi::Env env, Napi::Function jsudf, std::nullptr_t *, JSArgs *jsargs) {
@@ -221,9 +221,9 @@ void DuckDBNodeUDFLauncher(Napi::Env env, Napi::Function jsudf, std::nullptr_t *
 		}
 		}
 	} catch (const duckdb::Exception &e) {
-		jsargs->error = duckdb::PreservedError(e);
+		jsargs->error = duckdb::ErrorData(e);
 	} catch (const std::exception &e) {
-		jsargs->error = duckdb::PreservedError(e);
+		jsargs->error = duckdb::ErrorData(e);
 	}
 	jsargs->done = true;
 }
@@ -254,7 +254,7 @@ struct RegisterUdfTask : public Task {
 			while (!jsargs.done) {
 				std::this_thread::yield();
 			}
-			if (jsargs.error) {
+			if (jsargs.error.HasError()) {
 				jsargs.error.Throw();
 			}
 			if (all_constant) {
@@ -373,7 +373,7 @@ struct ExecTask : public Task {
 			}
 		} catch (duckdb::ParserException &e) {
 			success = false;
-			error = duckdb::PreservedError(e);
+			error = duckdb::ErrorData(e);
 			return;
 		}
 	}
@@ -386,7 +386,7 @@ struct ExecTask : public Task {
 
 	std::string sql;
 	bool success;
-	duckdb::PreservedError error;
+	duckdb::ErrorData error;
 };
 
 struct ExecTaskWithCallback : public ExecTask {

@@ -57,9 +57,9 @@ struct OpenTask : public Task {
 			success = true;
 
 		} catch (const duckdb::Exception &ex) {
-			error = duckdb::PreservedError(ex);
+			error = duckdb::ErrorData(ex);
 		} catch (std::exception &ex) {
-			error = duckdb::PreservedError(ex);
+			error = duckdb::ErrorData(ex);
 		}
 	}
 
@@ -81,7 +81,7 @@ struct OpenTask : public Task {
 
 	std::string filename;
 	duckdb::DBConfig duckdb_config;
-	duckdb::PreservedError error;
+	duckdb::ErrorData error;
 	bool success = false;
 };
 
@@ -269,7 +269,7 @@ struct JSRSArgs {
 	std::string function = "";
 	vector<duckdb::Value> parameters;
 	bool done = false;
-	duckdb::PreservedError error;
+	duckdb::ErrorData error;
 };
 
 struct NodeReplacementScanData : duckdb::ReplacementScanData {
@@ -292,15 +292,15 @@ void DuckDBNodeRSLauncher(Napi::Env env, Napi::Function jsrs, std::nullptr_t *, 
 					jsargs->parameters.push_back(Utils::BindParameter(paramArray.Get(i)));
 				}
 			} else {
-				throw duckdb::Exception("Expected parameter array");
+				throw duckdb::InvalidInputException("Expected parameter array");
 			}
 		} else if (!result.IsNull()) {
-			throw duckdb::Exception("Invalid scan replacement result");
+			throw std::runtime_error("Invalid scan replacement result");
 		}
 	} catch (const duckdb::Exception &e) {
-		jsargs->error = duckdb::PreservedError(e);
+		jsargs->error = duckdb::ErrorData(e);
 	} catch (const std::exception &e) {
-		jsargs->error = duckdb::PreservedError(e);
+		jsargs->error = duckdb::ErrorData(e);
 	}
 	jsargs->done = true;
 }
@@ -313,7 +313,7 @@ ScanReplacement(duckdb::ClientContext &context, const std::string &table_name, d
 	while (!jsargs.done) {
 		std::this_thread::yield();
 	}
-	if (jsargs.error) {
+	if (jsargs.error.HasError()) {
 		jsargs.error.Throw();
 	}
 	if (jsargs.function != "") {

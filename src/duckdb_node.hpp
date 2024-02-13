@@ -222,7 +222,7 @@ struct TaskHolder {
 
 class Utils {
 public:
-	static Napi::Object CreateError(Napi::Env env, duckdb::PreservedError &e);
+	static Napi::Object CreateError(Napi::Env env, duckdb::ErrorData &e);
 	static Napi::Object CreateError(Napi::Env env, std::string msg);
 	static bool OtherIsInt(Napi::Number source);
 
