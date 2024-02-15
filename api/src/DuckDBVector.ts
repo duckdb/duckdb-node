@@ -10,6 +10,7 @@ import {
   DuckDBFloatType,
   DuckDBHugeIntType,
   DuckDBIntegerType,
+  DuckDBIntervalType,
   DuckDBListType,
   DuckDBMapType,
   DuckDBSmallIntType,
@@ -33,6 +34,14 @@ import {
 import { DuckDBTypeId } from './DuckDBTypeId';
 
 const littleEndian = os.endianness() === 'LE';
+
+function getInt32(dataView: DataView, offset: number): number {
+  return dataView.getInt32(offset, littleEndian);
+}
+
+function getInt64(dataView: DataView, offset: number): bigint {
+  return dataView.getBigInt64(offset, littleEndian);
+}
 
 function getInt128(dataView: DataView, offset: number): bigint {
   const lower = dataView.getBigUint64(offset, littleEndian);
@@ -138,8 +147,8 @@ export abstract class DuckDBVector<T> {
         return DuckDBDateVector.fromRawVector(vector, itemCount);
       case DuckDBTypeId.TIME:
         return DuckDBTimeVector.fromRawVector(vector, itemCount);
-      case DuckDBTypeId.INTERVAL: // Int32, Int32, Int64
-        throw new Error('not yet implemented');
+      case DuckDBTypeId.INTERVAL:
+        return DuckDBIntervalVector.fromRawVector(vector, itemCount);
       case DuckDBTypeId.HUGEINT:
         return DuckDBHugeIntVector.fromRawVector(vector, itemCount);
       case DuckDBTypeId.VARCHAR:
@@ -578,7 +587,59 @@ export class DuckDBTimeVector extends DuckDBVector<bigint> {
   }
 }
 
+export class DuckDBInterval {
+  private readonly months: number;
+  private readonly days: number;
+  private readonly micros: bigint;
+
+  public constructor(months: number, days: number, micros: bigint) {
+    this.months = months;
+    this.days = days;
+    this.micros = micros;
+  }
+}
+
 // TODO: INTERVAL
+export class DuckDBIntervalVector extends DuckDBVector<DuckDBInterval> {
+  private readonly dataView: DataView;
+  private readonly validity: DuckDBValidity;
+  private readonly _itemCount: number;
+  constructor(dataView: DataView, validity: DuckDBValidity, itemCount: number) {
+    super();
+    this.dataView = dataView;
+    this.validity = validity;
+    this._itemCount = itemCount;
+  }
+  static fromRawVector(vector: ddb.duckdb_vector, itemCount: number): DuckDBIntervalVector {
+    const data = vectorData(vector, itemCount * 16);
+    const dataView = new DataView(data.buffer, data.byteOffset, data.byteLength);
+    const validity = DuckDBValidity.fromVector(vector, itemCount);
+    return new DuckDBIntervalVector(dataView, validity, itemCount);
+  }
+  public override get type(): DuckDBHugeIntType {
+    return DuckDBIntervalType.instance;
+  }
+  public override get itemCount(): number {
+    return this._itemCount;
+  }
+  public override getItem(itemIndex: number): DuckDBInterval | null {
+    if (!this.validity.itemValid(itemIndex)) {
+      return null;
+    }
+    const itemStart = itemIndex * 16;
+    const months = getInt32(this.dataView, itemStart);
+    const days = getInt32(this.dataView, itemStart + 4);
+    const micros = getInt64(this.dataView, itemStart + 8);
+    return new DuckDBInterval(months, days, micros);
+  }
+  public override slice(offset: number, length: number): DuckDBIntervalVector {
+    return new DuckDBIntervalVector(
+      new DataView(this.dataView.buffer, offset * 16, length * 16),
+      this.validity.slice(offset),
+      length,
+    );
+  }
+}
 
 export class DuckDBHugeIntVector extends DuckDBVector<bigint> {
   private readonly dataView: DataView;

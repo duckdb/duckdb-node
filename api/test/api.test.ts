@@ -22,7 +22,9 @@ import {
   DuckDBInstance,
   DuckDBIntegerType,
   DuckDBIntegerVector,
+  DuckDBInterval,
   DuckDBIntervalType,
+  DuckDBIntervalVector,
   DuckDBListType,
   DuckDBListVector,
   DuckDBMapEntry,
@@ -494,7 +496,11 @@ describe('api', () => {
           // TODO: DECIMAL (int64)
           // TODO: DECIMAL (int128)
           assertValues(chunk, 24, DuckDBUUIDVector, [MinUUID, MaxUUID, null]);
-          // TODO: INTERVAL
+          assertValues(chunk, 25, DuckDBIntervalVector, [
+            new DuckDBInterval(0, 0, BigInt(0)),
+            new DuckDBInterval(999, 999, BigInt(999999999)),
+            null,
+          ]);
           assertValues(chunk, 26, DuckDBVarCharVector, ['🦆🦆🦆🦆🦆🦆', 'goo\0se', null]);
           assertValues(chunk, 27, DuckDBBlobVector, [
             blobFromString('thisisalongblob\x00withnullbytes'),
