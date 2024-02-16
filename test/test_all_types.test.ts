@@ -60,7 +60,7 @@ const correct_answer_map: Record<string, any[]> = {
   uint: [0, 4294967295, null],
   ubigint: [BigInt(0), BigInt("18446744073709551615"), null],
 
-  time: ["00:00:00", "23:59:59.999999", null],
+  time: ["00:00:00", "24:00:00", null],
 
   float: [-3.4028234663852886e38, 3.4028234663852886e38, null],
   double: [-1.7976931348623157e308, 1.7976931348623157e308, null],
@@ -161,7 +161,7 @@ const correct_answer_map: Record<string, any[]> = {
   map: ["{}", "{key1=🦆🦆🦆🦆🦆🦆, key2=goose}", null],
   union: ["Frank", "5", null],
 
-  time_tz: ["00:00:00-1559", "23:59:59.999999+1559", null],
+  time_tz: ["00:00:00+15:59:59", "24:00:00-15:59:59", null],
   interval: [
     timedelta({
       days: 0,
