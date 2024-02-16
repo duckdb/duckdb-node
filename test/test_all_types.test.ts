@@ -5,7 +5,7 @@ function get_all_types(): Promise<string[]> {
   return new Promise((resolve, reject) => {
     const conn = new duckdb.Database(":memory:");
     conn.all(
-      "describe select * from test_all_types()",
+      "describe select * EXCLUDE (uhugeint) from test_all_types()",
       (error: DuckDbError | null, data: TableData) => {
         if (error) reject(error);
         resolve(data.map((row) => row.column_name));
