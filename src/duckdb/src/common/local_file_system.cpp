@@ -50,6 +50,7 @@ extern "C" WINBASEAPI BOOL WINAPI GetPhysicallyInstalledSystemMemory(PULONGLONG)
 #endif                                                      // NOLINT
 #elif defined(_WIN32)
 #include <RestartManager.h>
+#pragma comment(lib, "rstrtmgr.lib")
 #endif
 
 namespace duckdb {
