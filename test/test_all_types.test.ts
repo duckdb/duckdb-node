@@ -49,7 +49,7 @@ const correct_answer_map: Record<string, any[]> = {
   bigint: [BigInt("-9223372036854775808"), BigInt("9223372036854775807"), null],
 
   hugeint: [
-    BigInt("-170141183460469231731687303715884105727"),
+    BigInt("-170141183460469231731687303715884105728"),
     BigInt("170141183460469231731687303715884105727"),
     null,
   ],
@@ -74,7 +74,7 @@ const correct_answer_map: Record<string, any[]> = {
     null,
   ],
   uuid: [
-    "00000000-0000-0000-0000-000000000001",
+    "00000000-0000-0000-0000-000000000000",
     "ffffffff-ffff-ffff-ffff-ffffffffffff",
     null,
   ],
