@@ -161,6 +161,11 @@ static Napi::Value convert_col_val(Napi::Env &env, duckdb::Value dval, duckdb::L
 	case duckdb::LogicalTypeId::DOUBLE: {
 		value = Napi::Number::New(env, duckdb::DoubleValue::Get(dval));
 	} break;
+	case duckdb::LogicalTypeId::UHUGEINT: {
+		auto val = duckdb::UhugeIntValue::Get(dval);
+		const uint64_t words[] = {val.lower, val.upper};
+		value = Napi::BigInt::New(env, false, 2, words);
+	} break;
 	case duckdb::LogicalTypeId::HUGEINT: {
 		auto val = duckdb::HugeIntValue::Get(dval);
 		const uint64_t words_min[] = {0, 1ull<<63};
