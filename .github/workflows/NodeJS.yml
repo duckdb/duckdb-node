@@ -73,6 +73,11 @@ jobs:
         with:
           fetch-depth: 0
 
+      # Default Python (3.12) doesn't have support for distutils
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
       - name: Update apt
         shell: bash
         run: |
@@ -102,6 +107,10 @@ jobs:
           npm_config_yes: true
 
       - name: Node ${{ matrix.node }}
+        env:
+          AWS_ACCESS_KEY_ID: ${{secrets.S3_ID}}
+          AWS_SECRET_ACCESS_KEY: ${{secrets.S3_KEY}}
+          AWS_DEFAULT_REGION: us-east-1
         shell: bash
         run: ./scripts/node_build.sh ${{ matrix.node }}
 
@@ -166,6 +175,10 @@ jobs:
           NODE_AUTH_TOKEN: ${{secrets.NODE_AUTH_TOKEN}}
 
       - name: Node ${{ matrix.node }}
+        env:
+          AWS_ACCESS_KEY_ID: ${{secrets.S3_ID}}
+          AWS_SECRET_ACCESS_KEY: ${{secrets.S3_KEY}}
+          AWS_DEFAULT_REGION: us-east-1
         shell: bash
         run: ./scripts/node_build.sh ${{ matrix.node }}
 
@@ -199,9 +212,10 @@ jobs:
             node: 20
 
     steps:
+      # Default Python (3.12) doesn't have support for distutils
       - uses: actions/setup-python@v4
         with:
-          python-version: '3.8'
+          python-version: '3.11'
 
       - uses: actions/checkout@v3
         with:
@@ -238,5 +252,9 @@ jobs:
           variant: sccache
 
       - name: Node
+        env:
+          AWS_ACCESS_KEY_ID: ${{secrets.S3_ID}}
+          AWS_SECRET_ACCESS_KEY: ${{secrets.S3_KEY}}
+          AWS_DEFAULT_REGION: us-east-1
         shell: bash
         run: ./scripts/node_build_win.sh
