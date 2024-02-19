@@ -161,15 +161,25 @@ static Napi::Value convert_col_val(Napi::Env &env, duckdb::Value dval, duckdb::L
 	case duckdb::LogicalTypeId::DOUBLE: {
 		value = Napi::Number::New(env, duckdb::DoubleValue::Get(dval));
 	} break;
+	case duckdb::LogicalTypeId::UHUGEINT: {
+		auto val = duckdb::UhugeIntValue::Get(dval);
+		const uint64_t words[] = {val.lower, val.upper};
+		value = Napi::BigInt::New(env, false, 2, words);
+	} break;
 	case duckdb::LogicalTypeId::HUGEINT: {
 		auto val = duckdb::HugeIntValue::Get(dval);
-		auto negative = val.upper < 0;
-		if (negative) {
-			duckdb::Hugeint::NegateInPlace(val); // remove signing bit
+		const uint64_t words_min[] = {0, 1ull<<63};
+		if (val == duckdb::NumericLimits<duckdb::hugeint_t>::Minimum()) {
+			value = Napi::BigInt::New(env, true, 2, words_min);
+		} else {
+			auto negative = val.upper < 0;
+			if (negative) {
+				duckdb::Hugeint::NegateInPlace(val); // remove signing bit
+			}
+			D_ASSERT(val.upper >= 0);
+			const uint64_t words[] = {val.lower, static_cast<uint64_t>(val.upper)};
+			value = Napi::BigInt::New(env, negative, 2, words);
 		}
-		D_ASSERT(val.upper >= 0);
-		const uint64_t words[] = {val.lower, static_cast<uint64_t>(val.upper)};
-		value = Napi::BigInt::New(env, negative, 2, words);
 	} break;
 	case duckdb::LogicalTypeId::DECIMAL: {
 		value = Napi::Number::New(env, dval.GetValue<double>());

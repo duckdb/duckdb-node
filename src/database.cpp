@@ -45,7 +45,8 @@ struct OpenTask : public Task {
 				try {
 					duckdb_config.SetOptionByName(key, duckdb::Value(val));
 				} catch (std::exception &e) {
-					throw Napi::TypeError::New(env, "Failed to set configuration option " + key + ": " + e.what());
+					duckdb::ErrorData error(e);
+					throw Napi::TypeError::New(env, "Failed to set configuration option " + key + ": " + error.Message());
 				}
 			}
 		}
