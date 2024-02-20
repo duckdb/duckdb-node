@@ -14,7 +14,7 @@ describe('each', function() {
         
 
         db.each('SELECT id, txt FROM foo WHERE ROWID < ?', total, function(err: null | Error, row: RowData) {
-            if (err) throw err;
+            if (err) done(new Error('Query failed unexpectedly'));
             retrieved++;
 
             if(retrieved === total) {
@@ -29,7 +29,7 @@ describe('each', function() {
         var retrieved = 0;
 
         db.each('SELECT id, txt FROM foo WHERE ROWID < ?', total, function(err: null | Error, row: RowData) {
-            if (err) throw err;
+            if (err) done(new Error('Query failed unexpectedly'));
             retrieved++;
         }, function(err: null | Error, num: RowData) {
             assert.equal(retrieved, num);

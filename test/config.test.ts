@@ -9,7 +9,7 @@ describe('user_agent', () => {
 
         db.all('PRAGMA USER_AGENT', (err: null | Error, rows: TableData) => {
             if (err) {
-                throw err;
+                done(new Error('Query failed unexpectedly'));
             }
             assert.match(rows[0].user_agent, /duckdb\/.*\(*\) nodejs/);
             done();
@@ -21,7 +21,7 @@ describe('user_agent', () => {
 
         db.all('PRAGMA USER_AGENT', (err: null | Error, rows: TableData) => {
             if (err) {
-                throw err;
+                done(new Error('Query failed unexpectedly'));
             }
             assert.match(rows[0].user_agent, /duckdb\/.*\(*\) nodejs a_framework/);
             done();

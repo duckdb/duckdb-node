@@ -13,7 +13,7 @@ describe('query properties', function() {
         var j = 1;
         for (var i = 0; i < 5000; i++) {
             stmt.run(i, "demo", function(err: null | Error) {
-                if (err) throw err;
+                if (err) done(new Error('Query failed unexpectedly'));
                 // Relies on SQLite's row numbering to be gapless and starting
                 // from 1.
                 // @ts-ignore
@@ -26,7 +26,7 @@ describe('query properties', function() {
 
     it.skip('should return the correct changes count', function(done) {
         db.run("UPDATE foo SET id = id + 1 WHERE id % 2 = 0", function(err: null | Error) {
-            if (err) throw err;
+            if (err) done(new Error('Query failed unexpectedly'));
            // FIXME assert.equal(2500, this.changes);
             done();
         });
