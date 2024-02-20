@@ -14,7 +14,9 @@ describe('prepare', function() {
                     err.message === 'Parser: syntax error at or near "CRATE' */) {
                     done();
                 }
-                else throw err;
+                else {
+                    done(new Error('Query failed unexpectedly'));
+                }
             });
         });
 
@@ -56,11 +58,11 @@ describe('prepare', function() {
                     i * Math.PI,
                      null,
                     function(err: null | Error) {
-                        if (err) throw err;
+                        if (err) done(new Error('Query failed unexpectedly'));
                         inserted++;
                     }
                 ).finalize(function(err) {
-                    if (err) throw err;
+                    if (err) done(new Error('Query failed unexpectedly'));
                     if (inserted == count) done();
                 });
             }
@@ -68,12 +70,12 @@ describe('prepare', function() {
 
         it('should prepare a statement and return values again', function(done) {
             var stmt = db.prepare("SELECT txt, num, flt, blb FROM foo ORDER BY num", function(err: null | Error) {
-                if (err) throw err;
+                if (err) done(new Error('Query failed unexpectedly'));
                 assert.equal(stmt.sql, 'SELECT txt, num, flt, blb FROM foo ORDER BY num');
             });
 
             stmt.each(function(err: null | Error, row: RowData) {
-                if (err) throw err;
+                if (err) done(new Error('Query failed unexpectedly'));
                 assert.equal(row.txt, 'String ' + retrieved);
                 assert.equal(row.num, retrieved);
                 assert.equal(row.flt, retrieved * Math.PI);
@@ -93,13 +95,13 @@ describe('prepare', function() {
 /* // get() is an abomination and should be killed
         it('should prepare a statement and run it ' + (count + 5) + ' times', function(done) {
             var stmt = db.prepare("SELECT txt, num, flt, blb FROM foo ORDER BY num", function(err) {
-                if (err) throw err;
+                if (err) done(new Error('Query failed unexpectedly'));
                 assert.equal(stmt.sql, 'SELECT txt, num, flt, blb FROM foo ORDER BY num');
             });
 
             for (var i = 0; i < count + 5; i++) (function(i) {
                 stmt.get(function(err, row) {
-                    if (err) throw err;
+                    if (err) done(new Error('Query failed unexpectedly'));
 
                     if (retrieved >= 1000) {
                         assert.equal(row, undefined);
@@ -138,7 +140,7 @@ describe('prepare', function() {
 
         it('should insert two rows', function(done) {
             db.prepare('INSERT INTO foo VALUES(4)').run(function(err: null | Error) {
-                if (err) throw err;
+                if (err) done(new Error('Query failed unexpectedly'));
                 inserted++;
             }).run(undefined, function (err: null | Error) {
                 // The second time we pass undefined as a parameter. This is
@@ -149,7 +151,7 @@ describe('prepare', function() {
                 };
                 inserted++;
             }).finalize(function(err) {
-                if (err) throw err;
+                if (err) done(new Error('Query failed unexpectedly'));
                 if (inserted == 2) done();
             });
         });
@@ -157,12 +159,12 @@ describe('prepare', function() {
 /*
         it('should retrieve the data', function(done) {
             var stmt = db.prepare("SELECT num FROM foo", function(err) {
-                if (err) throw err;
+                if (err) done(new Error('Query failed unexpectedly'));
             });
 
             for (var i = 0; i < 2; i++) (function(i) {
                 stmt.get(function(err, row) {
-                    if (err) throw err;
+                    if (err) done(new Error('Query failed unexpectedly'));
                     assert(row);
                     assert.equal(row.num, 4);
                     retrieved++;
@@ -175,11 +177,11 @@ describe('prepare', function() {
 
         it('should retrieve the data', function(done) {
                     var stmt = db.prepare("SELECT num FROM foo", function(err: null | Error) {
-                        if (err) throw err;
+                        if (err) done(new Error('Query failed unexpectedly'));
                     });
 
                     stmt.each(function(err: null | Error, row: RowData) {
-                        if (err) throw err;
+                        if (err) done(new Error('Query failed unexpectedly'));
                         assert.ok(row);
                         assert.equal(row.num, 4);
                         retrieved++;
@@ -211,7 +213,7 @@ describe('prepare', function() {
             for (var i = 0; i < 10; i++) {
                 stmt.reset();
                 stmt.get(function(err, row) {
-                    if (err) throw err;
+                    if (err) done(new Error('Query failed unexpectedly'));
                     assert.equal(row.txt, 'String 0');
                     assert.equal(row.num, 0);
                     assert.equal(row.flt, 0.0);
@@ -245,7 +247,7 @@ describe('prepare', function() {
 
             for (var i = 0; i < 10; i++) (function(i) {
                 stmt.get(i * 10 + 1, function(err, row) {
-                    if (err) throw err;
+                    if (err) done(new Error('Query failed unexpectedly'));
                     var val = i * 10 + 1;
                     assert.equal(row.txt, 'String ' + val);
                     assert.equal(row.num, val);
@@ -279,7 +281,7 @@ describe('prepare', function() {
        /* it('should retrieve particular rows', function(done) {
             db.prepare("SELECT txt, num, flt, blb FROM foo WHERE num = ? AND txt = ?", 10, 'String 10')
                 .get(function(err, row) {
-                    if (err) throw err;
+                    if (err) done(new Error('Query failed unexpectedly'));
                     assert.equal(row.txt, 'String 10');
                     assert.equal(row.num, 10);
                     assert.equal(row.flt, 10 * Math.PI);
@@ -292,7 +294,7 @@ describe('prepare', function() {
         it('should retrieve particular rows', function(done) {
             db.prepare("SELECT txt, num, flt, blb FROM foo WHERE num = ? AND txt = ?")
                 .each(10, 'String 10', function(err: null | Error, row: RowData) {
-                    if (err) throw err;
+                    if (err) done(new Error('Query failed unexpectedly'));
                     assert.equal(row.txt, 'String 10');
                     assert.equal(row.num, 10);
                    //  assert.equal(row.flt, 10 * Math.PI);
@@ -323,7 +325,7 @@ describe('prepare', function() {
         it('should retrieve particular rows', function(done) {
             db.prepare("SELECT txt, num, flt, blb FROM foo WHERE num < ? ORDER BY num")
                 .all(count, function(err: null | Error, rows: TableData) {
-                    if (err) throw err;
+                    if (err) done(new Error('Query failed unexpectedly'));
                     for (var i = 0; i < rows.length; i++) {
                         assert.equal(rows[i].txt, 'String ' + i);
                         assert.equal(rows[i].num, i);
@@ -353,7 +355,7 @@ describe('prepare', function() {
         it('should directly execute first statements', function(done) {
             db.prepare("insert into foo values (3); insert into foo values (4); select * from foo")
                 .all(function(err: null | Error, rows: TableData) {
-                    if (err) throw err;
+                    if (err) done(new Error('Query failed unexpectedly'));
                     assert.equal(rows[0].a, 3);
                     assert.equal(rows[1].a, 4);
                 })
@@ -392,7 +394,7 @@ describe('prepare', function() {
         it('should retrieve particular rows', function(done) {
            db.prepare("SELECT txt, num, flt, blb FROM foo WHERE num > 5000")
                 .all(function(err: null | Error, rows: TableData) {
-                    if (err) throw err;
+                    if (err) done(new Error('Query failed unexpectedly'));
                     assert.ok(rows.length === 0);
                 })
                 .finalize(done);
@@ -435,10 +437,10 @@ describe('prepare', function() {
             for (var i = 0; i < data.length; i++) {
                 var stmt = db.prepare("INSERT INTO foo VALUES(?, ?, ?, ?)");
                 stmt.run(data[i][0], data[i][1], data[i][2], data[i][3], function(err: null | Error) {
-                    if (err) throw err;
+                    if (err) done(new Error('Query failed unexpectedly'));
                     inserted++;
                 }).finalize(function(err) {
-                    if (err) throw err;
+                    if (err) done(new Error('Query failed unexpectedly'));
                     if (inserted == data.length) done();
                 });
             }
@@ -447,7 +449,7 @@ describe('prepare', function() {
         it('should retrieve all values', function(done) {
             db.prepare("SELECT txt, num, flt, blb FROM foo")
                 .all(function(err: null | Error, rows: TableData) {
-                    if (err) throw err;
+                    if (err) done(new Error('Query failed unexpectedly'));
 
                     for (var i = 0; i < rows.length; i++) {
                         assert.ok(retrieved_marks[rows[i].num] !== true);
@@ -485,7 +487,7 @@ describe('prepare', function() {
 
         it('should get a row', function(done) {
             db.get("SELECT txt, num, flt, blb FROM foo WHERE num = ? AND txt = ?", 10, 'String 10', function(err, row) {
-                if (err) throw err;
+                if (err) done(new Error('Query failed unexpectedly'));
                 assert.equal(row.txt, 'String 10');
                 assert.equal(row.num, 10);
                 assert.equal(row.flt, 10 * Math.PI);
@@ -524,7 +526,7 @@ describe('prepare', function() {
                     i * Math.PI,
                      null,
                     function(err: null | Error) {
-                        if (err) throw err;
+                        if (err) done(new Error('Query failed unexpectedly'));
                         inserted++;
                         if (inserted == count) done();
                     }
@@ -534,7 +536,7 @@ describe('prepare', function() {
 
         it('should retrieve all rows', function(done) {
             db.all("SELECT txt, num, flt, blb FROM foo ORDER BY num", function(err: null | Error, rows: TableData) {
-                if (err) throw err;
+                if (err) done(new Error('Query failed unexpectedly'));
                 for (var i = 0; i < rows.length; i++) {
                     assert.equal(rows[i].txt, 'String ' + i);
                     assert.equal(rows[i].num, i);

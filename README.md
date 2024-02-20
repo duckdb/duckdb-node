@@ -15,7 +15,7 @@ Then you can run a query:
 ```js
 db.all('SELECT 42 AS fortytwo', function(err, res) {
   if (err) {
-    throw err;
+    console.warn(err);
   }
   console.log(res[0].fortytwo)
 });
@@ -26,7 +26,7 @@ Other available methods are `each`, where the callback is invoked for each row, 
 ```js
 db.all('SELECT ?::INTEGER AS fortytwo, ?::STRING as hello', 42, 'Hello, World', function(err, res) {
   if (err) {
-    throw err;
+    console.warn(err);
   }
   console.log(res[0].fortytwo)
   console.log(res[0].hello)
@@ -47,7 +47,7 @@ You can create multiple connections, each with their own transaction context.
 ```js
 con.all('SELECT 42 AS fortytwo', function(err, res) {
   if (err) {
-    throw err;
+    console.warn(err);
   }
   console.log(res[0].fortytwo)
 });
@@ -64,7 +64,7 @@ To execute this statement, you can call for example `all()` on the `stmt` object
 ```js
 stmt.all(42, function(err, res) {
   if (err) {
-    throw err;
+    console.warn(err);
   }
   console.log(res[0].fortytwo)
 });
@@ -81,7 +81,7 @@ for (var i = 0; i < 10; i++) {
 stmt.finalize();
 con.all('SELECT * FROM a', function(err, res) {
   if (err) {
-    throw err;
+    console.warn(err);
   }
   console.log(res)
 });
@@ -93,7 +93,7 @@ con.all('SELECT * FROM a', function(err, res) {
 var stmt = con.prepare('select ?::INTEGER as fortytwo', function(err, stmt) {
   stmt.all(42, function(err, res) {
     if (err) {
-      throw err;
+      console.warn(err);
     }
     console.log(res[0].fortytwo)
   });

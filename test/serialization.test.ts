@@ -25,12 +25,12 @@ describe('serialize() and parallelize()', function() {
         for (var i = 0; i < count; i++) {
             // Interleaved inserts with two statements.
             stmt1.run('String ' + i, i, i * Math.PI, null, function(err: null | Error) {
-                if (err) throw err;
+                if (err) done(new Error('Query failed unexpectedly'));
                 inserted1++;
             });
             i++;
             stmt2.run('String ' + i, i, i * Math.PI, null, function(err: null | Error) {
-                if (err) throw err;
+                if (err) done(new Error('Query failed unexpectedly'));
                 inserted2++;
             });
         }
@@ -41,7 +41,7 @@ describe('serialize() and parallelize()', function() {
     it('should have inserted all the rows after synchronizing with serialize()', function(done) {
         db.serialize();
         db.all("SELECT txt, num, flt, blb FROM foo ORDER BY num", function(err: null | Error, rows: TableData) {
-            if (err) throw err;
+            if (err) done(new Error('Query failed unexpectedly'));
             for (var i = 0; i < rows.length; i++) {
                 assert.equal(rows[i].txt, 'String ' + i);
                 assert.equal(rows[i].num, i);
@@ -77,14 +77,14 @@ describe('serialize(fn)', function() {
                 var d = new Date(Date.UTC(2018, 0, i));
                 var ts = new Date(Date.UTC(2021, 6, 10, 0, 0, i));
                 stmt.run('String ' + i, i, i * Math.PI, null, d, ts, function(err: null | Error) {
-                    if (err) throw err;
+                    if (err) done(new Error('Query failed unexpectedly'));
                     inserted++;
                 });
             }
             stmt.finalize();
 
             db.all("SELECT txt, num, flt, blb, d, ts FROM foo ORDER BY num", function(err: null | Error, rows: TableData) {
-                if (err) throw err;
+                if (err) done(new Error('Query failed unexpectedly'));
                 for (var i = 0; i < rows.length; i++) {
                     var d = new Date(Date.UTC(2018, 0, i));
                     var ts = new Date(Date.UTC(2021, 6, 10, 0, 0, i));

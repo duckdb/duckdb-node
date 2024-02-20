@@ -12,14 +12,14 @@ describe('exec', function() {
     it('Database#exec', function(done) {
         var sql = fs.readFileSync('test/support/script.sql', 'utf8');
         db.exec(sql, function(err: null | Error) {
-            if (err) throw err;
+            if (err) done(new Error('Query failed unexpectedly'));
             done();
         });
     });
 
     it('retrieve database structure', function(done) {
         db.all("SELECT type, name FROM sqlite_master ORDER BY type, name", function(err: null | Error, rows: TableData) {
-            if (err) throw err;
+            if (err) done(new Error('Query failed unexpectedly'));
             assert.deepEqual(rows, [
                // { type: 'index', name: 'grid_key_lookup' },
                // { type: 'index', name: 'grid_utfgrid_lookup' },

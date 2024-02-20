@@ -86,7 +86,7 @@ describe('unicode', function() {
         const stmt = db.prepare("INSERT INTO foo VALUES(?, ?)");
         for (let i = 0; i < data.length; i++) {
             stmt.run(i, data[i], function(err: null | Error) {
-                if (err) throw err;
+                if (err) done(new Error('Query failed unexpectedly'));
                 inserted++;
             });
         }
@@ -95,7 +95,7 @@ describe('unicode', function() {
 
     it('should retrieve all values', function(done) {
         db.all("SELECT txt FROM foo ORDER BY id", function(err: null | Error, rows: TableData) {
-            if (err) throw err;
+            if (err) done(new Error('Query failed unexpectedly'));
 
             for (let i = 0; i < rows.length; i++) {
                 assert.equal(rows[i].txt, data[i]);

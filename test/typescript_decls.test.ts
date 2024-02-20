@@ -63,7 +63,7 @@ describe("TypeScript declarations", function () {
   it("typescript: Database#exec", function (done) {
     var sql = fs.readFileSync("test/support/script.sql", "utf8");
     db.exec(sql, function (err: duckdb.DuckDbError | null) {
-      if (err) throw err;
+      if (err) done(new Error('Query failed unexpectedly'));
       done();
     });
   });
@@ -72,7 +72,7 @@ describe("TypeScript declarations", function () {
     db.all(
       "SELECT type, name FROM sqlite_master ORDER BY type, name",
       function (err: duckdb.DuckDbError | null, rows: duckdb.TableData) {
-        if (err) throw err;
+        if (err) done(new Error('Query failed unexpectedly'));
         assert.deepEqual(rows, [
           { type: "table", name: "grid_key" },
           { type: "table", name: "grid_utfgrid" },
@@ -125,7 +125,7 @@ describe("TypeScript declarations", function () {
     db.all(
       "select udf(21, 20, 1) v",
       function (err: duckdb.DuckDbError | null, rows: duckdb.TableData) {
-        if (err) throw err;
+        if (err) done(new Error('Query failed unexpectedly'));
         assert.equal(rows[0].v, 42);
       }
     );
@@ -139,7 +139,7 @@ describe("TypeScript declarations", function () {
       "SELECT * FROM range(0, ?)",
       total,
       function (err: duckdb.DuckDbError | null, row: any) {
-        if (err) throw err;
+        if (err) done(new Error('Query failed unexpectedly'));
         retrieved++;
 
         if (retrieved === total) {
@@ -197,12 +197,12 @@ describe("typescript: prepared statements", function () {
           i * Math.PI,
           null,
           function (err: duckdb.DuckDbError | null) {
-            if (err) throw err;
+            if (err) done(new Error('Query failed unexpectedly'));
             inserted++;
           }
         )
         .finalize(function (err) {
-          if (err) throw err;
+          if (err) done(new Error('Query failed unexpectedly'));
           if (inserted == count) done();
         });
     }
