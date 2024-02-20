@@ -19,23 +19,24 @@ describe('serialize() and parallelize()', function() {
         db.parallelize(done);
     });
 
-    it('should insert rows', function() {
+    it('should insert rows', function(done) {
         var stmt1 = db.prepare("INSERT INTO foo VALUES(?, ?, ?, ?)");
         var stmt2 = db.prepare("INSERT INTO foo VALUES(?, ?, ?, ?)");
         for (var i = 0; i < count; i++) {
             // Interleaved inserts with two statements.
             stmt1.run('String ' + i, i, i * Math.PI, null, function(err: null | Error) {
-                if (err) done(new Error('Query failed unexpectedly'));
+                if (err) {console.warn(err);done(new Error('Query failed unexpectedly'));}
                 inserted1++;
             });
             i++;
             stmt2.run('String ' + i, i, i * Math.PI, null, function(err: null | Error) {
-                if (err) done(new Error('Query failed unexpectedly'));
+                if (err) {console.warn(err);done(new Error('Query failed unexpectedly'));}
                 inserted2++;
             });
         }
         stmt1.finalize();
         stmt2.finalize();
+	done();
     });
 
     it('should have inserted all the rows after synchronizing with serialize()', function(done) {
