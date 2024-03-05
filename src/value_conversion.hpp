@@ -3,8 +3,6 @@
 #include "napi.h"
 #include "duckdb.h"
 
-
-
 namespace duckdb_node {
 
 typedef uint8_t data_t;
@@ -20,8 +18,8 @@ static Napi::Value GetValue(const Napi::CallbackInfo &info, size_t offset) {
 
 //
 //
-//class ObjectDestructorWrapper : public Napi::ObjectWrap<ObjectDestructorWrapper> {
-//public:
+// class ObjectDestructorWrapper : public Napi::ObjectWrap<ObjectDestructorWrapper> {
+// public:
 //    static Napi::FunctionReference *Init(Napi::Env env) {
 //        // TODO needs a getter
 //        auto func = Napi::ObjectWrap<ObjectDestructorWrapper>::DefineClass(env, "duckdb_object_destructor", {});
@@ -41,12 +39,11 @@ static Napi::Value GetValue(const Napi::CallbackInfo &info, size_t offset) {
 //
 //    }
 //
-//private:
+// private:
 //    Napi::ObjectReference object;
 //    Napi::FunctionReference destructor;
 //};
 //
-
 
 template <class T>
 class PointerHolder : public Napi::ObjectWrap<PointerHolder<T>> {
@@ -383,12 +380,12 @@ public:
 		return GetValue(info, offset).As<Napi::Number>().FloatValue();
 	}
 
-    template <>
-    double FromJS(const Napi::CallbackInfo &info, idx_t offset) {
-        return GetValue(info, offset).As<Napi::Number>().DoubleValue();
-    }
+	template <>
+	double FromJS(const Napi::CallbackInfo &info, idx_t offset) {
+		return GetValue(info, offset).As<Napi::Number>().DoubleValue();
+	}
 
-    template <>
+	template <>
 	int8_t FromJS(const Napi::CallbackInfo &info, idx_t offset) {
 		return GetValue(info, offset).As<Napi::Number>().Int32Value();
 	}
