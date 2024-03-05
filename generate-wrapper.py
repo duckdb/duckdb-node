@@ -241,7 +241,7 @@ if __name__ == "__main__":
 
     with tempfile.TemporaryDirectory() as tmp:
         zip_path = os.path.join(tmp, "libduckdb.zip")
-        urllib.request.urlretrieve("https://github.com/duckdb/duckdb/releases/download/v0.9.2/libduckdb-osx-universal.zip", zip_path)
+        urllib.request.urlretrieve("https://github.com/duckdb/duckdb/releases/download/v0.10.0/libduckdb-osx-universal.zip", zip_path)
         zip = zipfile.ZipFile(zip_path)
         zip.extract("libduckdb.dylib", tmp)
         shutil.copy(os.path.join(tmp, "libduckdb.dylib"), "lib/binding/libduckdb")

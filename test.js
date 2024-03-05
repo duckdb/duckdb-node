@@ -17,18 +17,39 @@ function convert_validity(vector, n) {
     return res;
 }
 
-function convert_validity_native(vector, n) {
-    const validity = duckdb_native.duckdb_vector_get_validity(vector);
-    const res = Array.from({ length: n }).fill(true);
+function convert_string_vector(vector, n) {
+    const validity = convert_validity(vector, n);
+    // from string_type.hpp
+    const SIZEOF_STRING_T = 16;
+    const INLINE_LENGTH = 12;
+
+    const data_buf =
+        duckdb_native.copy_buffer(duckdb_native.duckdb_vector_get_data(vector), SIZEOF_STRING_T * n);
+    // TODO can we really have a case without data_buf??? if so, we could end here.
+    const lenghts_arr = new Uint32Array(data_buf.buffer);
+    // we pretend the pointers are doubles for node reasons
+    const pointers_arr = new Float64Array(data_buf.buffer);
+
+    const vector_data = new Array(n).fill(null);
     for (let row_idx = 0; row_idx < n; row_idx++) {
-        res[row_idx] = duckdb_native.duckdb_validity_row_is_valid(validity, row_idx);
+        if (!validity[row_idx]) {
+            continue;
+        }
+        const length = lenghts_arr[row_idx*(SIZEOF_STRING_T/Uint32Array.BYTES_PER_ELEMENT)];
+        const string_start_bytes = row_idx * SIZEOF_STRING_T + Uint32Array.BYTES_PER_ELEMENT;
+
+        if (length <= INLINE_LENGTH) { // short string is inlined.
+            vector_data[row_idx] = data_buf.slice(string_start_bytes, string_start_bytes + length);
+        } else { // long string has prefix (ignored) and pointer
+            const pointer = pointers_arr[row_idx * (SIZEOF_STRING_T/Float64Array.BYTES_PER_ELEMENT) + 1];
+            vector_data[row_idx] = duckdb_native.copy_buffer_double(pointer, length);
+        }
     }
-    return res;
+    return vector_data;
 }
 
-
 function convert_primitive_vector(vector, n, array_type) {
-    const validity = convert_validity_native(vector, n);
+    const validity = convert_validity(vector, n);
     const data_buf =
         duckdb_native.copy_buffer(duckdb_native.duckdb_vector_get_data(vector), array_type.BYTES_PER_ELEMENT * n);
     const typed_data_arr = data_buf ? new array_type(data_buf.buffer) : null;
@@ -170,9 +191,9 @@ function convert_vector(vector, n) {
         break;
     }
     case duckdb_native.duckdb_type.DUCKDB_TYPE_BLOB:
-        return duckdb_native.convert_string_vector(vector, n);
+        return convert_string_vector(vector, n);
     case duckdb_native.duckdb_type.DUCKDB_TYPE_VARCHAR: {
-        const bytes = duckdb_native.convert_string_vector(vector, n);
+        const bytes = convert_string_vector(vector, n);
         const decoder = new TextDecoder('utf-8');
         const ret = new Array(n);
         for (let i = 0; i < n; i++) {
@@ -218,23 +239,18 @@ async function test() {
 
     // create a statement and bind a value to it
     const prepared_statement = new duckdb_native.duckdb_prepared_statement;
-    // const prepare_status = await duckdb_native.duckdb_prepare(
-    //     con,
-    //     "SELECT 42.0::DECIMAL, CASE WHEN range % 2 == 0 THEN [1, 2, 3] ELSE NULL END, CASE WHEN range % 2 == 0
-    //     THEN {'key1': 'string', 'key2': 1, 'key3': 12.345} ELSE NULL END , range::INTEGER, CASE WHEN range % 2 == 0
-    //     THEN range ELSE NULL END, CASE WHEN range % 2 == 0 THEN range::VARCHAR ELSE NULL END FROM range(?)",
-    //     prepared_statement);
-    //
 
-    const prepare_status =
-        await duckdb_native.duckdb_prepare(con, "SELECT CASE WHEN range % 2 = 0 THEN range ELSE NULL END asdf FROM range(?)", prepared_statement);
+    const prepare_status = await duckdb_native.duckdb_prepare(
+        con,
+        "SELECT 42.0::DECIMAL, CASE WHEN range % 2 == 0 THEN [1, 2, 3] ELSE NULL END, CASE WHEN range % 2 == 0 THEN {'key1': 'string', 'key2': 1, 'key3': 12.345} ELSE NULL END , range::INTEGER, CASE WHEN range % 2 == 0 THEN range ELSE NULL END, CASE WHEN range % 2 == 0 THEN range::VARCHAR ELSE NULL END, CASE WHEN range % 2 == 0 THEN 'somewhat long string ' || range::VARCHAR ELSE NULL END  FROM range(?)",  prepared_statement);
+
 
     if (prepare_status != duckdb_native.duckdb_state.DuckDBSuccess) {
         console.error(duckdb_native.duckdb_prepare_error(prepared_statement));
         duckdb_native.duckdb_destroy_prepare(prepared_statement);
         return;
     }
-    const bind_state = duckdb_native.duckdb_bind_int64(prepared_statement, 1, 1000000);
+    const bind_state = duckdb_native.duckdb_bind_int64(prepared_statement, 1, 10000);
     if (bind_state != duckdb_native.duckdb_state.DuckDBSuccess) {
         console.error("Failed to bind parameter");
         return;
@@ -278,8 +294,6 @@ async function test() {
 
     const start = Date.now();
 
-    var sum = BigInt(0);
-
     // now consume result set stream
     while (true) {
         const chunk = await duckdb_native.duckdb_stream_fetch_chunk(result);
@@ -292,16 +306,14 @@ async function test() {
         // loop over columns and interpret vector bytes
         for (let col_idx = 0; col_idx < duckdb_native.duckdb_data_chunk_get_column_count(chunk); col_idx++) {
            const vec = convert_vector(duckdb_native.duckdb_data_chunk_get_vector(chunk, col_idx), n);
-           sum += vec[0];
+           console.log(vec);
         }
 
         duckdb_native.duckdb_destroy_data_chunk(chunk);
     }
 
     const end = Date.now();
-    console.log(sum);
     console.log(`Execution time: ${end - start} ms`);
-
 
     // clean up again
     duckdb_native.duckdb_destroy_result(result);

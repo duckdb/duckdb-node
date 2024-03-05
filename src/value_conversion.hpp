@@ -383,7 +383,12 @@ public:
 		return GetValue(info, offset).As<Napi::Number>().FloatValue();
 	}
 
-	template <>
+    template <>
+    double FromJS(const Napi::CallbackInfo &info, idx_t offset) {
+        return GetValue(info, offset).As<Napi::Number>().DoubleValue();
+    }
+
+    template <>
 	int8_t FromJS(const Napi::CallbackInfo &info, idx_t offset) {
 		return GetValue(info, offset).As<Napi::Number>().Int32Value();
 	}
