@@ -45,6 +45,8 @@ echo "local binary at  $LOCAL_BINARY"
 echo "remote binary at $REMOTE_BINARY"
 echo "served from      $S3_ENDPOINT_BINARY"
 
+ls -la **/$LOCAL_BINARY
+
 if [[ "$GITHUB_REF" =~ ^(refs/heads/main|refs/tags/v.+)$ ]] ; then
   aws s3 cp $LOCAL_BINARY $S3_ENDPOINT_BINARY --acl public-read
 else
