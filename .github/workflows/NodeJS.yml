@@ -118,7 +118,7 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' || github.repository != 'duckdb/duckdb-node'
     name: node.js OSX
     runs-on: macos-latest
-    needs: linux-nodejs
+    needs: set-up-npm
     continue-on-error: ${{ matrix.node != '18' && matrix.node != '20' && matrix.node != '21' }}
     strategy:
       matrix:
@@ -185,7 +185,7 @@ jobs:
   win-nodejs:
     name: node.js Windows
     runs-on: windows-latest
-    needs: linux-nodejs
+    needs: set-up-npm
     continue-on-error: ${{ matrix.node != '18' && matrix.node != '20' && matrix.node != '21' }}
     env:
       npm_config_msvs_version: 2019
