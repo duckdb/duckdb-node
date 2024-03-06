@@ -3,898 +3,319 @@
 #include "function_wrappers.hpp"
 #include "duckdb.h"
 
-static void RegisterGenerated(Napi::Env env, Napi::Object exports) {
-	auto duckdb_type_enum = Napi::Object::New(env);
-	duckdb_type_enum.Set("DUCKDB_TYPE_INVALID", 0);
-	duckdb_type_enum.Set("DUCKDB_TYPE_BOOLEAN", 1);
-	duckdb_type_enum.Set("DUCKDB_TYPE_TINYINT", 2);
-	duckdb_type_enum.Set("DUCKDB_TYPE_SMALLINT", 3);
-	duckdb_type_enum.Set("DUCKDB_TYPE_INTEGER", 4);
-	duckdb_type_enum.Set("DUCKDB_TYPE_BIGINT", 5);
-	duckdb_type_enum.Set("DUCKDB_TYPE_UTINYINT", 6);
-	duckdb_type_enum.Set("DUCKDB_TYPE_USMALLINT", 7);
-	duckdb_type_enum.Set("DUCKDB_TYPE_UINTEGER", 8);
-	duckdb_type_enum.Set("DUCKDB_TYPE_UBIGINT", 9);
-	duckdb_type_enum.Set("DUCKDB_TYPE_FLOAT", 10);
-	duckdb_type_enum.Set("DUCKDB_TYPE_DOUBLE", 11);
-	duckdb_type_enum.Set("DUCKDB_TYPE_TIMESTAMP", 12);
-	duckdb_type_enum.Set("DUCKDB_TYPE_DATE", 13);
-	duckdb_type_enum.Set("DUCKDB_TYPE_TIME", 14);
-	duckdb_type_enum.Set("DUCKDB_TYPE_INTERVAL", 15);
-	duckdb_type_enum.Set("DUCKDB_TYPE_HUGEINT", 16);
-	duckdb_type_enum.Set("DUCKDB_TYPE_UHUGEINT", 17);
-	duckdb_type_enum.Set("DUCKDB_TYPE_VARCHAR", 18);
-	duckdb_type_enum.Set("DUCKDB_TYPE_BLOB", 19);
-	duckdb_type_enum.Set("DUCKDB_TYPE_DECIMAL", 20);
-	duckdb_type_enum.Set("DUCKDB_TYPE_TIMESTAMP_S", 21);
-	duckdb_type_enum.Set("DUCKDB_TYPE_TIMESTAMP_MS", 22);
-	duckdb_type_enum.Set("DUCKDB_TYPE_TIMESTAMP_NS", 23);
-	duckdb_type_enum.Set("DUCKDB_TYPE_ENUM", 24);
-	duckdb_type_enum.Set("DUCKDB_TYPE_LIST", 25);
-	duckdb_type_enum.Set("DUCKDB_TYPE_STRUCT", 26);
-	duckdb_type_enum.Set("DUCKDB_TYPE_MAP", 27);
-	duckdb_type_enum.Set("DUCKDB_TYPE_UUID", 28);
-	duckdb_type_enum.Set("DUCKDB_TYPE_UNION", 29);
-	duckdb_type_enum.Set("DUCKDB_TYPE_BIT", 30);
-	duckdb_type_enum.Set("DUCKDB_TYPE_TIME_TZ", 31);
-	duckdb_type_enum.Set("DUCKDB_TYPE_TIMESTAMP_TZ", 32);
-	exports.DefineProperty(Napi::PropertyDescriptor::Value(
-	    "duckdb_type", duckdb_type_enum, static_cast<napi_property_attributes>(napi_enumerable | napi_configurable)));
-	auto duckdb_state_enum = Napi::Object::New(env);
-	duckdb_state_enum.Set("DuckDBSuccess", 0);
-	duckdb_state_enum.Set("DuckDBError", 1);
-	exports.DefineProperty(Napi::PropertyDescriptor::Value(
-	    "duckdb_state", duckdb_state_enum, static_cast<napi_property_attributes>(napi_enumerable | napi_configurable)));
-	auto duckdb_pending_state_enum = Napi::Object::New(env);
-	duckdb_pending_state_enum.Set("DUCKDB_PENDING_RESULT_READY", 0);
-	duckdb_pending_state_enum.Set("DUCKDB_PENDING_RESULT_NOT_READY", 1);
-	duckdb_pending_state_enum.Set("DUCKDB_PENDING_ERROR", 2);
-	duckdb_pending_state_enum.Set("DUCKDB_PENDING_NO_TASKS_AVAILABLE", 3);
-	exports.DefineProperty(
-	    Napi::PropertyDescriptor::Value("duckdb_pending_state", duckdb_pending_state_enum,
-	                                    static_cast<napi_property_attributes>(napi_enumerable | napi_configurable)));
-	auto duckdb_result_type_enum = Napi::Object::New(env);
-	duckdb_result_type_enum.Set("DUCKDB_RESULT_TYPE_INVALID", 0);
-	duckdb_result_type_enum.Set("DUCKDB_RESULT_TYPE_CHANGED_ROWS", 1);
-	duckdb_result_type_enum.Set("DUCKDB_RESULT_TYPE_NOTHING", 2);
-	duckdb_result_type_enum.Set("DUCKDB_RESULT_TYPE_QUERY_RESULT", 3);
-	exports.DefineProperty(
-	    Napi::PropertyDescriptor::Value("duckdb_result_type", duckdb_result_type_enum,
-	                                    static_cast<napi_property_attributes>(napi_enumerable | napi_configurable)));
-	auto duckdb_statement_type_enum = Napi::Object::New(env);
-	duckdb_statement_type_enum.Set("DUCKDB_STATEMENT_TYPE_INVALID", 0);
-	duckdb_statement_type_enum.Set("DUCKDB_STATEMENT_TYPE_SELECT", 1);
-	duckdb_statement_type_enum.Set("DUCKDB_STATEMENT_TYPE_INSERT", 2);
-	duckdb_statement_type_enum.Set("DUCKDB_STATEMENT_TYPE_UPDATE", 3);
-	duckdb_statement_type_enum.Set("DUCKDB_STATEMENT_TYPE_EXPLAIN", 4);
-	duckdb_statement_type_enum.Set("DUCKDB_STATEMENT_TYPE_DELETE", 5);
-	duckdb_statement_type_enum.Set("DUCKDB_STATEMENT_TYPE_PREPARE", 6);
-	duckdb_statement_type_enum.Set("DUCKDB_STATEMENT_TYPE_CREATE", 7);
-	duckdb_statement_type_enum.Set("DUCKDB_STATEMENT_TYPE_EXECUTE", 8);
-	duckdb_statement_type_enum.Set("DUCKDB_STATEMENT_TYPE_ALTER", 9);
-	duckdb_statement_type_enum.Set("DUCKDB_STATEMENT_TYPE_TRANSACTION", 10);
-	duckdb_statement_type_enum.Set("DUCKDB_STATEMENT_TYPE_COPY", 11);
-	duckdb_statement_type_enum.Set("DUCKDB_STATEMENT_TYPE_ANALYZE", 12);
-	duckdb_statement_type_enum.Set("DUCKDB_STATEMENT_TYPE_VARIABLE_SET", 13);
-	duckdb_statement_type_enum.Set("DUCKDB_STATEMENT_TYPE_CREATE_FUNC", 14);
-	duckdb_statement_type_enum.Set("DUCKDB_STATEMENT_TYPE_DROP", 15);
-	duckdb_statement_type_enum.Set("DUCKDB_STATEMENT_TYPE_EXPORT", 16);
-	duckdb_statement_type_enum.Set("DUCKDB_STATEMENT_TYPE_PRAGMA", 17);
-	duckdb_statement_type_enum.Set("DUCKDB_STATEMENT_TYPE_VACUUM", 18);
-	duckdb_statement_type_enum.Set("DUCKDB_STATEMENT_TYPE_CALL", 19);
-	duckdb_statement_type_enum.Set("DUCKDB_STATEMENT_TYPE_SET", 20);
-	duckdb_statement_type_enum.Set("DUCKDB_STATEMENT_TYPE_LOAD", 21);
-	duckdb_statement_type_enum.Set("DUCKDB_STATEMENT_TYPE_RELATION", 22);
-	duckdb_statement_type_enum.Set("DUCKDB_STATEMENT_TYPE_EXTENSION", 23);
-	duckdb_statement_type_enum.Set("DUCKDB_STATEMENT_TYPE_LOGICAL_PLAN", 24);
-	duckdb_statement_type_enum.Set("DUCKDB_STATEMENT_TYPE_ATTACH", 25);
-	duckdb_statement_type_enum.Set("DUCKDB_STATEMENT_TYPE_DETACH", 26);
-	duckdb_statement_type_enum.Set("DUCKDB_STATEMENT_TYPE_MULTI", 27);
-	exports.DefineProperty(
-	    Napi::PropertyDescriptor::Value("duckdb_statement_type", duckdb_statement_type_enum,
-	                                    static_cast<napi_property_attributes>(napi_enumerable | napi_configurable)));
-	exports.Set(Napi::String::New(env, "duckdb_date"),
-	            duckdb_node::PointerHolder<duckdb_date>::Init(env, "duckdb_date")->Value());
-	exports.Set(Napi::String::New(env, "duckdb_date_struct"),
-	            duckdb_node::PointerHolder<duckdb_date_struct>::Init(env, "duckdb_date_struct")->Value());
-	exports.Set(Napi::String::New(env, "duckdb_time"),
-	            duckdb_node::PointerHolder<duckdb_time>::Init(env, "duckdb_time")->Value());
-	exports.Set(Napi::String::New(env, "duckdb_time_struct"),
-	            duckdb_node::PointerHolder<duckdb_time_struct>::Init(env, "duckdb_time_struct")->Value());
-	exports.Set(Napi::String::New(env, "duckdb_time_tz"),
-	            duckdb_node::PointerHolder<duckdb_time_tz>::Init(env, "duckdb_time_tz")->Value());
-	exports.Set(Napi::String::New(env, "duckdb_time_tz_struct"),
-	            duckdb_node::PointerHolder<duckdb_time_tz_struct>::Init(env, "duckdb_time_tz_struct")->Value());
-	exports.Set(Napi::String::New(env, "duckdb_timestamp"),
-	            duckdb_node::PointerHolder<duckdb_timestamp>::Init(env, "duckdb_timestamp")->Value());
-	exports.Set(Napi::String::New(env, "duckdb_timestamp_struct"),
-	            duckdb_node::PointerHolder<duckdb_timestamp_struct>::Init(env, "duckdb_timestamp_struct")->Value());
-	exports.Set(Napi::String::New(env, "duckdb_interval"),
-	            duckdb_node::PointerHolder<duckdb_interval>::Init(env, "duckdb_interval")->Value());
-	exports.Set(Napi::String::New(env, "duckdb_hugeint"),
-	            duckdb_node::PointerHolder<duckdb_hugeint>::Init(env, "duckdb_hugeint")->Value());
-	exports.Set(Napi::String::New(env, "duckdb_uhugeint"),
-	            duckdb_node::PointerHolder<duckdb_uhugeint>::Init(env, "duckdb_uhugeint")->Value());
-	exports.Set(Napi::String::New(env, "duckdb_decimal"),
-	            duckdb_node::PointerHolder<duckdb_decimal>::Init(env, "duckdb_decimal")->Value());
-	exports.Set(
-	    Napi::String::New(env, "duckdb_query_progress_type"),
-	    duckdb_node::PointerHolder<duckdb_query_progress_type>::Init(env, "duckdb_query_progress_type")->Value());
-	exports.Set(Napi::String::New(env, "duckdb_string_t"),
-	            duckdb_node::PointerHolder<duckdb_string_t>::Init(env, "duckdb_string_t")->Value());
-	exports.Set(Napi::String::New(env, "duckdb_list_entry"),
-	            duckdb_node::PointerHolder<duckdb_list_entry>::Init(env, "duckdb_list_entry")->Value());
-	exports.Set(Napi::String::New(env, "duckdb_column"),
-	            duckdb_node::PointerHolder<duckdb_column>::Init(env, "duckdb_column")->Value());
-	exports.Set(Napi::String::New(env, "duckdb_vector"),
-	            duckdb_node::PointerHolder<duckdb_vector>::Init(env, "duckdb_vector")->Value());
-	exports.Set(Napi::String::New(env, "duckdb_string"),
-	            duckdb_node::PointerHolder<duckdb_string>::Init(env, "duckdb_string")->Value());
-	exports.Set(Napi::String::New(env, "duckdb_blob"),
-	            duckdb_node::PointerHolder<duckdb_blob>::Init(env, "duckdb_blob")->Value());
-	exports.Set(Napi::String::New(env, "duckdb_result"),
-	            duckdb_node::PointerHolder<duckdb_result>::Init(env, "duckdb_result")->Value());
-	exports.Set(Napi::String::New(env, "duckdb_database"),
-	            duckdb_node::PointerHolder<duckdb_database>::Init(env, "duckdb_database")->Value());
-	exports.Set(Napi::String::New(env, "duckdb_connection"),
-	            duckdb_node::PointerHolder<duckdb_connection>::Init(env, "duckdb_connection")->Value());
-	exports.Set(Napi::String::New(env, "duckdb_prepared_statement"),
-	            duckdb_node::PointerHolder<duckdb_prepared_statement>::Init(env, "duckdb_prepared_statement")->Value());
-	exports.Set(
-	    Napi::String::New(env, "duckdb_extracted_statements"),
-	    duckdb_node::PointerHolder<duckdb_extracted_statements>::Init(env, "duckdb_extracted_statements")->Value());
-	exports.Set(Napi::String::New(env, "duckdb_pending_result"),
-	            duckdb_node::PointerHolder<duckdb_pending_result>::Init(env, "duckdb_pending_result")->Value());
-	exports.Set(Napi::String::New(env, "duckdb_appender"),
-	            duckdb_node::PointerHolder<duckdb_appender>::Init(env, "duckdb_appender")->Value());
-	exports.Set(Napi::String::New(env, "duckdb_config"),
-	            duckdb_node::PointerHolder<duckdb_config>::Init(env, "duckdb_config")->Value());
-	exports.Set(Napi::String::New(env, "duckdb_logical_type"),
-	            duckdb_node::PointerHolder<duckdb_logical_type>::Init(env, "duckdb_logical_type")->Value());
-	exports.Set(Napi::String::New(env, "duckdb_data_chunk"),
-	            duckdb_node::PointerHolder<duckdb_data_chunk>::Init(env, "duckdb_data_chunk")->Value());
-	exports.Set(Napi::String::New(env, "duckdb_value"),
-	            duckdb_node::PointerHolder<duckdb_value>::Init(env, "duckdb_value")->Value());
-	exports.Set(Napi::String::New(env, "duckdb_arrow"),
-	            duckdb_node::PointerHolder<duckdb_arrow>::Init(env, "duckdb_arrow")->Value());
-	exports.Set(Napi::String::New(env, "duckdb_arrow_stream"),
-	            duckdb_node::PointerHolder<duckdb_arrow_stream>::Init(env, "duckdb_arrow_stream")->Value());
-	exports.Set(Napi::String::New(env, "duckdb_arrow_schema"),
-	            duckdb_node::PointerHolder<duckdb_arrow_schema>::Init(env, "duckdb_arrow_schema")->Value());
-	exports.Set(Napi::String::New(env, "duckdb_arrow_array"),
-	            duckdb_node::PointerHolder<duckdb_arrow_array>::Init(env, "duckdb_arrow_array")->Value());
-	exports.Set(Napi::String::New(env, "duckdb_open"),
-	            Napi::Function::New<duckdb_node::FunctionWrappers::AsyncFunctionWrapper2<
-	                duckdb_state, const char *, duckdb_database *, "duckdb_open">>(env));
-	exports.Set(Napi::String::New(env, "duckdb_open_ext"),
-	            Napi::Function::New<duckdb_node::FunctionWrappers::AsyncFunctionWrapper4<
-	                duckdb_state, const char *, duckdb_database *, duckdb_config, char **, "duckdb_open_ext">>(env));
-	exports.Set(Napi::String::New(env, "duckdb_close"),
-	            Napi::Function::New<
-	                duckdb_node::FunctionWrappers::AsyncFunctionWrapper1Void<duckdb_database *, "duckdb_close">>(env));
-	exports.Set(Napi::String::New(env, "duckdb_connect"),
-	            Napi::Function::New<duckdb_node::FunctionWrappers::AsyncFunctionWrapper2<
-	                duckdb_state, duckdb_database, duckdb_connection *, "duckdb_connect">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_interrupt"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1Void<duckdb_connection, "duckdb_interrupt">>(
-	        env));
-	exports.Set(Napi::String::New(env, "duckdb_query_progress"),
-	            Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<
-	                duckdb_query_progress_type, duckdb_connection, "duckdb_query_progress">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_disconnect"),
-	    Napi::Function::New<
-	        duckdb_node::FunctionWrappers::AsyncFunctionWrapper1Void<duckdb_connection *, "duckdb_disconnect">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_library_version"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper0<const char *, "duckdb_library_version">>(
-	        env));
-	exports.Set(Napi::String::New(env, "duckdb_create_config"),
-	            Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<duckdb_state, duckdb_config *,
-	                                                                                "duckdb_create_config">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_config_count"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper0<size_t, "duckdb_config_count">>(env));
-	exports.Set(Napi::String::New(env, "duckdb_get_config_flag"),
-	            Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper3<
-	                duckdb_state, size_t, const char **, const char **, "duckdb_get_config_flag">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_set_config"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper3<duckdb_state, duckdb_config, const char *,
-	                                                                        const char *, "duckdb_set_config">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_destroy_config"),
-	    Napi::Function::New<
-	        duckdb_node::FunctionWrappers::FunctionWrapper1Void<duckdb_config *, "duckdb_destroy_config">>(env));
-	exports.Set(Napi::String::New(env, "duckdb_query"),
-	            Napi::Function::New<duckdb_node::FunctionWrappers::AsyncFunctionWrapper3<
-	                duckdb_state, duckdb_connection, const char *, duckdb_result *, "duckdb_query">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_destroy_result"),
-	    Napi::Function::New<
-	        duckdb_node::FunctionWrappers::FunctionWrapper1Void<duckdb_result *, "duckdb_destroy_result">>(env));
-	exports.Set(Napi::String::New(env, "duckdb_column_name"),
-	            Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<const char *, duckdb_result *,
-	                                                                                idx_t, "duckdb_column_name">>(env));
-	exports.Set(Napi::String::New(env, "duckdb_column_type"),
-	            Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_type, duckdb_result *, idx_t,
-	                                                                                "duckdb_column_type">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_result_statement_type"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<duckdb_statement_type, duckdb_result,
-	                                                                        "duckdb_result_statement_type">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_column_logical_type"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_logical_type, duckdb_result *, idx_t,
-	                                                                        "duckdb_column_logical_type">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_column_count"),
-	    Napi::Function::New<
-	        duckdb_node::FunctionWrappers::FunctionWrapper1<idx_t, duckdb_result *, "duckdb_column_count">>(env));
-	exports.Set(Napi::String::New(env, "duckdb_row_count"),
-	            Napi::Function::New<
-	                duckdb_node::FunctionWrappers::FunctionWrapper1<idx_t, duckdb_result *, "duckdb_row_count">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_rows_changed"),
-	    Napi::Function::New<
-	        duckdb_node::FunctionWrappers::FunctionWrapper1<idx_t, duckdb_result *, "duckdb_rows_changed">>(env));
-	exports.Set(Napi::String::New(env, "duckdb_result_error"),
-	            Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<const char *, duckdb_result *,
-	                                                                                "duckdb_result_error">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_result_get_chunk"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_data_chunk, duckdb_result, idx_t,
-	                                                                        "duckdb_result_get_chunk">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_result_is_streaming"),
-	    Napi::Function::New<
-	        duckdb_node::FunctionWrappers::FunctionWrapper1<bool, duckdb_result, "duckdb_result_is_streaming">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_result_chunk_count"),
-	    Napi::Function::New<
-	        duckdb_node::FunctionWrappers::FunctionWrapper1<idx_t, duckdb_result, "duckdb_result_chunk_count">>(env));
-	exports.Set(Napi::String::New(env, "duckdb_result_return_type"),
-	            Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<duckdb_result_type, duckdb_result,
-	                                                                                "duckdb_result_return_type">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_value_uhugeint"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper3<duckdb_uhugeint, duckdb_result *, idx_t,
-	                                                                        idx_t, "duckdb_value_uhugeint">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_malloc"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<void *, size_t, "duckdb_malloc">>(env));
-	exports.Set(Napi::String::New(env, "duckdb_free"),
-	            Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1Void<void *, "duckdb_free">>(env));
-	exports.Set(Napi::String::New(env, "duckdb_vector_size"),
-	            Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper0<idx_t, "duckdb_vector_size">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_string_is_inlined"),
-	    Napi::Function::New<
-	        duckdb_node::FunctionWrappers::FunctionWrapper1<bool, duckdb_string_t, "duckdb_string_is_inlined">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_from_date"),
-	    Napi::Function::New<
-	        duckdb_node::FunctionWrappers::FunctionWrapper1<duckdb_date_struct, duckdb_date, "duckdb_from_date">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_to_date"),
-	    Napi::Function::New<
-	        duckdb_node::FunctionWrappers::FunctionWrapper1<duckdb_date, duckdb_date_struct, "duckdb_to_date">>(env));
-	exports.Set(Napi::String::New(env, "duckdb_is_finite_date"),
-	            Napi::Function::New<
-	                duckdb_node::FunctionWrappers::FunctionWrapper1<bool, duckdb_date, "duckdb_is_finite_date">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_from_time"),
-	    Napi::Function::New<
-	        duckdb_node::FunctionWrappers::FunctionWrapper1<duckdb_time_struct, duckdb_time, "duckdb_from_time">>(env));
-	exports.Set(Napi::String::New(env, "duckdb_create_time_tz"),
-	            Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_time_tz, int64_t, int32_t,
-	                                                                                "duckdb_create_time_tz">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_from_time_tz"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<duckdb_time_tz_struct, duckdb_time_tz,
-	                                                                        "duckdb_from_time_tz">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_to_time"),
-	    Napi::Function::New<
-	        duckdb_node::FunctionWrappers::FunctionWrapper1<duckdb_time, duckdb_time_struct, "duckdb_to_time">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_from_timestamp"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<duckdb_timestamp_struct, duckdb_timestamp,
-	                                                                        "duckdb_from_timestamp">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_to_timestamp"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<duckdb_timestamp, duckdb_timestamp_struct,
-	                                                                        "duckdb_to_timestamp">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_is_finite_timestamp"),
-	    Napi::Function::New<
-	        duckdb_node::FunctionWrappers::FunctionWrapper1<bool, duckdb_timestamp, "duckdb_is_finite_timestamp">>(
-	        env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_hugeint_to_double"),
-	    Napi::Function::New<
-	        duckdb_node::FunctionWrappers::FunctionWrapper1<double, duckdb_hugeint, "duckdb_hugeint_to_double">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_double_to_hugeint"),
-	    Napi::Function::New<
-	        duckdb_node::FunctionWrappers::FunctionWrapper1<duckdb_hugeint, double, "duckdb_double_to_hugeint">>(env));
-	exports.Set(Napi::String::New(env, "duckdb_uhugeint_to_double"),
-	            Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<double, duckdb_uhugeint,
-	                                                                                "duckdb_uhugeint_to_double">>(env));
-	exports.Set(Napi::String::New(env, "duckdb_double_to_uhugeint"),
-	            Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<duckdb_uhugeint, double,
-	                                                                                "duckdb_double_to_uhugeint">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_double_to_decimal"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper3<duckdb_decimal, double, uint8_t, uint8_t,
-	                                                                        "duckdb_double_to_decimal">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_decimal_to_double"),
-	    Napi::Function::New<
-	        duckdb_node::FunctionWrappers::FunctionWrapper1<double, duckdb_decimal, "duckdb_decimal_to_double">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_prepare"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::AsyncFunctionWrapper3<
-	        duckdb_state, duckdb_connection, const char *, duckdb_prepared_statement *, "duckdb_prepare">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_destroy_prepare"),
-	    Napi::Function::New<
-	        duckdb_node::FunctionWrappers::FunctionWrapper1Void<duckdb_prepared_statement *, "duckdb_destroy_prepare">>(
-	        env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_prepare_error"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<const char *, duckdb_prepared_statement,
-	                                                                        "duckdb_prepare_error">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_nparams"),
-	    Napi::Function::New<
-	        duckdb_node::FunctionWrappers::FunctionWrapper1<idx_t, duckdb_prepared_statement, "duckdb_nparams">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_parameter_name"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<const char *, duckdb_prepared_statement,
-	                                                                        idx_t, "duckdb_parameter_name">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_param_type"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_type, duckdb_prepared_statement,
-	                                                                        idx_t, "duckdb_param_type">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_clear_bindings"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<duckdb_state, duckdb_prepared_statement,
-	                                                                        "duckdb_clear_bindings">>(env));
-	exports.Set(Napi::String::New(env, "duckdb_prepared_statement_type"),
-	            Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<
-	                duckdb_statement_type, duckdb_prepared_statement, "duckdb_prepared_statement_type">>(env));
-	exports.Set(Napi::String::New(env, "duckdb_bind_value"),
-	            Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper3<
-	                duckdb_state, duckdb_prepared_statement, idx_t, duckdb_value, "duckdb_bind_value">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_bind_parameter_index"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper3<
-	        duckdb_state, duckdb_prepared_statement, idx_t *, const char *, "duckdb_bind_parameter_index">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_bind_boolean"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper3<duckdb_state, duckdb_prepared_statement,
-	                                                                        idx_t, bool, "duckdb_bind_boolean">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_bind_int8"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper3<duckdb_state, duckdb_prepared_statement,
-	                                                                        idx_t, int8_t, "duckdb_bind_int8">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_bind_int16"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper3<duckdb_state, duckdb_prepared_statement,
-	                                                                        idx_t, int16_t, "duckdb_bind_int16">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_bind_int32"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper3<duckdb_state, duckdb_prepared_statement,
-	                                                                        idx_t, int32_t, "duckdb_bind_int32">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_bind_int64"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper3<duckdb_state, duckdb_prepared_statement,
-	                                                                        idx_t, int64_t, "duckdb_bind_int64">>(env));
-	exports.Set(Napi::String::New(env, "duckdb_bind_hugeint"),
-	            Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper3<
-	                duckdb_state, duckdb_prepared_statement, idx_t, duckdb_hugeint, "duckdb_bind_hugeint">>(env));
-	exports.Set(Napi::String::New(env, "duckdb_bind_uhugeint"),
-	            Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper3<
-	                duckdb_state, duckdb_prepared_statement, idx_t, duckdb_uhugeint, "duckdb_bind_uhugeint">>(env));
-	exports.Set(Napi::String::New(env, "duckdb_bind_decimal"),
-	            Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper3<
-	                duckdb_state, duckdb_prepared_statement, idx_t, duckdb_decimal, "duckdb_bind_decimal">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_bind_uint8"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper3<duckdb_state, duckdb_prepared_statement,
-	                                                                        idx_t, uint8_t, "duckdb_bind_uint8">>(env));
-	exports.Set(Napi::String::New(env, "duckdb_bind_uint16"),
-	            Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper3<
-	                duckdb_state, duckdb_prepared_statement, idx_t, uint16_t, "duckdb_bind_uint16">>(env));
-	exports.Set(Napi::String::New(env, "duckdb_bind_uint32"),
-	            Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper3<
-	                duckdb_state, duckdb_prepared_statement, idx_t, uint32_t, "duckdb_bind_uint32">>(env));
-	exports.Set(Napi::String::New(env, "duckdb_bind_uint64"),
-	            Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper3<
-	                duckdb_state, duckdb_prepared_statement, idx_t, uint64_t, "duckdb_bind_uint64">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_bind_float"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper3<duckdb_state, duckdb_prepared_statement,
-	                                                                        idx_t, float, "duckdb_bind_float">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_bind_double"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper3<duckdb_state, duckdb_prepared_statement,
-	                                                                        idx_t, double, "duckdb_bind_double">>(env));
-	exports.Set(Napi::String::New(env, "duckdb_bind_date"),
-	            Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper3<
-	                duckdb_state, duckdb_prepared_statement, idx_t, duckdb_date, "duckdb_bind_date">>(env));
-	exports.Set(Napi::String::New(env, "duckdb_bind_time"),
-	            Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper3<
-	                duckdb_state, duckdb_prepared_statement, idx_t, duckdb_time, "duckdb_bind_time">>(env));
-	exports.Set(Napi::String::New(env, "duckdb_bind_timestamp"),
-	            Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper3<
-	                duckdb_state, duckdb_prepared_statement, idx_t, duckdb_timestamp, "duckdb_bind_timestamp">>(env));
-	exports.Set(Napi::String::New(env, "duckdb_bind_interval"),
-	            Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper3<
-	                duckdb_state, duckdb_prepared_statement, idx_t, duckdb_interval, "duckdb_bind_interval">>(env));
-	exports.Set(Napi::String::New(env, "duckdb_bind_varchar"),
-	            Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper3<
-	                duckdb_state, duckdb_prepared_statement, idx_t, const char *, "duckdb_bind_varchar">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_bind_varchar_length"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper4<
-	        duckdb_state, duckdb_prepared_statement, idx_t, const char *, idx_t, "duckdb_bind_varchar_length">>(env));
-	exports.Set(Napi::String::New(env, "duckdb_bind_blob"),
-	            Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper4<
-	                duckdb_state, duckdb_prepared_statement, idx_t, const void *, idx_t, "duckdb_bind_blob">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_bind_null"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_state, duckdb_prepared_statement,
-	                                                                        idx_t, "duckdb_bind_null">>(env));
-	exports.Set(Napi::String::New(env, "duckdb_execute_prepared"),
-	            Napi::Function::New<duckdb_node::FunctionWrappers::AsyncFunctionWrapper2<
-	                duckdb_state, duckdb_prepared_statement, duckdb_result *, "duckdb_execute_prepared">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_execute_prepared_streaming"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<
-	        duckdb_state, duckdb_prepared_statement, duckdb_result *, "duckdb_execute_prepared_streaming">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_extract_statements"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::AsyncFunctionWrapper3<
-	        idx_t, duckdb_connection, const char *, duckdb_extracted_statements *, "duckdb_extract_statements">>(env));
-	exports.Set(Napi::String::New(env, "duckdb_prepare_extracted_statement"),
-	            Napi::Function::New<duckdb_node::FunctionWrappers::AsyncFunctionWrapper4<
-	                duckdb_state, duckdb_connection, duckdb_extracted_statements, idx_t, duckdb_prepared_statement *,
-	                "duckdb_prepare_extracted_statement">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_extract_statements_error"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<const char *, duckdb_extracted_statements,
-	                                                                        "duckdb_extract_statements_error">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_destroy_extracted"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1Void<duckdb_extracted_statements *,
-	                                                                            "duckdb_destroy_extracted">>(env));
-	exports.Set(Napi::String::New(env, "duckdb_pending_prepared"),
-	            Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<
-	                duckdb_state, duckdb_prepared_statement, duckdb_pending_result *, "duckdb_pending_prepared">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_pending_prepared_streaming"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<
-	        duckdb_state, duckdb_prepared_statement, duckdb_pending_result *, "duckdb_pending_prepared_streaming">>(
-	        env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_destroy_pending"),
-	    Napi::Function::New<
-	        duckdb_node::FunctionWrappers::FunctionWrapper1Void<duckdb_pending_result *, "duckdb_destroy_pending">>(
-	        env));
-	exports.Set(Napi::String::New(env, "duckdb_pending_error"),
-	            Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<const char *, duckdb_pending_result,
-	                                                                                "duckdb_pending_error">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_pending_execute_task"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<duckdb_pending_state, duckdb_pending_result,
-	                                                                        "duckdb_pending_execute_task">>(env));
-	exports.Set(Napi::String::New(env, "duckdb_pending_execute_check_state"),
-	            Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<
-	                duckdb_pending_state, duckdb_pending_result, "duckdb_pending_execute_check_state">>(env));
-	exports.Set(Napi::String::New(env, "duckdb_execute_pending"),
-	            Napi::Function::New<duckdb_node::FunctionWrappers::AsyncFunctionWrapper2<
-	                duckdb_state, duckdb_pending_result, duckdb_result *, "duckdb_execute_pending">>(env));
-	exports.Set(Napi::String::New(env, "duckdb_pending_execution_is_finished"),
-	            Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<
-	                bool, duckdb_pending_state, "duckdb_pending_execution_is_finished">>(env));
-	exports.Set(Napi::String::New(env, "duckdb_destroy_value"),
-	            Napi::Function::New<
-	                duckdb_node::FunctionWrappers::FunctionWrapper1Void<duckdb_value *, "duckdb_destroy_value">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_create_varchar"),
-	    Napi::Function::New<
-	        duckdb_node::FunctionWrappers::FunctionWrapper1<duckdb_value, const char *, "duckdb_create_varchar">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_create_varchar_length"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_value, const char *, idx_t,
-	                                                                        "duckdb_create_varchar_length">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_create_int64"),
-	    Napi::Function::New<
-	        duckdb_node::FunctionWrappers::FunctionWrapper1<duckdb_value, int64_t, "duckdb_create_int64">>(env));
-	exports.Set(Napi::String::New(env, "duckdb_create_struct_value"),
-	            Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<
-	                duckdb_value, duckdb_logical_type, duckdb_value *, "duckdb_create_struct_value">>(env));
-	exports.Set(Napi::String::New(env, "duckdb_create_list_value"),
-	            Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper3<
-	                duckdb_value, duckdb_logical_type, duckdb_value *, idx_t, "duckdb_create_list_value">>(env));
-	exports.Set(Napi::String::New(env, "duckdb_get_varchar"),
-	            Napi::Function::New<
-	                duckdb_node::FunctionWrappers::FunctionWrapper1<char *, duckdb_value, "duckdb_get_varchar">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_get_int64"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<int64_t, duckdb_value, "duckdb_get_int64">>(
-	        env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_create_logical_type"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<duckdb_logical_type, duckdb_type,
-	                                                                        "duckdb_create_logical_type">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_logical_type_get_alias"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<char *, duckdb_logical_type,
-	                                                                        "duckdb_logical_type_get_alias">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_create_list_type"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<duckdb_logical_type, duckdb_logical_type,
-	                                                                        "duckdb_create_list_type">>(env));
-	exports.Set(Napi::String::New(env, "duckdb_create_map_type"),
-	            Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<
-	                duckdb_logical_type, duckdb_logical_type, duckdb_logical_type, "duckdb_create_map_type">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_create_union_type"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper3<
-	        duckdb_logical_type, duckdb_logical_type *, const char **, idx_t, "duckdb_create_union_type">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_create_struct_type"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper3<
-	        duckdb_logical_type, duckdb_logical_type *, const char **, idx_t, "duckdb_create_struct_type">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_create_enum_type"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_logical_type, const char **, idx_t,
-	                                                                        "duckdb_create_enum_type">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_create_decimal_type"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_logical_type, uint8_t, uint8_t,
-	                                                                        "duckdb_create_decimal_type">>(env));
-	exports.Set(Napi::String::New(env, "duckdb_get_type_id"),
-	            Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<duckdb_type, duckdb_logical_type,
-	                                                                                "duckdb_get_type_id">>(env));
-	exports.Set(Napi::String::New(env, "duckdb_decimal_width"),
-	            Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<uint8_t, duckdb_logical_type,
-	                                                                                "duckdb_decimal_width">>(env));
-	exports.Set(Napi::String::New(env, "duckdb_decimal_scale"),
-	            Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<uint8_t, duckdb_logical_type,
-	                                                                                "duckdb_decimal_scale">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_decimal_internal_type"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<duckdb_type, duckdb_logical_type,
-	                                                                        "duckdb_decimal_internal_type">>(env));
-	exports.Set(Napi::String::New(env, "duckdb_enum_internal_type"),
-	            Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<duckdb_type, duckdb_logical_type,
-	                                                                                "duckdb_enum_internal_type">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_enum_dictionary_size"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<uint32_t, duckdb_logical_type,
-	                                                                        "duckdb_enum_dictionary_size">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_enum_dictionary_value"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<char *, duckdb_logical_type, idx_t,
-	                                                                        "duckdb_enum_dictionary_value">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_list_type_child_type"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<duckdb_logical_type, duckdb_logical_type,
-	                                                                        "duckdb_list_type_child_type">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_map_type_key_type"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<duckdb_logical_type, duckdb_logical_type,
-	                                                                        "duckdb_map_type_key_type">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_map_type_value_type"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<duckdb_logical_type, duckdb_logical_type,
-	                                                                        "duckdb_map_type_value_type">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_struct_type_child_count"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<idx_t, duckdb_logical_type,
-	                                                                        "duckdb_struct_type_child_count">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_struct_type_child_name"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<char *, duckdb_logical_type, idx_t,
-	                                                                        "duckdb_struct_type_child_name">>(env));
-	exports.Set(Napi::String::New(env, "duckdb_struct_type_child_type"),
-	            Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<
-	                duckdb_logical_type, duckdb_logical_type, idx_t, "duckdb_struct_type_child_type">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_union_type_member_count"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<idx_t, duckdb_logical_type,
-	                                                                        "duckdb_union_type_member_count">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_union_type_member_name"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<char *, duckdb_logical_type, idx_t,
-	                                                                        "duckdb_union_type_member_name">>(env));
-	exports.Set(Napi::String::New(env, "duckdb_union_type_member_type"),
-	            Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<
-	                duckdb_logical_type, duckdb_logical_type, idx_t, "duckdb_union_type_member_type">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_destroy_logical_type"),
-	    Napi::Function::New<
-	        duckdb_node::FunctionWrappers::FunctionWrapper1Void<duckdb_logical_type *, "duckdb_destroy_logical_type">>(
-	        env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_create_data_chunk"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_data_chunk, duckdb_logical_type *,
-	                                                                        idx_t, "duckdb_create_data_chunk">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_destroy_data_chunk"),
-	    Napi::Function::New<
-	        duckdb_node::FunctionWrappers::FunctionWrapper1Void<duckdb_data_chunk *, "duckdb_destroy_data_chunk">>(
-	        env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_data_chunk_reset"),
-	    Napi::Function::New<
-	        duckdb_node::FunctionWrappers::FunctionWrapper1Void<duckdb_data_chunk, "duckdb_data_chunk_reset">>(env));
-	exports.Set(Napi::String::New(env, "duckdb_data_chunk_get_column_count"),
-	            Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<
-	                idx_t, duckdb_data_chunk, "duckdb_data_chunk_get_column_count">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_data_chunk_get_vector"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_vector, duckdb_data_chunk, idx_t,
-	                                                                        "duckdb_data_chunk_get_vector">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_data_chunk_get_size"),
-	    Napi::Function::New<
-	        duckdb_node::FunctionWrappers::FunctionWrapper1<idx_t, duckdb_data_chunk, "duckdb_data_chunk_get_size">>(
-	        env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_data_chunk_set_size"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2Void<duckdb_data_chunk, idx_t,
-	                                                                            "duckdb_data_chunk_set_size">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_vector_get_column_type"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<duckdb_logical_type, duckdb_vector,
-	                                                                        "duckdb_vector_get_column_type">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_vector_get_data"),
-	    Napi::Function::New<
-	        duckdb_node::FunctionWrappers::FunctionWrapper1<void *, duckdb_vector, "duckdb_vector_get_data">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_vector_get_validity"),
-	    Napi::Function::New<
-	        duckdb_node::FunctionWrappers::FunctionWrapper1<uint64_t *, duckdb_vector, "duckdb_vector_get_validity">>(
-	        env));
-	exports.Set(Napi::String::New(env, "duckdb_vector_assign_string_element"),
-	            Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper3Void<
-	                duckdb_vector, idx_t, const char *, "duckdb_vector_assign_string_element">>(env));
-	exports.Set(Napi::String::New(env, "duckdb_vector_assign_string_element_len"),
-	            Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper4Void<
-	                duckdb_vector, idx_t, const char *, idx_t, "duckdb_vector_assign_string_element_len">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_list_vector_get_child"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<duckdb_vector, duckdb_vector,
-	                                                                        "duckdb_list_vector_get_child">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_list_vector_get_size"),
-	    Napi::Function::New<
-	        duckdb_node::FunctionWrappers::FunctionWrapper1<idx_t, duckdb_vector, "duckdb_list_vector_get_size">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_list_vector_set_size"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_state, duckdb_vector, idx_t,
-	                                                                        "duckdb_list_vector_set_size">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_list_vector_reserve"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_state, duckdb_vector, idx_t,
-	                                                                        "duckdb_list_vector_reserve">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_struct_vector_get_child"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_vector, duckdb_vector, idx_t,
-	                                                                        "duckdb_struct_vector_get_child">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_validity_row_is_valid"),
-	    Napi::Function::New<
-	        duckdb_node::FunctionWrappers::FunctionWrapper2<bool, uint64_t *, idx_t, "duckdb_validity_row_is_valid">>(
-	        env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_bind_get_extra_info"),
-	    Napi::Function::New<
-	        duckdb_node::FunctionWrappers::FunctionWrapper1<void *, duckdb_bind_info, "duckdb_bind_get_extra_info">>(
-	        env));
-	exports.Set(Napi::String::New(env, "duckdb_bind_add_result_column"),
-	            Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper3Void<
-	                duckdb_bind_info, const char *, duckdb_logical_type, "duckdb_bind_add_result_column">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_bind_get_parameter_count"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<idx_t, duckdb_bind_info,
-	                                                                        "duckdb_bind_get_parameter_count">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_bind_get_parameter"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_value, duckdb_bind_info, idx_t,
-	                                                                        "duckdb_bind_get_parameter">>(env));
-	exports.Set(Napi::String::New(env, "duckdb_bind_get_named_parameter"),
-	            Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<
-	                duckdb_value, duckdb_bind_info, const char *, "duckdb_bind_get_named_parameter">>(env));
-	exports.Set(Napi::String::New(env, "duckdb_bind_set_bind_data"),
-	            Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper3Void<
-	                duckdb_bind_info, void *, duckdb_delete_callback_t, "duckdb_bind_set_bind_data">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_bind_set_cardinality"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper3Void<duckdb_bind_info, idx_t, bool,
-	                                                                            "duckdb_bind_set_cardinality">>(env));
-	exports.Set(Napi::String::New(env, "duckdb_bind_set_error"),
-	            Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2Void<duckdb_bind_info, const char *,
-	                                                                                    "duckdb_bind_set_error">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_function_get_extra_info"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<void *, duckdb_function_info,
-	                                                                        "duckdb_function_get_extra_info">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_function_get_bind_data"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<void *, duckdb_function_info,
-	                                                                        "duckdb_function_get_bind_data">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_function_get_init_data"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<void *, duckdb_function_info,
-	                                                                        "duckdb_function_get_init_data">>(env));
-	exports.Set(Napi::String::New(env, "duckdb_function_get_local_init_data"),
-	            Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<
-	                void *, duckdb_function_info, "duckdb_function_get_local_init_data">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_function_set_error"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2Void<duckdb_function_info, const char *,
-	                                                                            "duckdb_function_set_error">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_appender_create"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::AsyncFunctionWrapper4<
-	        duckdb_state, duckdb_connection, const char *, const char *, duckdb_appender *, "duckdb_appender_create">>(
-	        env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_appender_column_count"),
-	    Napi::Function::New<
-	        duckdb_node::FunctionWrappers::FunctionWrapper1<idx_t, duckdb_appender, "duckdb_appender_column_count">>(
-	        env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_appender_column_type"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_logical_type, duckdb_appender, idx_t,
-	                                                                        "duckdb_appender_column_type">>(env));
-	exports.Set(Napi::String::New(env, "duckdb_appender_error"),
-	            Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<const char *, duckdb_appender,
-	                                                                                "duckdb_appender_error">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_appender_flush"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::AsyncFunctionWrapper1<duckdb_state, duckdb_appender,
-	                                                                             "duckdb_appender_flush">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_appender_close"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::AsyncFunctionWrapper1<duckdb_state, duckdb_appender,
-	                                                                             "duckdb_appender_close">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_appender_destroy"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::AsyncFunctionWrapper1<duckdb_state, duckdb_appender *,
-	                                                                             "duckdb_appender_destroy">>(env));
-	exports.Set(Napi::String::New(env, "duckdb_appender_begin_row"),
-	            Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<duckdb_state, duckdb_appender,
-	                                                                                "duckdb_appender_begin_row">>(env));
-	exports.Set(Napi::String::New(env, "duckdb_appender_end_row"),
-	            Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<duckdb_state, duckdb_appender,
-	                                                                                "duckdb_appender_end_row">>(env));
-	exports.Set(Napi::String::New(env, "duckdb_append_bool"),
-	            Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_state, duckdb_appender, bool,
-	                                                                                "duckdb_append_bool">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_append_int8"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_state, duckdb_appender, int8_t,
-	                                                                        "duckdb_append_int8">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_append_int16"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_state, duckdb_appender, int16_t,
-	                                                                        "duckdb_append_int16">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_append_int32"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_state, duckdb_appender, int32_t,
-	                                                                        "duckdb_append_int32">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_append_int64"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_state, duckdb_appender, int64_t,
-	                                                                        "duckdb_append_int64">>(env));
-	exports.Set(Napi::String::New(env, "duckdb_append_hugeint"),
-	            Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<
-	                duckdb_state, duckdb_appender, duckdb_hugeint, "duckdb_append_hugeint">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_append_uint8"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_state, duckdb_appender, uint8_t,
-	                                                                        "duckdb_append_uint8">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_append_uint16"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_state, duckdb_appender, uint16_t,
-	                                                                        "duckdb_append_uint16">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_append_uint32"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_state, duckdb_appender, uint32_t,
-	                                                                        "duckdb_append_uint32">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_append_uint64"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_state, duckdb_appender, uint64_t,
-	                                                                        "duckdb_append_uint64">>(env));
-	exports.Set(Napi::String::New(env, "duckdb_append_uhugeint"),
-	            Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<
-	                duckdb_state, duckdb_appender, duckdb_uhugeint, "duckdb_append_uhugeint">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_append_float"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_state, duckdb_appender, float,
-	                                                                        "duckdb_append_float">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_append_double"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_state, duckdb_appender, double,
-	                                                                        "duckdb_append_double">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_append_date"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_state, duckdb_appender, duckdb_date,
-	                                                                        "duckdb_append_date">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_append_time"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_state, duckdb_appender, duckdb_time,
-	                                                                        "duckdb_append_time">>(env));
-	exports.Set(Napi::String::New(env, "duckdb_append_timestamp"),
-	            Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<
-	                duckdb_state, duckdb_appender, duckdb_timestamp, "duckdb_append_timestamp">>(env));
-	exports.Set(Napi::String::New(env, "duckdb_append_interval"),
-	            Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<
-	                duckdb_state, duckdb_appender, duckdb_interval, "duckdb_append_interval">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_append_varchar"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_state, duckdb_appender, const char *,
-	                                                                        "duckdb_append_varchar">>(env));
-	exports.Set(Napi::String::New(env, "duckdb_append_varchar_length"),
-	            Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper3<
-	                duckdb_state, duckdb_appender, const char *, idx_t, "duckdb_append_varchar_length">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_append_blob"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper3<duckdb_state, duckdb_appender, const void *,
-	                                                                        idx_t, "duckdb_append_blob">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_append_null"),
-	    Napi::Function::New<
-	        duckdb_node::FunctionWrappers::FunctionWrapper1<duckdb_state, duckdb_appender, "duckdb_append_null">>(env));
-	exports.Set(Napi::String::New(env, "duckdb_append_data_chunk"),
-	            Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<
-	                duckdb_state, duckdb_appender, duckdb_data_chunk, "duckdb_append_data_chunk">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_execute_tasks"),
-	    Napi::Function::New<
-	        duckdb_node::FunctionWrappers::AsyncFunctionWrapper2Void<duckdb_database, idx_t, "duckdb_execute_tasks">>(
-	        env));
-	exports.Set(Napi::String::New(env, "duckdb_create_task_state"),
-	            Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<duckdb_task_state, duckdb_database,
-	                                                                                "duckdb_create_task_state">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_execute_tasks_state"),
-	    Napi::Function::New<
-	        duckdb_node::FunctionWrappers::FunctionWrapper1Void<duckdb_task_state, "duckdb_execute_tasks_state">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_execute_n_tasks_state"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<idx_t, duckdb_task_state, idx_t,
-	                                                                        "duckdb_execute_n_tasks_state">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_finish_execution"),
-	    Napi::Function::New<
-	        duckdb_node::FunctionWrappers::FunctionWrapper1Void<duckdb_task_state, "duckdb_finish_execution">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_task_state_is_finished"),
-	    Napi::Function::New<
-	        duckdb_node::FunctionWrappers::FunctionWrapper1<bool, duckdb_task_state, "duckdb_task_state_is_finished">>(
-	        env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_destroy_task_state"),
-	    Napi::Function::New<
-	        duckdb_node::FunctionWrappers::FunctionWrapper1Void<duckdb_task_state, "duckdb_destroy_task_state">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_execution_is_finished"),
-	    Napi::Function::New<
-	        duckdb_node::FunctionWrappers::FunctionWrapper1<bool, duckdb_connection, "duckdb_execution_is_finished">>(
-	        env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_stream_fetch_chunk"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::AsyncFunctionWrapper1<duckdb_data_chunk, duckdb_result,
-	                                                                             "duckdb_stream_fetch_chunk">>(env));
+static void RegisterGenerated(Napi::Env env, Napi::Object exports){
+auto duckdb_type_enum = Napi::Object::New(env);
+duckdb_type_enum.Set("DUCKDB_TYPE_INVALID", 0);
+duckdb_type_enum.Set("DUCKDB_TYPE_BOOLEAN", 1);
+duckdb_type_enum.Set("DUCKDB_TYPE_TINYINT", 2);
+duckdb_type_enum.Set("DUCKDB_TYPE_SMALLINT", 3);
+duckdb_type_enum.Set("DUCKDB_TYPE_INTEGER", 4);
+duckdb_type_enum.Set("DUCKDB_TYPE_BIGINT", 5);
+duckdb_type_enum.Set("DUCKDB_TYPE_UTINYINT", 6);
+duckdb_type_enum.Set("DUCKDB_TYPE_USMALLINT", 7);
+duckdb_type_enum.Set("DUCKDB_TYPE_UINTEGER", 8);
+duckdb_type_enum.Set("DUCKDB_TYPE_UBIGINT", 9);
+duckdb_type_enum.Set("DUCKDB_TYPE_FLOAT", 10);
+duckdb_type_enum.Set("DUCKDB_TYPE_DOUBLE", 11);
+duckdb_type_enum.Set("DUCKDB_TYPE_TIMESTAMP", 12);
+duckdb_type_enum.Set("DUCKDB_TYPE_DATE", 13);
+duckdb_type_enum.Set("DUCKDB_TYPE_TIME", 14);
+duckdb_type_enum.Set("DUCKDB_TYPE_INTERVAL", 15);
+duckdb_type_enum.Set("DUCKDB_TYPE_HUGEINT", 16);
+duckdb_type_enum.Set("DUCKDB_TYPE_UHUGEINT", 17);
+duckdb_type_enum.Set("DUCKDB_TYPE_VARCHAR", 18);
+duckdb_type_enum.Set("DUCKDB_TYPE_BLOB", 19);
+duckdb_type_enum.Set("DUCKDB_TYPE_DECIMAL", 20);
+duckdb_type_enum.Set("DUCKDB_TYPE_TIMESTAMP_S", 21);
+duckdb_type_enum.Set("DUCKDB_TYPE_TIMESTAMP_MS", 22);
+duckdb_type_enum.Set("DUCKDB_TYPE_TIMESTAMP_NS", 23);
+duckdb_type_enum.Set("DUCKDB_TYPE_ENUM", 24);
+duckdb_type_enum.Set("DUCKDB_TYPE_LIST", 25);
+duckdb_type_enum.Set("DUCKDB_TYPE_STRUCT", 26);
+duckdb_type_enum.Set("DUCKDB_TYPE_MAP", 27);
+duckdb_type_enum.Set("DUCKDB_TYPE_UUID", 28);
+duckdb_type_enum.Set("DUCKDB_TYPE_UNION", 29);
+duckdb_type_enum.Set("DUCKDB_TYPE_BIT", 30);
+duckdb_type_enum.Set("DUCKDB_TYPE_TIME_TZ", 31);
+duckdb_type_enum.Set("DUCKDB_TYPE_TIMESTAMP_TZ", 32);
+exports.DefineProperty(Napi::PropertyDescriptor::Value("duckdb_type", duckdb_type_enum, static_cast<napi_property_attributes>(napi_enumerable | napi_configurable)));
+auto duckdb_state_enum = Napi::Object::New(env);
+duckdb_state_enum.Set("DuckDBSuccess", 0);
+duckdb_state_enum.Set("DuckDBError", 1);
+exports.DefineProperty(Napi::PropertyDescriptor::Value("duckdb_state", duckdb_state_enum, static_cast<napi_property_attributes>(napi_enumerable | napi_configurable)));
+auto duckdb_pending_state_enum = Napi::Object::New(env);
+duckdb_pending_state_enum.Set("DUCKDB_PENDING_RESULT_READY", 0);
+duckdb_pending_state_enum.Set("DUCKDB_PENDING_RESULT_NOT_READY", 1);
+duckdb_pending_state_enum.Set("DUCKDB_PENDING_ERROR", 2);
+duckdb_pending_state_enum.Set("DUCKDB_PENDING_NO_TASKS_AVAILABLE", 3);
+exports.DefineProperty(Napi::PropertyDescriptor::Value("duckdb_pending_state", duckdb_pending_state_enum, static_cast<napi_property_attributes>(napi_enumerable | napi_configurable)));
+auto duckdb_result_type_enum = Napi::Object::New(env);
+duckdb_result_type_enum.Set("DUCKDB_RESULT_TYPE_INVALID", 0);
+duckdb_result_type_enum.Set("DUCKDB_RESULT_TYPE_CHANGED_ROWS", 1);
+duckdb_result_type_enum.Set("DUCKDB_RESULT_TYPE_NOTHING", 2);
+duckdb_result_type_enum.Set("DUCKDB_RESULT_TYPE_QUERY_RESULT", 3);
+exports.DefineProperty(Napi::PropertyDescriptor::Value("duckdb_result_type", duckdb_result_type_enum, static_cast<napi_property_attributes>(napi_enumerable | napi_configurable)));
+auto duckdb_statement_type_enum = Napi::Object::New(env);
+duckdb_statement_type_enum.Set("DUCKDB_STATEMENT_TYPE_INVALID", 0);
+duckdb_statement_type_enum.Set("DUCKDB_STATEMENT_TYPE_SELECT", 1);
+duckdb_statement_type_enum.Set("DUCKDB_STATEMENT_TYPE_INSERT", 2);
+duckdb_statement_type_enum.Set("DUCKDB_STATEMENT_TYPE_UPDATE", 3);
+duckdb_statement_type_enum.Set("DUCKDB_STATEMENT_TYPE_EXPLAIN", 4);
+duckdb_statement_type_enum.Set("DUCKDB_STATEMENT_TYPE_DELETE", 5);
+duckdb_statement_type_enum.Set("DUCKDB_STATEMENT_TYPE_PREPARE", 6);
+duckdb_statement_type_enum.Set("DUCKDB_STATEMENT_TYPE_CREATE", 7);
+duckdb_statement_type_enum.Set("DUCKDB_STATEMENT_TYPE_EXECUTE", 8);
+duckdb_statement_type_enum.Set("DUCKDB_STATEMENT_TYPE_ALTER", 9);
+duckdb_statement_type_enum.Set("DUCKDB_STATEMENT_TYPE_TRANSACTION", 10);
+duckdb_statement_type_enum.Set("DUCKDB_STATEMENT_TYPE_COPY", 11);
+duckdb_statement_type_enum.Set("DUCKDB_STATEMENT_TYPE_ANALYZE", 12);
+duckdb_statement_type_enum.Set("DUCKDB_STATEMENT_TYPE_VARIABLE_SET", 13);
+duckdb_statement_type_enum.Set("DUCKDB_STATEMENT_TYPE_CREATE_FUNC", 14);
+duckdb_statement_type_enum.Set("DUCKDB_STATEMENT_TYPE_DROP", 15);
+duckdb_statement_type_enum.Set("DUCKDB_STATEMENT_TYPE_EXPORT", 16);
+duckdb_statement_type_enum.Set("DUCKDB_STATEMENT_TYPE_PRAGMA", 17);
+duckdb_statement_type_enum.Set("DUCKDB_STATEMENT_TYPE_VACUUM", 18);
+duckdb_statement_type_enum.Set("DUCKDB_STATEMENT_TYPE_CALL", 19);
+duckdb_statement_type_enum.Set("DUCKDB_STATEMENT_TYPE_SET", 20);
+duckdb_statement_type_enum.Set("DUCKDB_STATEMENT_TYPE_LOAD", 21);
+duckdb_statement_type_enum.Set("DUCKDB_STATEMENT_TYPE_RELATION", 22);
+duckdb_statement_type_enum.Set("DUCKDB_STATEMENT_TYPE_EXTENSION", 23);
+duckdb_statement_type_enum.Set("DUCKDB_STATEMENT_TYPE_LOGICAL_PLAN", 24);
+duckdb_statement_type_enum.Set("DUCKDB_STATEMENT_TYPE_ATTACH", 25);
+duckdb_statement_type_enum.Set("DUCKDB_STATEMENT_TYPE_DETACH", 26);
+duckdb_statement_type_enum.Set("DUCKDB_STATEMENT_TYPE_MULTI", 27);
+exports.DefineProperty(Napi::PropertyDescriptor::Value("duckdb_statement_type", duckdb_statement_type_enum, static_cast<napi_property_attributes>(napi_enumerable | napi_configurable)));
+exports.Set(Napi::String::New(env, "duckdb_date"), duckdb_node::PointerHolder<duckdb_date>::Init(env, "duckdb_date")->Value());
+exports.Set(Napi::String::New(env, "duckdb_date_struct"), duckdb_node::PointerHolder<duckdb_date_struct>::Init(env, "duckdb_date_struct")->Value());
+exports.Set(Napi::String::New(env, "duckdb_time"), duckdb_node::PointerHolder<duckdb_time>::Init(env, "duckdb_time")->Value());
+exports.Set(Napi::String::New(env, "duckdb_time_struct"), duckdb_node::PointerHolder<duckdb_time_struct>::Init(env, "duckdb_time_struct")->Value());
+exports.Set(Napi::String::New(env, "duckdb_time_tz"), duckdb_node::PointerHolder<duckdb_time_tz>::Init(env, "duckdb_time_tz")->Value());
+exports.Set(Napi::String::New(env, "duckdb_time_tz_struct"), duckdb_node::PointerHolder<duckdb_time_tz_struct>::Init(env, "duckdb_time_tz_struct")->Value());
+exports.Set(Napi::String::New(env, "duckdb_timestamp"), duckdb_node::PointerHolder<duckdb_timestamp>::Init(env, "duckdb_timestamp")->Value());
+exports.Set(Napi::String::New(env, "duckdb_timestamp_struct"), duckdb_node::PointerHolder<duckdb_timestamp_struct>::Init(env, "duckdb_timestamp_struct")->Value());
+exports.Set(Napi::String::New(env, "duckdb_interval"), duckdb_node::PointerHolder<duckdb_interval>::Init(env, "duckdb_interval")->Value());
+exports.Set(Napi::String::New(env, "duckdb_hugeint"), duckdb_node::PointerHolder<duckdb_hugeint>::Init(env, "duckdb_hugeint")->Value());
+exports.Set(Napi::String::New(env, "duckdb_uhugeint"), duckdb_node::PointerHolder<duckdb_uhugeint>::Init(env, "duckdb_uhugeint")->Value());
+exports.Set(Napi::String::New(env, "duckdb_decimal"), duckdb_node::PointerHolder<duckdb_decimal>::Init(env, "duckdb_decimal")->Value());
+exports.Set(Napi::String::New(env, "duckdb_query_progress_type"), duckdb_node::PointerHolder<duckdb_query_progress_type>::Init(env, "duckdb_query_progress_type")->Value());
+exports.Set(Napi::String::New(env, "duckdb_string_t"), duckdb_node::PointerHolder<duckdb_string_t>::Init(env, "duckdb_string_t")->Value());
+exports.Set(Napi::String::New(env, "duckdb_list_entry"), duckdb_node::PointerHolder<duckdb_list_entry>::Init(env, "duckdb_list_entry")->Value());
+exports.Set(Napi::String::New(env, "duckdb_column"), duckdb_node::PointerHolder<duckdb_column>::Init(env, "duckdb_column")->Value());
+exports.Set(Napi::String::New(env, "duckdb_vector"), duckdb_node::PointerHolder<duckdb_vector>::Init(env, "duckdb_vector")->Value());
+exports.Set(Napi::String::New(env, "duckdb_string"), duckdb_node::PointerHolder<duckdb_string>::Init(env, "duckdb_string")->Value());
+exports.Set(Napi::String::New(env, "duckdb_blob"), duckdb_node::PointerHolder<duckdb_blob>::Init(env, "duckdb_blob")->Value());
+exports.Set(Napi::String::New(env, "duckdb_result"), duckdb_node::PointerHolder<duckdb_result>::Init(env, "duckdb_result")->Value());
+exports.Set(Napi::String::New(env, "duckdb_database"), duckdb_node::PointerHolder<duckdb_database>::Init(env, "duckdb_database")->Value());
+exports.Set(Napi::String::New(env, "duckdb_connection"), duckdb_node::PointerHolder<duckdb_connection>::Init(env, "duckdb_connection")->Value());
+exports.Set(Napi::String::New(env, "duckdb_prepared_statement"), duckdb_node::PointerHolder<duckdb_prepared_statement>::Init(env, "duckdb_prepared_statement")->Value());
+exports.Set(Napi::String::New(env, "duckdb_extracted_statements"), duckdb_node::PointerHolder<duckdb_extracted_statements>::Init(env, "duckdb_extracted_statements")->Value());
+exports.Set(Napi::String::New(env, "duckdb_pending_result"), duckdb_node::PointerHolder<duckdb_pending_result>::Init(env, "duckdb_pending_result")->Value());
+exports.Set(Napi::String::New(env, "duckdb_appender"), duckdb_node::PointerHolder<duckdb_appender>::Init(env, "duckdb_appender")->Value());
+exports.Set(Napi::String::New(env, "duckdb_config"), duckdb_node::PointerHolder<duckdb_config>::Init(env, "duckdb_config")->Value());
+exports.Set(Napi::String::New(env, "duckdb_logical_type"), duckdb_node::PointerHolder<duckdb_logical_type>::Init(env, "duckdb_logical_type")->Value());
+exports.Set(Napi::String::New(env, "duckdb_data_chunk"), duckdb_node::PointerHolder<duckdb_data_chunk>::Init(env, "duckdb_data_chunk")->Value());
+exports.Set(Napi::String::New(env, "duckdb_value"), duckdb_node::PointerHolder<duckdb_value>::Init(env, "duckdb_value")->Value());
+exports.Set(Napi::String::New(env, "duckdb_arrow"), duckdb_node::PointerHolder<duckdb_arrow>::Init(env, "duckdb_arrow")->Value());
+exports.Set(Napi::String::New(env, "duckdb_arrow_stream"), duckdb_node::PointerHolder<duckdb_arrow_stream>::Init(env, "duckdb_arrow_stream")->Value());
+exports.Set(Napi::String::New(env, "duckdb_arrow_schema"), duckdb_node::PointerHolder<duckdb_arrow_schema>::Init(env, "duckdb_arrow_schema")->Value());
+exports.Set(Napi::String::New(env, "duckdb_arrow_array"), duckdb_node::PointerHolder<duckdb_arrow_array>::Init(env, "duckdb_arrow_array")->Value());
+exports.Set(Napi::String::New(env, "duckdb_open"), Napi::Function::New<duckdb_node::FunctionWrappers::AsyncFunctionWrapper2<duckdb_state, const char*, duckdb_database*, "duckdb_open">>(env));
+exports.Set(Napi::String::New(env, "duckdb_open_ext"), Napi::Function::New<duckdb_node::FunctionWrappers::AsyncFunctionWrapper4<duckdb_state, const char*, duckdb_database*, duckdb_config, char**, "duckdb_open_ext">>(env));
+exports.Set(Napi::String::New(env, "duckdb_close"), Napi::Function::New<duckdb_node::FunctionWrappers::AsyncFunctionWrapper1Void<duckdb_database*, "duckdb_close">>(env));
+exports.Set(Napi::String::New(env, "duckdb_connect"), Napi::Function::New<duckdb_node::FunctionWrappers::AsyncFunctionWrapper2<duckdb_state, duckdb_database, duckdb_connection*, "duckdb_connect">>(env));
+exports.Set(Napi::String::New(env, "duckdb_interrupt"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1Void<duckdb_connection, "duckdb_interrupt">>(env));
+exports.Set(Napi::String::New(env, "duckdb_query_progress"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<duckdb_query_progress_type, duckdb_connection, "duckdb_query_progress">>(env));
+exports.Set(Napi::String::New(env, "duckdb_disconnect"), Napi::Function::New<duckdb_node::FunctionWrappers::AsyncFunctionWrapper1Void<duckdb_connection*, "duckdb_disconnect">>(env));
+exports.Set(Napi::String::New(env, "duckdb_library_version"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper0<const char*, "duckdb_library_version">>(env));
+exports.Set(Napi::String::New(env, "duckdb_create_config"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<duckdb_state, duckdb_config*, "duckdb_create_config">>(env));
+exports.Set(Napi::String::New(env, "duckdb_config_count"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper0<size_t, "duckdb_config_count">>(env));
+exports.Set(Napi::String::New(env, "duckdb_get_config_flag"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper3<duckdb_state, size_t, const char**, const char**, "duckdb_get_config_flag">>(env));
+exports.Set(Napi::String::New(env, "duckdb_set_config"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper3<duckdb_state, duckdb_config, const char*, const char*, "duckdb_set_config">>(env));
+exports.Set(Napi::String::New(env, "duckdb_destroy_config"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1Void<duckdb_config*, "duckdb_destroy_config">>(env));
+exports.Set(Napi::String::New(env, "duckdb_query"), Napi::Function::New<duckdb_node::FunctionWrappers::AsyncFunctionWrapper3<duckdb_state, duckdb_connection, const char*, duckdb_result*, "duckdb_query">>(env));
+exports.Set(Napi::String::New(env, "duckdb_destroy_result"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1Void<duckdb_result*, "duckdb_destroy_result">>(env));
+exports.Set(Napi::String::New(env, "duckdb_column_name"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<const char*, duckdb_result*, idx_t, "duckdb_column_name">>(env));
+exports.Set(Napi::String::New(env, "duckdb_column_type"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_type, duckdb_result*, idx_t, "duckdb_column_type">>(env));
+exports.Set(Napi::String::New(env, "duckdb_result_statement_type"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<duckdb_statement_type, duckdb_result, "duckdb_result_statement_type">>(env));
+exports.Set(Napi::String::New(env, "duckdb_column_logical_type"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_logical_type, duckdb_result*, idx_t, "duckdb_column_logical_type">>(env));
+exports.Set(Napi::String::New(env, "duckdb_column_count"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<idx_t, duckdb_result*, "duckdb_column_count">>(env));
+exports.Set(Napi::String::New(env, "duckdb_row_count"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<idx_t, duckdb_result*, "duckdb_row_count">>(env));
+exports.Set(Napi::String::New(env, "duckdb_rows_changed"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<idx_t, duckdb_result*, "duckdb_rows_changed">>(env));
+exports.Set(Napi::String::New(env, "duckdb_result_error"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<const char*, duckdb_result*, "duckdb_result_error">>(env));
+exports.Set(Napi::String::New(env, "duckdb_result_get_chunk"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_data_chunk, duckdb_result, idx_t, "duckdb_result_get_chunk">>(env));
+exports.Set(Napi::String::New(env, "duckdb_result_is_streaming"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<bool, duckdb_result, "duckdb_result_is_streaming">>(env));
+exports.Set(Napi::String::New(env, "duckdb_result_chunk_count"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<idx_t, duckdb_result, "duckdb_result_chunk_count">>(env));
+exports.Set(Napi::String::New(env, "duckdb_result_return_type"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<duckdb_result_type, duckdb_result, "duckdb_result_return_type">>(env));
+exports.Set(Napi::String::New(env, "duckdb_value_uhugeint"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper3<duckdb_uhugeint, duckdb_result*, idx_t, idx_t, "duckdb_value_uhugeint">>(env));
+exports.Set(Napi::String::New(env, "duckdb_malloc"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<void*, size_t, "duckdb_malloc">>(env));
+exports.Set(Napi::String::New(env, "duckdb_free"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1Void<void*, "duckdb_free">>(env));
+exports.Set(Napi::String::New(env, "duckdb_vector_size"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper0<idx_t, "duckdb_vector_size">>(env));
+exports.Set(Napi::String::New(env, "duckdb_string_is_inlined"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<bool, duckdb_string_t, "duckdb_string_is_inlined">>(env));
+exports.Set(Napi::String::New(env, "duckdb_from_date"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<duckdb_date_struct, duckdb_date, "duckdb_from_date">>(env));
+exports.Set(Napi::String::New(env, "duckdb_to_date"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<duckdb_date, duckdb_date_struct, "duckdb_to_date">>(env));
+exports.Set(Napi::String::New(env, "duckdb_is_finite_date"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<bool, duckdb_date, "duckdb_is_finite_date">>(env));
+exports.Set(Napi::String::New(env, "duckdb_from_time"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<duckdb_time_struct, duckdb_time, "duckdb_from_time">>(env));
+exports.Set(Napi::String::New(env, "duckdb_create_time_tz"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_time_tz, int64_t, int32_t, "duckdb_create_time_tz">>(env));
+exports.Set(Napi::String::New(env, "duckdb_from_time_tz"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<duckdb_time_tz_struct, duckdb_time_tz, "duckdb_from_time_tz">>(env));
+exports.Set(Napi::String::New(env, "duckdb_to_time"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<duckdb_time, duckdb_time_struct, "duckdb_to_time">>(env));
+exports.Set(Napi::String::New(env, "duckdb_from_timestamp"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<duckdb_timestamp_struct, duckdb_timestamp, "duckdb_from_timestamp">>(env));
+exports.Set(Napi::String::New(env, "duckdb_to_timestamp"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<duckdb_timestamp, duckdb_timestamp_struct, "duckdb_to_timestamp">>(env));
+exports.Set(Napi::String::New(env, "duckdb_is_finite_timestamp"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<bool, duckdb_timestamp, "duckdb_is_finite_timestamp">>(env));
+exports.Set(Napi::String::New(env, "duckdb_hugeint_to_double"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<double, duckdb_hugeint, "duckdb_hugeint_to_double">>(env));
+exports.Set(Napi::String::New(env, "duckdb_double_to_hugeint"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<duckdb_hugeint, double, "duckdb_double_to_hugeint">>(env));
+exports.Set(Napi::String::New(env, "duckdb_uhugeint_to_double"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<double, duckdb_uhugeint, "duckdb_uhugeint_to_double">>(env));
+exports.Set(Napi::String::New(env, "duckdb_double_to_uhugeint"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<duckdb_uhugeint, double, "duckdb_double_to_uhugeint">>(env));
+exports.Set(Napi::String::New(env, "duckdb_double_to_decimal"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper3<duckdb_decimal, double, uint8_t, uint8_t, "duckdb_double_to_decimal">>(env));
+exports.Set(Napi::String::New(env, "duckdb_decimal_to_double"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<double, duckdb_decimal, "duckdb_decimal_to_double">>(env));
+exports.Set(Napi::String::New(env, "duckdb_prepare"), Napi::Function::New<duckdb_node::FunctionWrappers::AsyncFunctionWrapper3<duckdb_state, duckdb_connection, const char*, duckdb_prepared_statement*, "duckdb_prepare">>(env));
+exports.Set(Napi::String::New(env, "duckdb_destroy_prepare"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1Void<duckdb_prepared_statement*, "duckdb_destroy_prepare">>(env));
+exports.Set(Napi::String::New(env, "duckdb_prepare_error"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<const char*, duckdb_prepared_statement, "duckdb_prepare_error">>(env));
+exports.Set(Napi::String::New(env, "duckdb_nparams"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<idx_t, duckdb_prepared_statement, "duckdb_nparams">>(env));
+exports.Set(Napi::String::New(env, "duckdb_parameter_name"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<const char*, duckdb_prepared_statement, idx_t, "duckdb_parameter_name">>(env));
+exports.Set(Napi::String::New(env, "duckdb_param_type"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_type, duckdb_prepared_statement, idx_t, "duckdb_param_type">>(env));
+exports.Set(Napi::String::New(env, "duckdb_clear_bindings"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<duckdb_state, duckdb_prepared_statement, "duckdb_clear_bindings">>(env));
+exports.Set(Napi::String::New(env, "duckdb_prepared_statement_type"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<duckdb_statement_type, duckdb_prepared_statement, "duckdb_prepared_statement_type">>(env));
+exports.Set(Napi::String::New(env, "duckdb_bind_value"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper3<duckdb_state, duckdb_prepared_statement, idx_t, duckdb_value, "duckdb_bind_value">>(env));
+exports.Set(Napi::String::New(env, "duckdb_bind_parameter_index"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper3<duckdb_state, duckdb_prepared_statement, idx_t*, const char*, "duckdb_bind_parameter_index">>(env));
+exports.Set(Napi::String::New(env, "duckdb_bind_boolean"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper3<duckdb_state, duckdb_prepared_statement, idx_t, bool, "duckdb_bind_boolean">>(env));
+exports.Set(Napi::String::New(env, "duckdb_bind_int8"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper3<duckdb_state, duckdb_prepared_statement, idx_t, int8_t, "duckdb_bind_int8">>(env));
+exports.Set(Napi::String::New(env, "duckdb_bind_int16"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper3<duckdb_state, duckdb_prepared_statement, idx_t, int16_t, "duckdb_bind_int16">>(env));
+exports.Set(Napi::String::New(env, "duckdb_bind_int32"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper3<duckdb_state, duckdb_prepared_statement, idx_t, int32_t, "duckdb_bind_int32">>(env));
+exports.Set(Napi::String::New(env, "duckdb_bind_int64"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper3<duckdb_state, duckdb_prepared_statement, idx_t, int64_t, "duckdb_bind_int64">>(env));
+exports.Set(Napi::String::New(env, "duckdb_bind_hugeint"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper3<duckdb_state, duckdb_prepared_statement, idx_t, duckdb_hugeint, "duckdb_bind_hugeint">>(env));
+exports.Set(Napi::String::New(env, "duckdb_bind_uhugeint"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper3<duckdb_state, duckdb_prepared_statement, idx_t, duckdb_uhugeint, "duckdb_bind_uhugeint">>(env));
+exports.Set(Napi::String::New(env, "duckdb_bind_decimal"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper3<duckdb_state, duckdb_prepared_statement, idx_t, duckdb_decimal, "duckdb_bind_decimal">>(env));
+exports.Set(Napi::String::New(env, "duckdb_bind_uint8"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper3<duckdb_state, duckdb_prepared_statement, idx_t, uint8_t, "duckdb_bind_uint8">>(env));
+exports.Set(Napi::String::New(env, "duckdb_bind_uint16"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper3<duckdb_state, duckdb_prepared_statement, idx_t, uint16_t, "duckdb_bind_uint16">>(env));
+exports.Set(Napi::String::New(env, "duckdb_bind_uint32"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper3<duckdb_state, duckdb_prepared_statement, idx_t, uint32_t, "duckdb_bind_uint32">>(env));
+exports.Set(Napi::String::New(env, "duckdb_bind_uint64"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper3<duckdb_state, duckdb_prepared_statement, idx_t, uint64_t, "duckdb_bind_uint64">>(env));
+exports.Set(Napi::String::New(env, "duckdb_bind_float"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper3<duckdb_state, duckdb_prepared_statement, idx_t, float, "duckdb_bind_float">>(env));
+exports.Set(Napi::String::New(env, "duckdb_bind_double"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper3<duckdb_state, duckdb_prepared_statement, idx_t, double, "duckdb_bind_double">>(env));
+exports.Set(Napi::String::New(env, "duckdb_bind_date"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper3<duckdb_state, duckdb_prepared_statement, idx_t, duckdb_date, "duckdb_bind_date">>(env));
+exports.Set(Napi::String::New(env, "duckdb_bind_time"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper3<duckdb_state, duckdb_prepared_statement, idx_t, duckdb_time, "duckdb_bind_time">>(env));
+exports.Set(Napi::String::New(env, "duckdb_bind_timestamp"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper3<duckdb_state, duckdb_prepared_statement, idx_t, duckdb_timestamp, "duckdb_bind_timestamp">>(env));
+exports.Set(Napi::String::New(env, "duckdb_bind_interval"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper3<duckdb_state, duckdb_prepared_statement, idx_t, duckdb_interval, "duckdb_bind_interval">>(env));
+exports.Set(Napi::String::New(env, "duckdb_bind_varchar"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper3<duckdb_state, duckdb_prepared_statement, idx_t, const char*, "duckdb_bind_varchar">>(env));
+exports.Set(Napi::String::New(env, "duckdb_bind_varchar_length"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper4<duckdb_state, duckdb_prepared_statement, idx_t, const char*, idx_t, "duckdb_bind_varchar_length">>(env));
+exports.Set(Napi::String::New(env, "duckdb_bind_blob"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper4<duckdb_state, duckdb_prepared_statement, idx_t, const void*, idx_t, "duckdb_bind_blob">>(env));
+exports.Set(Napi::String::New(env, "duckdb_bind_null"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_state, duckdb_prepared_statement, idx_t, "duckdb_bind_null">>(env));
+exports.Set(Napi::String::New(env, "duckdb_execute_prepared"), Napi::Function::New<duckdb_node::FunctionWrappers::AsyncFunctionWrapper2<duckdb_state, duckdb_prepared_statement, duckdb_result*, "duckdb_execute_prepared">>(env));
+exports.Set(Napi::String::New(env, "duckdb_execute_prepared_streaming"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_state, duckdb_prepared_statement, duckdb_result*, "duckdb_execute_prepared_streaming">>(env));
+exports.Set(Napi::String::New(env, "duckdb_extract_statements"), Napi::Function::New<duckdb_node::FunctionWrappers::AsyncFunctionWrapper3<idx_t, duckdb_connection, const char*, duckdb_extracted_statements*, "duckdb_extract_statements">>(env));
+exports.Set(Napi::String::New(env, "duckdb_prepare_extracted_statement"), Napi::Function::New<duckdb_node::FunctionWrappers::AsyncFunctionWrapper4<duckdb_state, duckdb_connection, duckdb_extracted_statements, idx_t, duckdb_prepared_statement*, "duckdb_prepare_extracted_statement">>(env));
+exports.Set(Napi::String::New(env, "duckdb_extract_statements_error"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<const char*, duckdb_extracted_statements, "duckdb_extract_statements_error">>(env));
+exports.Set(Napi::String::New(env, "duckdb_destroy_extracted"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1Void<duckdb_extracted_statements*, "duckdb_destroy_extracted">>(env));
+exports.Set(Napi::String::New(env, "duckdb_pending_prepared"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_state, duckdb_prepared_statement, duckdb_pending_result*, "duckdb_pending_prepared">>(env));
+exports.Set(Napi::String::New(env, "duckdb_pending_prepared_streaming"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_state, duckdb_prepared_statement, duckdb_pending_result*, "duckdb_pending_prepared_streaming">>(env));
+exports.Set(Napi::String::New(env, "duckdb_destroy_pending"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1Void<duckdb_pending_result*, "duckdb_destroy_pending">>(env));
+exports.Set(Napi::String::New(env, "duckdb_pending_error"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<const char*, duckdb_pending_result, "duckdb_pending_error">>(env));
+exports.Set(Napi::String::New(env, "duckdb_pending_execute_task"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<duckdb_pending_state, duckdb_pending_result, "duckdb_pending_execute_task">>(env));
+exports.Set(Napi::String::New(env, "duckdb_pending_execute_check_state"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<duckdb_pending_state, duckdb_pending_result, "duckdb_pending_execute_check_state">>(env));
+exports.Set(Napi::String::New(env, "duckdb_execute_pending"), Napi::Function::New<duckdb_node::FunctionWrappers::AsyncFunctionWrapper2<duckdb_state, duckdb_pending_result, duckdb_result*, "duckdb_execute_pending">>(env));
+exports.Set(Napi::String::New(env, "duckdb_pending_execution_is_finished"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<bool, duckdb_pending_state, "duckdb_pending_execution_is_finished">>(env));
+exports.Set(Napi::String::New(env, "duckdb_destroy_value"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1Void<duckdb_value*, "duckdb_destroy_value">>(env));
+exports.Set(Napi::String::New(env, "duckdb_create_varchar"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<duckdb_value, const char*, "duckdb_create_varchar">>(env));
+exports.Set(Napi::String::New(env, "duckdb_create_varchar_length"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_value, const char*, idx_t, "duckdb_create_varchar_length">>(env));
+exports.Set(Napi::String::New(env, "duckdb_create_int64"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<duckdb_value, int64_t, "duckdb_create_int64">>(env));
+exports.Set(Napi::String::New(env, "duckdb_create_struct_value"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_value, duckdb_logical_type, duckdb_value*, "duckdb_create_struct_value">>(env));
+exports.Set(Napi::String::New(env, "duckdb_create_list_value"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper3<duckdb_value, duckdb_logical_type, duckdb_value*, idx_t, "duckdb_create_list_value">>(env));
+exports.Set(Napi::String::New(env, "duckdb_get_varchar"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<char*, duckdb_value, "duckdb_get_varchar">>(env));
+exports.Set(Napi::String::New(env, "duckdb_get_int64"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<int64_t, duckdb_value, "duckdb_get_int64">>(env));
+exports.Set(Napi::String::New(env, "duckdb_create_logical_type"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<duckdb_logical_type, duckdb_type, "duckdb_create_logical_type">>(env));
+exports.Set(Napi::String::New(env, "duckdb_logical_type_get_alias"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<char*, duckdb_logical_type, "duckdb_logical_type_get_alias">>(env));
+exports.Set(Napi::String::New(env, "duckdb_create_list_type"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<duckdb_logical_type, duckdb_logical_type, "duckdb_create_list_type">>(env));
+exports.Set(Napi::String::New(env, "duckdb_create_map_type"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_logical_type, duckdb_logical_type, duckdb_logical_type, "duckdb_create_map_type">>(env));
+exports.Set(Napi::String::New(env, "duckdb_create_union_type"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper3<duckdb_logical_type, duckdb_logical_type*, const char**, idx_t, "duckdb_create_union_type">>(env));
+exports.Set(Napi::String::New(env, "duckdb_create_struct_type"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper3<duckdb_logical_type, duckdb_logical_type*, const char**, idx_t, "duckdb_create_struct_type">>(env));
+exports.Set(Napi::String::New(env, "duckdb_create_enum_type"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_logical_type, const char**, idx_t, "duckdb_create_enum_type">>(env));
+exports.Set(Napi::String::New(env, "duckdb_create_decimal_type"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_logical_type, uint8_t, uint8_t, "duckdb_create_decimal_type">>(env));
+exports.Set(Napi::String::New(env, "duckdb_get_type_id"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<duckdb_type, duckdb_logical_type, "duckdb_get_type_id">>(env));
+exports.Set(Napi::String::New(env, "duckdb_decimal_width"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<uint8_t, duckdb_logical_type, "duckdb_decimal_width">>(env));
+exports.Set(Napi::String::New(env, "duckdb_decimal_scale"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<uint8_t, duckdb_logical_type, "duckdb_decimal_scale">>(env));
+exports.Set(Napi::String::New(env, "duckdb_decimal_internal_type"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<duckdb_type, duckdb_logical_type, "duckdb_decimal_internal_type">>(env));
+exports.Set(Napi::String::New(env, "duckdb_enum_internal_type"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<duckdb_type, duckdb_logical_type, "duckdb_enum_internal_type">>(env));
+exports.Set(Napi::String::New(env, "duckdb_enum_dictionary_size"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<uint32_t, duckdb_logical_type, "duckdb_enum_dictionary_size">>(env));
+exports.Set(Napi::String::New(env, "duckdb_enum_dictionary_value"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<char*, duckdb_logical_type, idx_t, "duckdb_enum_dictionary_value">>(env));
+exports.Set(Napi::String::New(env, "duckdb_list_type_child_type"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<duckdb_logical_type, duckdb_logical_type, "duckdb_list_type_child_type">>(env));
+exports.Set(Napi::String::New(env, "duckdb_map_type_key_type"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<duckdb_logical_type, duckdb_logical_type, "duckdb_map_type_key_type">>(env));
+exports.Set(Napi::String::New(env, "duckdb_map_type_value_type"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<duckdb_logical_type, duckdb_logical_type, "duckdb_map_type_value_type">>(env));
+exports.Set(Napi::String::New(env, "duckdb_struct_type_child_count"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<idx_t, duckdb_logical_type, "duckdb_struct_type_child_count">>(env));
+exports.Set(Napi::String::New(env, "duckdb_struct_type_child_name"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<char*, duckdb_logical_type, idx_t, "duckdb_struct_type_child_name">>(env));
+exports.Set(Napi::String::New(env, "duckdb_struct_type_child_type"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_logical_type, duckdb_logical_type, idx_t, "duckdb_struct_type_child_type">>(env));
+exports.Set(Napi::String::New(env, "duckdb_union_type_member_count"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<idx_t, duckdb_logical_type, "duckdb_union_type_member_count">>(env));
+exports.Set(Napi::String::New(env, "duckdb_union_type_member_name"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<char*, duckdb_logical_type, idx_t, "duckdb_union_type_member_name">>(env));
+exports.Set(Napi::String::New(env, "duckdb_union_type_member_type"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_logical_type, duckdb_logical_type, idx_t, "duckdb_union_type_member_type">>(env));
+exports.Set(Napi::String::New(env, "duckdb_destroy_logical_type"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1Void<duckdb_logical_type*, "duckdb_destroy_logical_type">>(env));
+exports.Set(Napi::String::New(env, "duckdb_create_data_chunk"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_data_chunk, duckdb_logical_type*, idx_t, "duckdb_create_data_chunk">>(env));
+exports.Set(Napi::String::New(env, "duckdb_destroy_data_chunk"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1Void<duckdb_data_chunk*, "duckdb_destroy_data_chunk">>(env));
+exports.Set(Napi::String::New(env, "duckdb_data_chunk_reset"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1Void<duckdb_data_chunk, "duckdb_data_chunk_reset">>(env));
+exports.Set(Napi::String::New(env, "duckdb_data_chunk_get_column_count"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<idx_t, duckdb_data_chunk, "duckdb_data_chunk_get_column_count">>(env));
+exports.Set(Napi::String::New(env, "duckdb_data_chunk_get_vector"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_vector, duckdb_data_chunk, idx_t, "duckdb_data_chunk_get_vector">>(env));
+exports.Set(Napi::String::New(env, "duckdb_data_chunk_get_size"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<idx_t, duckdb_data_chunk, "duckdb_data_chunk_get_size">>(env));
+exports.Set(Napi::String::New(env, "duckdb_data_chunk_set_size"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2Void<duckdb_data_chunk, idx_t, "duckdb_data_chunk_set_size">>(env));
+exports.Set(Napi::String::New(env, "duckdb_vector_get_column_type"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<duckdb_logical_type, duckdb_vector, "duckdb_vector_get_column_type">>(env));
+exports.Set(Napi::String::New(env, "duckdb_vector_get_data"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<void*, duckdb_vector, "duckdb_vector_get_data">>(env));
+exports.Set(Napi::String::New(env, "duckdb_vector_get_validity"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<uint64_t*, duckdb_vector, "duckdb_vector_get_validity">>(env));
+exports.Set(Napi::String::New(env, "duckdb_vector_assign_string_element"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper3Void<duckdb_vector, idx_t, const char*, "duckdb_vector_assign_string_element">>(env));
+exports.Set(Napi::String::New(env, "duckdb_vector_assign_string_element_len"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper4Void<duckdb_vector, idx_t, const char*, idx_t, "duckdb_vector_assign_string_element_len">>(env));
+exports.Set(Napi::String::New(env, "duckdb_list_vector_get_child"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<duckdb_vector, duckdb_vector, "duckdb_list_vector_get_child">>(env));
+exports.Set(Napi::String::New(env, "duckdb_list_vector_get_size"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<idx_t, duckdb_vector, "duckdb_list_vector_get_size">>(env));
+exports.Set(Napi::String::New(env, "duckdb_list_vector_set_size"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_state, duckdb_vector, idx_t, "duckdb_list_vector_set_size">>(env));
+exports.Set(Napi::String::New(env, "duckdb_list_vector_reserve"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_state, duckdb_vector, idx_t, "duckdb_list_vector_reserve">>(env));
+exports.Set(Napi::String::New(env, "duckdb_struct_vector_get_child"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_vector, duckdb_vector, idx_t, "duckdb_struct_vector_get_child">>(env));
+exports.Set(Napi::String::New(env, "duckdb_validity_row_is_valid"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<bool, uint64_t*, idx_t, "duckdb_validity_row_is_valid">>(env));
+exports.Set(Napi::String::New(env, "duckdb_bind_get_extra_info"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<void*, duckdb_bind_info, "duckdb_bind_get_extra_info">>(env));
+exports.Set(Napi::String::New(env, "duckdb_bind_add_result_column"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper3Void<duckdb_bind_info, const char*, duckdb_logical_type, "duckdb_bind_add_result_column">>(env));
+exports.Set(Napi::String::New(env, "duckdb_bind_get_parameter_count"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<idx_t, duckdb_bind_info, "duckdb_bind_get_parameter_count">>(env));
+exports.Set(Napi::String::New(env, "duckdb_bind_get_parameter"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_value, duckdb_bind_info, idx_t, "duckdb_bind_get_parameter">>(env));
+exports.Set(Napi::String::New(env, "duckdb_bind_get_named_parameter"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_value, duckdb_bind_info, const char*, "duckdb_bind_get_named_parameter">>(env));
+exports.Set(Napi::String::New(env, "duckdb_bind_set_bind_data"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper3Void<duckdb_bind_info, void*, duckdb_delete_callback_t, "duckdb_bind_set_bind_data">>(env));
+exports.Set(Napi::String::New(env, "duckdb_bind_set_cardinality"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper3Void<duckdb_bind_info, idx_t, bool, "duckdb_bind_set_cardinality">>(env));
+exports.Set(Napi::String::New(env, "duckdb_bind_set_error"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2Void<duckdb_bind_info, const char*, "duckdb_bind_set_error">>(env));
+exports.Set(Napi::String::New(env, "duckdb_function_get_extra_info"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<void*, duckdb_function_info, "duckdb_function_get_extra_info">>(env));
+exports.Set(Napi::String::New(env, "duckdb_function_get_bind_data"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<void*, duckdb_function_info, "duckdb_function_get_bind_data">>(env));
+exports.Set(Napi::String::New(env, "duckdb_function_get_init_data"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<void*, duckdb_function_info, "duckdb_function_get_init_data">>(env));
+exports.Set(Napi::String::New(env, "duckdb_function_get_local_init_data"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<void*, duckdb_function_info, "duckdb_function_get_local_init_data">>(env));
+exports.Set(Napi::String::New(env, "duckdb_function_set_error"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2Void<duckdb_function_info, const char*, "duckdb_function_set_error">>(env));
+exports.Set(Napi::String::New(env, "duckdb_appender_create"), Napi::Function::New<duckdb_node::FunctionWrappers::AsyncFunctionWrapper4<duckdb_state, duckdb_connection, const char*, const char*, duckdb_appender*, "duckdb_appender_create">>(env));
+exports.Set(Napi::String::New(env, "duckdb_appender_column_count"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<idx_t, duckdb_appender, "duckdb_appender_column_count">>(env));
+exports.Set(Napi::String::New(env, "duckdb_appender_column_type"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_logical_type, duckdb_appender, idx_t, "duckdb_appender_column_type">>(env));
+exports.Set(Napi::String::New(env, "duckdb_appender_error"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<const char*, duckdb_appender, "duckdb_appender_error">>(env));
+exports.Set(Napi::String::New(env, "duckdb_appender_flush"), Napi::Function::New<duckdb_node::FunctionWrappers::AsyncFunctionWrapper1<duckdb_state, duckdb_appender, "duckdb_appender_flush">>(env));
+exports.Set(Napi::String::New(env, "duckdb_appender_close"), Napi::Function::New<duckdb_node::FunctionWrappers::AsyncFunctionWrapper1<duckdb_state, duckdb_appender, "duckdb_appender_close">>(env));
+exports.Set(Napi::String::New(env, "duckdb_appender_destroy"), Napi::Function::New<duckdb_node::FunctionWrappers::AsyncFunctionWrapper1<duckdb_state, duckdb_appender*, "duckdb_appender_destroy">>(env));
+exports.Set(Napi::String::New(env, "duckdb_appender_begin_row"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<duckdb_state, duckdb_appender, "duckdb_appender_begin_row">>(env));
+exports.Set(Napi::String::New(env, "duckdb_appender_end_row"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<duckdb_state, duckdb_appender, "duckdb_appender_end_row">>(env));
+exports.Set(Napi::String::New(env, "duckdb_append_bool"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_state, duckdb_appender, bool, "duckdb_append_bool">>(env));
+exports.Set(Napi::String::New(env, "duckdb_append_int8"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_state, duckdb_appender, int8_t, "duckdb_append_int8">>(env));
+exports.Set(Napi::String::New(env, "duckdb_append_int16"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_state, duckdb_appender, int16_t, "duckdb_append_int16">>(env));
+exports.Set(Napi::String::New(env, "duckdb_append_int32"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_state, duckdb_appender, int32_t, "duckdb_append_int32">>(env));
+exports.Set(Napi::String::New(env, "duckdb_append_int64"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_state, duckdb_appender, int64_t, "duckdb_append_int64">>(env));
+exports.Set(Napi::String::New(env, "duckdb_append_hugeint"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_state, duckdb_appender, duckdb_hugeint, "duckdb_append_hugeint">>(env));
+exports.Set(Napi::String::New(env, "duckdb_append_uint8"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_state, duckdb_appender, uint8_t, "duckdb_append_uint8">>(env));
+exports.Set(Napi::String::New(env, "duckdb_append_uint16"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_state, duckdb_appender, uint16_t, "duckdb_append_uint16">>(env));
+exports.Set(Napi::String::New(env, "duckdb_append_uint32"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_state, duckdb_appender, uint32_t, "duckdb_append_uint32">>(env));
+exports.Set(Napi::String::New(env, "duckdb_append_uint64"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_state, duckdb_appender, uint64_t, "duckdb_append_uint64">>(env));
+exports.Set(Napi::String::New(env, "duckdb_append_uhugeint"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_state, duckdb_appender, duckdb_uhugeint, "duckdb_append_uhugeint">>(env));
+exports.Set(Napi::String::New(env, "duckdb_append_float"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_state, duckdb_appender, float, "duckdb_append_float">>(env));
+exports.Set(Napi::String::New(env, "duckdb_append_double"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_state, duckdb_appender, double, "duckdb_append_double">>(env));
+exports.Set(Napi::String::New(env, "duckdb_append_date"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_state, duckdb_appender, duckdb_date, "duckdb_append_date">>(env));
+exports.Set(Napi::String::New(env, "duckdb_append_time"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_state, duckdb_appender, duckdb_time, "duckdb_append_time">>(env));
+exports.Set(Napi::String::New(env, "duckdb_append_timestamp"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_state, duckdb_appender, duckdb_timestamp, "duckdb_append_timestamp">>(env));
+exports.Set(Napi::String::New(env, "duckdb_append_interval"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_state, duckdb_appender, duckdb_interval, "duckdb_append_interval">>(env));
+exports.Set(Napi::String::New(env, "duckdb_append_varchar"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_state, duckdb_appender, const char*, "duckdb_append_varchar">>(env));
+exports.Set(Napi::String::New(env, "duckdb_append_varchar_length"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper3<duckdb_state, duckdb_appender, const char*, idx_t, "duckdb_append_varchar_length">>(env));
+exports.Set(Napi::String::New(env, "duckdb_append_blob"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper3<duckdb_state, duckdb_appender, const void*, idx_t, "duckdb_append_blob">>(env));
+exports.Set(Napi::String::New(env, "duckdb_append_null"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<duckdb_state, duckdb_appender, "duckdb_append_null">>(env));
+exports.Set(Napi::String::New(env, "duckdb_append_data_chunk"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_state, duckdb_appender, duckdb_data_chunk, "duckdb_append_data_chunk">>(env));
+exports.Set(Napi::String::New(env, "duckdb_execute_tasks"), Napi::Function::New<duckdb_node::FunctionWrappers::AsyncFunctionWrapper2Void<duckdb_database, idx_t, "duckdb_execute_tasks">>(env));
+exports.Set(Napi::String::New(env, "duckdb_create_task_state"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<duckdb_task_state, duckdb_database, "duckdb_create_task_state">>(env));
+exports.Set(Napi::String::New(env, "duckdb_execute_tasks_state"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1Void<duckdb_task_state, "duckdb_execute_tasks_state">>(env));
+exports.Set(Napi::String::New(env, "duckdb_execute_n_tasks_state"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<idx_t, duckdb_task_state, idx_t, "duckdb_execute_n_tasks_state">>(env));
+exports.Set(Napi::String::New(env, "duckdb_finish_execution"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1Void<duckdb_task_state, "duckdb_finish_execution">>(env));
+exports.Set(Napi::String::New(env, "duckdb_task_state_is_finished"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<bool, duckdb_task_state, "duckdb_task_state_is_finished">>(env));
+exports.Set(Napi::String::New(env, "duckdb_destroy_task_state"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1Void<duckdb_task_state, "duckdb_destroy_task_state">>(env));
+exports.Set(Napi::String::New(env, "duckdb_execution_is_finished"), Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<bool, duckdb_connection, "duckdb_execution_is_finished">>(env));
+exports.Set(Napi::String::New(env, "duckdb_stream_fetch_chunk"), Napi::Function::New<duckdb_node::FunctionWrappers::AsyncFunctionWrapper1<duckdb_data_chunk, duckdb_result, "duckdb_stream_fetch_chunk">>(env));
 }
+
