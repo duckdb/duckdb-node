@@ -34,7 +34,19 @@ fi
 
 export PATH=$(npm bin):$PATH
 ./node_modules/.bin/node-pre-gyp package testpackage testbinary --target_arch="$TARGET_ARCH"
+
+LOCAL_BINARY=$(./node_modules/.bin/node-pre-gyp reveal staged_tarball --silent)
+REMOTE_BINARY=$(./node_modules/.bin/node-pre-gyp reveal hosted_tarball --silent)
+S3_ENDPOINT_BINARY="s3://duckdb-npm/"${REMOTE_BINARY:23}
+
+pip install awscli
+
+echo "local binary at  $LOCAL_BINARY"
+echo "remote binary at $REMOTE_BINARY"
+echo "served from      $S3_ENDPOINT_BINARY"
+
 if [[ "$GITHUB_REF" =~ ^(refs/heads/main|refs/tags/v.+)$ ]] ; then
-  ./node_modules/.bin/node-pre-gyp publish --target_arch=$TARGET_ARCH
-  ./node_modules/.bin/node-pre-gyp info --target_arch=$TARGET_ARCH
+  aws s3 cp $LOCAL_BINARY $S3_ENDPOINT_BINARY --acl public-read
+else
+  aws s3 cp $LOCAL_BINARY $S3_ENDPOINT_BINARY --acl public-read --dryrun
 fi
