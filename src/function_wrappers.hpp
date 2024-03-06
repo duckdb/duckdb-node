@@ -1,8 +1,19 @@
 #pragma once
 #include "napi.h"
 #include "value_conversion.hpp"
+#include <dlfcn.h>
+#include <exception>
 
 namespace duckdb_node {
+template <typename T>
+void GetFunctionPointer(const char *name, T *out_ptr) {
+	if (!*out_ptr) {
+		*out_ptr = (T)dlsym(duckdb_node_dlopen_handle, name);
+		if (!*out_ptr) {
+			throw std::runtime_error("Unable to find symbol");
+		}
+	}
+}
 
 // this dance is done so we can keep ownership of a string value returned by napi
 template <class T>
@@ -150,18 +161,20 @@ public:
 };
 
 // workers
-template <class RET, RET (*FUN)()>
+template <class RET, StringLiteral NAME>
 class FunctionWorker0 : public PromiseRetWorker<RET> {
 public:
 	FunctionWorker0(Napi::Env &env, const Napi::CallbackInfo &info) : PromiseRetWorker<RET>(env) {
 	}
 
 	void Execute() override {
-		this->ret = FUN();
+		static RET (*fun)() = nullptr;
+		GetFunctionPointer(NAME.value, &fun);
+		this->ret = fun();
 	}
 };
 
-template <class RET, class ARG1, RET (*FUN)(ARG1)>
+template <class RET, class ARG1, StringLiteral NAME>
 class FunctionWorker1 : public PromiseRetWorker<RET>, Worker1Arg<ARG1> {
 public:
 	FunctionWorker1(Napi::Env &env, const Napi::CallbackInfo &info)
@@ -169,11 +182,13 @@ public:
 	}
 
 	void Execute() override {
-		this->ret = FUN(OwnershipType<ARG1>::Get(this->arg1));
+		static RET (*fun)(ARG1) = nullptr;
+		GetFunctionPointer(NAME.value, &fun);
+		this->ret = fun(OwnershipType<ARG1>::Get(this->arg1));
 	}
 };
 
-template <class ARG1, void (*FUN)(ARG1)>
+template <class ARG1, StringLiteral NAME>
 class FunctionWorker1Void : public PromiseWorker, Worker1Arg<ARG1> {
 public:
 	FunctionWorker1Void(Napi::Env &env, const Napi::CallbackInfo &info)
@@ -181,11 +196,13 @@ public:
 	}
 
 	void Execute() override {
-		FUN(OwnershipType<ARG1>::Get(this->arg1));
+		static void (*fun)(ARG1) = nullptr;
+		GetFunctionPointer(NAME.value, &fun);
+		fun(OwnershipType<ARG1>::Get(this->arg1));
 	}
 };
 
-template <class RET, class ARG1, class ARG2, RET (*FUN)(ARG1, ARG2)>
+template <class RET, class ARG1, class ARG2, StringLiteral NAME>
 class FunctionWorker2 : public PromiseRetWorker<RET>, Worker2Arg<ARG1, ARG2> {
 public:
 	FunctionWorker2(Napi::Env &env, const Napi::CallbackInfo &info)
@@ -193,11 +210,13 @@ public:
 	}
 
 	void Execute() override {
-		this->ret = FUN(OwnershipType<ARG1>::Get(this->arg1), OwnershipType<ARG2>::Get(this->arg2));
+		static RET (*fun)(ARG1, ARG2) = nullptr;
+		GetFunctionPointer(NAME.value, &fun);
+		this->ret = fun(OwnershipType<ARG1>::Get(this->arg1), OwnershipType<ARG2>::Get(this->arg2));
 	}
 };
 
-template <class ARG1, class ARG2, void (*FUN)(ARG1, ARG2)>
+template <class ARG1, class ARG2, StringLiteral NAME>
 class FunctionWorker2Void : public PromiseWorker, Worker2Arg<ARG1, ARG2> {
 public:
 	FunctionWorker2Void(Napi::Env &env, const Napi::CallbackInfo &info)
@@ -205,11 +224,13 @@ public:
 	}
 
 	void Execute() override {
-		FUN(OwnershipType<ARG1>::Get(this->arg1), OwnershipType<ARG2>::Get(this->arg2));
+		static void (*fun)(ARG1, ARG2) = nullptr;
+		GetFunctionPointer(NAME.value, &fun);
+		fun(OwnershipType<ARG1>::Get(this->arg1), OwnershipType<ARG2>::Get(this->arg2));
 	}
 };
 
-template <class RET, class ARG1, class ARG2, class ARG3, RET (*FUN)(ARG1, ARG2, ARG3)>
+template <class RET, class ARG1, class ARG2, class ARG3, StringLiteral NAME>
 class FunctionWorker3 : public PromiseRetWorker<RET>, Worker3Arg<ARG1, ARG2, ARG3> {
 public:
 	FunctionWorker3(Napi::Env &env, const Napi::CallbackInfo &info)
@@ -217,12 +238,14 @@ public:
 	}
 
 	void Execute() override {
-		this->ret = FUN(OwnershipType<ARG1>::Get(this->arg1), OwnershipType<ARG2>::Get(this->arg2),
+		static RET (*fun)(ARG1, ARG2, ARG3) = nullptr;
+		GetFunctionPointer(NAME.value, &fun);
+		this->ret = fun(OwnershipType<ARG1>::Get(this->arg1), OwnershipType<ARG2>::Get(this->arg2),
 		                OwnershipType<ARG3>::Get(this->arg3));
 	}
 };
 
-template <class ARG1, class ARG2, class ARG3, void (*FUN)(ARG1, ARG2, ARG3)>
+template <class ARG1, class ARG2, class ARG3, StringLiteral NAME>
 class FunctionWorker3Void : public PromiseWorker, Worker3Arg<ARG1, ARG2, ARG3> {
 public:
 	FunctionWorker3Void(Napi::Env &env, const Napi::CallbackInfo &info)
@@ -230,12 +253,14 @@ public:
 	}
 
 	void Execute() override {
-		FUN(OwnershipType<ARG1>::Get(this->arg1), OwnershipType<ARG2>::Get(this->arg2),
+		static void (*fun)(ARG1, ARG2, ARG3) = nullptr;
+		GetFunctionPointer(NAME.value, &fun);
+		fun(OwnershipType<ARG1>::Get(this->arg1), OwnershipType<ARG2>::Get(this->arg2),
 		    OwnershipType<ARG3>::Get(this->arg3));
 	}
 };
 
-template <class RET, class ARG1, class ARG2, class ARG3, class ARG4, RET (*FUN)(ARG1, ARG2, ARG3, ARG4)>
+template <class RET, class ARG1, class ARG2, class ARG3, class ARG4, StringLiteral NAME>
 class FunctionWorker4 : public PromiseRetWorker<RET>, Worker4Arg<ARG1, ARG2, ARG3, ARG4> {
 public:
 	FunctionWorker4(Napi::Env &env, const Napi::CallbackInfo &info)
@@ -243,12 +268,14 @@ public:
 	}
 
 	void Execute() override {
-		this->ret = FUN(OwnershipType<ARG1>::Get(this->arg1), OwnershipType<ARG2>::Get(this->arg2),
+		static RET (*fun)(ARG1, ARG2, ARG3, ARG4) = nullptr;
+		GetFunctionPointer(NAME.value, &fun);
+		this->ret = fun(OwnershipType<ARG1>::Get(this->arg1), OwnershipType<ARG2>::Get(this->arg2),
 		                OwnershipType<ARG3>::Get(this->arg3), OwnershipType<ARG4>::Get(this->arg4));
 	}
 };
 
-template <class ARG1, class ARG2, class ARG3, class ARG4, void (*FUN)(ARG1, ARG2, ARG3, ARG4)>
+template <class ARG1, class ARG2, class ARG3, class ARG4, StringLiteral NAME>
 class FunctionWorker4Void : public PromiseWorker, Worker4Arg<ARG1, ARG2, ARG3, ARG4> {
 public:
 	FunctionWorker4Void(Napi::Env &env, const Napi::CallbackInfo &info)
@@ -256,13 +283,14 @@ public:
 	}
 
 	void Execute() override {
-		FUN(OwnershipType<ARG1>::Get(this->arg1), OwnershipType<ARG2>::Get(this->arg2),
+		static void (*fun)(ARG1, ARG2, ARG3, ARG4) = nullptr;
+		GetFunctionPointer(NAME.value, &fun);
+		fun(OwnershipType<ARG1>::Get(this->arg1), OwnershipType<ARG2>::Get(this->arg2),
 		    OwnershipType<ARG3>::Get(this->arg3), OwnershipType<ARG4>::Get(this->arg4));
 	}
 };
 
-template <class RET, class ARG1, class ARG2, class ARG3, class ARG4, class ARG5,
-          RET (*FUN)(ARG1, ARG2, ARG3, ARG4, ARG5)>
+template <class RET, class ARG1, class ARG2, class ARG3, class ARG4, class ARG5, StringLiteral NAME>
 class FunctionWorker5 : public PromiseRetWorker<RET>, Worker5Arg<ARG1, ARG2, ARG3, ARG4, ARG5> {
 public:
 	FunctionWorker5(Napi::Env &env, const Napi::CallbackInfo &info)
@@ -270,7 +298,9 @@ public:
 	}
 
 	void Execute() override {
-		this->ret = FUN(OwnershipType<ARG1>::Get(this->arg1), OwnershipType<ARG2>::Get(this->arg2),
+		static RET (*fun)(ARG1, ARG2, ARG3, ARG4, ARG5) = nullptr;
+		GetFunctionPointer(NAME.value, &fun);
+		this->ret = fun(OwnershipType<ARG1>::Get(this->arg1), OwnershipType<ARG2>::Get(this->arg2),
 		                OwnershipType<ARG3>::Get(this->arg3), OwnershipType<ARG4>::Get(this->arg4),
 		                OwnershipType<ARG5>::Get(this->arg5));
 	}
@@ -280,128 +310,128 @@ public:
 
 class FunctionWrappers {
 public:
-	template <class RET, class ARG1, RET (*FUN)(ARG1)>
+	template <class RET, class ARG1, StringLiteral NAME>
 	static Napi::Value AsyncFunctionWrapper1(const Napi::CallbackInfo &info) {
 		Napi::Env env = info.Env();
-		return (new FunctionWorker1<RET, ARG1, FUN>(env, info))->QueueAndPromise();
+		return (new FunctionWorker1<RET, ARG1, NAME>(env, info))->QueueAndPromise();
 	}
 
-	template <class RET, RET (*FUN)()>
+	template <class RET, StringLiteral NAME>
 	static Napi::Value AsyncFunctionWrapper0(const Napi::CallbackInfo &info) {
 		Napi::Env env = info.Env();
-		return (new FunctionWorker0<RET, FUN>(env, info))->QueueAndPromise();
+		return (new FunctionWorker0<RET, NAME>(env, info))->QueueAndPromise();
 	}
 
-	template <class RET, class ARG1, class ARG2, RET (*FUN)(ARG1, ARG2)>
+	template <class RET, class ARG1, class ARG2, StringLiteral NAME>
 	static Napi::Value AsyncFunctionWrapper2(const Napi::CallbackInfo &info) {
 		Napi::Env env = info.Env();
-		return (new FunctionWorker2<RET, ARG1, ARG2, FUN>(env, info))->QueueAndPromise();
+		return (new FunctionWorker2<RET, ARG1, ARG2, NAME>(env, info))->QueueAndPromise();
 	}
 
-	template <class RET, class ARG1, class ARG2, class ARG3, RET (*FUN)(ARG1, ARG2, ARG3)>
+	template <class RET, class ARG1, class ARG2, class ARG3, StringLiteral NAME>
 	static Napi::Value AsyncFunctionWrapper3(const Napi::CallbackInfo &info) {
 		Napi::Env env = info.Env();
-		return (new FunctionWorker3<RET, ARG1, ARG2, ARG3, FUN>(env, info))->QueueAndPromise();
+		return (new FunctionWorker3<RET, ARG1, ARG2, ARG3, NAME>(env, info))->QueueAndPromise();
 	}
 
-	template <class ARG1, class ARG2, void (*FUN)(ARG1, ARG2)>
+	template <class ARG1, class ARG2, StringLiteral NAME>
 	static Napi::Value AsyncFunctionWrapper2Void(const Napi::CallbackInfo &info) {
 		Napi::Env env = info.Env();
-		return (new FunctionWorker2Void<ARG1, ARG2, FUN>(env, info))->QueueAndPromise();
+		return (new FunctionWorker2Void<ARG1, ARG2, NAME>(env, info))->QueueAndPromise();
 	}
 
-	template <class ARG1, class ARG2, class ARG3, void (*FUN)(ARG1, ARG2, ARG3)>
+	template <class ARG1, class ARG2, class ARG3, StringLiteral NAME>
 	static Napi::Value AsyncFunctionWrapper3Void(const Napi::CallbackInfo &info) {
 		Napi::Env env = info.Env();
-		return (new FunctionWorker3Void<ARG1, ARG2, ARG3, FUN>(env, info))->QueueAndPromise();
+		return (new FunctionWorker3Void<ARG1, ARG2, ARG3, NAME>(env, info))->QueueAndPromise();
 	}
 
-	template <class RET, class ARG1, class ARG2, class ARG3, class ARG4, RET (*FUN)(ARG1, ARG2, ARG3, ARG4)>
+	template <class RET, class ARG1, class ARG2, class ARG3, class ARG4, StringLiteral NAME>
 	static Napi::Value AsyncFunctionWrapper4(const Napi::CallbackInfo &info) {
 		Napi::Env env = info.Env();
-		return (new FunctionWorker4<RET, ARG1, ARG2, ARG3, ARG4, FUN>(env, info))->QueueAndPromise();
+		return (new FunctionWorker4<RET, ARG1, ARG2, ARG3, ARG4, NAME>(env, info))->QueueAndPromise();
 	}
 
-	template <class ARG1, class ARG2, class ARG3, class ARG4, void (*FUN)(ARG1, ARG2, ARG3, ARG4)>
+	template <class ARG1, class ARG2, class ARG3, class ARG4, StringLiteral NAME>
 	static Napi::Value AsyncFunctionWrapper4Void(const Napi::CallbackInfo &info) {
 		Napi::Env env = info.Env();
-		return (new FunctionWorker4Void<ARG1, ARG2, ARG3, ARG4, FUN>(env, info))->QueueAndPromise();
+		return (new FunctionWorker4Void<ARG1, ARG2, ARG3, ARG4, NAME>(env, info))->QueueAndPromise();
 	}
 
-	template <class RET, class ARG1, class ARG2, class ARG3, class ARG4, class ARG5, RET (*FUN)(ARG1, ARG2, ARG3)>
+	template <class RET, class ARG1, class ARG2, class ARG3, class ARG4, class ARG5, StringLiteral NAME>
 	static Napi::Value AsyncFunctionWrapper5(const Napi::CallbackInfo &info) {
 		Napi::Env env = info.Env();
-		return (new FunctionWorker5<RET, ARG1, ARG2, ARG3, ARG4, ARG5, FUN>(env, info))->QueueAndPromise();
+		return (new FunctionWorker5<RET, ARG1, ARG2, ARG3, ARG4, ARG5, NAME>(env, info))->QueueAndPromise();
 	}
 
-	template <class ARG1, void (*FUN)(ARG1)>
+	template <class ARG1, StringLiteral NAME>
 	static Napi::Value AsyncFunctionWrapper1Void(const Napi::CallbackInfo &info) {
 		Napi::Env env = info.Env();
-		return (new FunctionWorker1Void<ARG1, FUN>(env, info))->QueueAndPromise();
+		return (new FunctionWorker1Void<ARG1, NAME>(env, info))->QueueAndPromise();
 	}
 
 	// sync wrappers
 
-	template <class ARG1, void (*FUN)(ARG1)>
+	template <class ARG1, StringLiteral NAME>
 	static Napi::Value FunctionWrapper1Void(const Napi::CallbackInfo &info) {
 		Napi::Env env = info.Env();
-		FunctionWorker1Void<ARG1, FUN> worker(env, info);
+		FunctionWorker1Void<ARG1, NAME> worker(env, info);
 		return worker.ExecuteAndResult();
 	}
 
-	template <class RET, RET (*FUN)()>
+	template <class RET, StringLiteral NAME>
 	static Napi::Value FunctionWrapper0(const Napi::CallbackInfo &info) {
 		Napi::Env env = info.Env();
-		FunctionWorker0<RET, FUN> worker(env, info);
+		FunctionWorker0<RET, NAME> worker(env, info);
 		return worker.ExecuteAndResult();
 	}
 
-	template <class RET, class ARG1, RET (*FUN)(ARG1)>
+	template <class RET, class ARG1, StringLiteral NAME>
 	static Napi::Value FunctionWrapper1(const Napi::CallbackInfo &info) {
 		Napi::Env env = info.Env();
-		FunctionWorker1<RET, ARG1, FUN> worker(env, info);
+		FunctionWorker1<RET, ARG1, NAME> worker(env, info);
 		return worker.ExecuteAndResult();
 	}
 
-	template <class RET, class ARG1, class ARG2, RET (*FUN)(ARG1, ARG2)>
+	template <class RET, class ARG1, class ARG2, StringLiteral NAME>
 	static Napi::Value FunctionWrapper2(const Napi::CallbackInfo &info) {
 		Napi::Env env = info.Env();
-		FunctionWorker2<RET, ARG1, ARG2, FUN> worker(env, info);
+		FunctionWorker2<RET, ARG1, ARG2, NAME> worker(env, info);
 		return worker.ExecuteAndResult();
 	}
 
-	template <class ARG1, class ARG2, void (*FUN)(ARG1, ARG2)>
+	template <class ARG1, class ARG2, StringLiteral NAME>
 	static Napi::Value FunctionWrapper2Void(const Napi::CallbackInfo &info) {
 		Napi::Env env = info.Env();
-		FunctionWorker2Void<ARG1, ARG2, FUN> worker(env, info);
+		FunctionWorker2Void<ARG1, ARG2, NAME> worker(env, info);
 		return worker.ExecuteAndResult();
 	}
 
-	template <class RET, class ARG1, class ARG2, class ARG3, RET (*FUN)(ARG1, ARG2, ARG3)>
+	template <class RET, class ARG1, class ARG2, class ARG3, StringLiteral NAME>
 	static Napi::Value FunctionWrapper3(const Napi::CallbackInfo &info) {
 		Napi::Env env = info.Env();
-		FunctionWorker3<RET, ARG1, ARG2, ARG3, FUN> worker(env, info);
+		FunctionWorker3<RET, ARG1, ARG2, ARG3, NAME> worker(env, info);
 		return worker.ExecuteAndResult();
 	}
 
-	template <class ARG1, class ARG2, class ARG3, void (*FUN)(ARG1, ARG2, ARG3)>
+	template <class ARG1, class ARG2, class ARG3, StringLiteral NAME>
 	static Napi::Value FunctionWrapper3Void(const Napi::CallbackInfo &info) {
 		Napi::Env env = info.Env();
-		FunctionWorker3Void<ARG1, ARG2, ARG3, FUN> worker(env, info);
+		FunctionWorker3Void<ARG1, ARG2, ARG3, NAME> worker(env, info);
 		return worker.ExecuteAndResult();
 	}
 
-	template <class RET, class ARG1, class ARG2, class ARG3, class ARG4, RET (*FUN)(ARG1, ARG2, ARG3, ARG4)>
+	template <class RET, class ARG1, class ARG2, class ARG3, class ARG4, StringLiteral NAME>
 	static Napi::Value FunctionWrapper4(const Napi::CallbackInfo &info) {
 		Napi::Env env = info.Env();
-		FunctionWorker4<RET, ARG1, ARG2, ARG3, ARG4, FUN> worker(env, info);
+		FunctionWorker4<RET, ARG1, ARG2, ARG3, ARG4, NAME> worker(env, info);
 		return worker.ExecuteAndResult();
 	}
 
-	template <class ARG1, class ARG2, class ARG3, class ARG4, void (*FUN)(ARG1, ARG2, ARG3, ARG4)>
+	template <class ARG1, class ARG2, class ARG3, class ARG4, StringLiteral NAME>
 	static Napi::Value FunctionWrapper4Void(const Napi::CallbackInfo &info) {
 		Napi::Env env = info.Env();
-		FunctionWorker4Void<ARG1, ARG2, ARG3, ARG4, FUN> worker(env, info);
+		FunctionWorker4Void<ARG1, ARG2, ARG3, ARG4, NAME> worker(env, info);
 		return worker.ExecuteAndResult();
 	}
 };

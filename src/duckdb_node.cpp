@@ -3,6 +3,8 @@
 #include "napi.h"
 #include <dlfcn.h>
 
+static void *duckdb_node_dlopen_handle;
+
 // this file contains generated template instantiations from duckdb.h
 #include "duckdb_node_generated.cpp"
 
@@ -42,8 +44,8 @@ static Napi::Value Initialize(const Napi::CallbackInfo &info) {
 	Napi::Env env = info.Env();
 	auto path = duckdb_node::ValueConversion::FromJS<std::string>(info, 0);
 	auto path2 = path.substr(0, path.rfind('/')) + "/libduckdb";
-	auto lib = dlopen(path2.c_str(), RTLD_GLOBAL);
-	if (!lib) {
+	duckdb_node_dlopen_handle = dlopen(path2.c_str(), RTLD_GLOBAL);
+	if (!duckdb_node_dlopen_handle) {
 		return Napi::Boolean::New(env, false);
 	}
 	return Napi::Boolean::New(env, true);

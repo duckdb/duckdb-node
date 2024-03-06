@@ -206,7 +206,7 @@ class DuckDBHeaderVisitor(pycparser.c_ast.NodeVisitor):
 
        n_args = len(args)
 
-       fwrap_args = list(map(lambda arg: arg[1], args)) + [name]
+       fwrap_args = list(map(lambda arg: arg[1], args)) + ['"' + name + '"']
        is_async = name in async_functions
        asyncstr = ''
        if is_async:

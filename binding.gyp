@@ -9,7 +9,7 @@
                     'message': 'Downloading DuckDB shared library...',
                     'inputs': [],
                     'outputs': ['lib/binding/libduckdb', 'src/duckdb.h', 'src/duckdb_node_generated.cpp'],
-                    'action': ['eval', 'python3 generate-wrapper.py'],
+                    'action': ['eval', '/Users/hannes/source/duckdb-node/pythonenv/bin/python generate-wrapper.py'],
                 },
             ],
       },
@@ -50,7 +50,7 @@
                 "GCC_ENABLE_CPP_RTTI": "YES", 
                 "CLANG_CXX_LIBRARY": "libc++", 
                 "MACOSX_DEPLOYMENT_TARGET": "10.15", 
-                "CLANG_CXX_LANGUAGE_STANDARD": "c++11", 
+                "CLANG_CXX_LANGUAGE_STANDARD": "c++20",
                 "OTHER_CFLAGS": [
                     "-fexceptions", 
                     "-frtti", 

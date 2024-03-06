@@ -5,6 +5,15 @@
 
 namespace duckdb_node {
 
+// C++ 20 magic ^^
+template <size_t N>
+struct StringLiteral {
+	constexpr StringLiteral(const char (&str)[N]) {
+		std::copy_n(str, N, value);
+	}
+	char value[N];
+};
+
 typedef uint8_t data_t;
 
 static Napi::Value GetValue(const Napi::CallbackInfo &info, size_t offset) {
