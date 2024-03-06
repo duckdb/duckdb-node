@@ -277,7 +277,6 @@ export function duckdb_bind_add_result_column(info: duckdb_bind_info, name: stri
 export function duckdb_bind_get_parameter_count(info: duckdb_bind_info): number;
 export function duckdb_bind_get_parameter(info: duckdb_bind_info, index: number): duckdb_value;
 export function duckdb_bind_get_named_parameter(info: duckdb_bind_info, name: string): duckdb_value;
-export function duckdb_bind_set_bind_data(info: duckdb_bind_info, bind_data: pointer, destroy: duckdb_delete_callback_t): void;
 export function duckdb_bind_set_cardinality(info: duckdb_bind_info, cardinality: number, is_exact: boolean): void;
 export function duckdb_bind_set_error(info: duckdb_bind_info, error: string): void;
 export function duckdb_function_get_extra_info(info: duckdb_function_info): pointer;

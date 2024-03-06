@@ -77,6 +77,7 @@ deprecated_functions = [
     'duckdb_value_uint8',
     'duckdb_value_varchar',
     'duckdb_value_varchar_internal',
+    "duckdb_bind_set_bind_data",
 ]
 
 def typename(decl):

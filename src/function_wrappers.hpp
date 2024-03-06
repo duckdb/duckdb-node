@@ -7,7 +7,7 @@
 namespace duckdb_node {
 template <typename T>
 void GetFunctionPointer(const char *name, T *out_ptr) {
-    // TODO check if handle is set
+	// TODO check if handle is set
 	if (!*out_ptr) {
 		*out_ptr = (T)dlsym(duckdb_node_dlopen_handle, name);
 		if (!*out_ptr) {

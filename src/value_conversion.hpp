@@ -25,35 +25,6 @@ static Napi::Value GetValue(const Napi::CallbackInfo &info, size_t offset) {
 	return info[offset].As<Napi::Value>();
 }
 
-//
-//
-// class ObjectDestructorWrapper : public Napi::ObjectWrap<ObjectDestructorWrapper> {
-// public:
-//    static Napi::FunctionReference *Init(Napi::Env env) {
-//        // TODO needs a getter
-//        auto func = Napi::ObjectWrap<ObjectDestructorWrapper>::DefineClass(env, "duckdb_object_destructor", {});
-//        auto constructor = new Napi::FunctionReference();
-//        *constructor = Napi::Persistent(func);                     // weird
-//        env.SetInstanceData<Napi::FunctionReference>(constructor); // is this so this is eventually freed?
-//        return constructor;
-//    }
-//
-//    ObjectDestructorWrapper(const Napi::CallbackInfo &info) : Napi::ObjectWrap<ObjectDestructorWrapper>(info) {
-//        object = Persistent(GetValue(info, 0).As<Napi::Object>());
-//        destructor = Persistent(GetValue(info, 1).As<Napi::Function>());
-//    }
-//
-//    void Finalize(Napi::Env env) override {
-//            printf("%p\n", object);
-//
-//    }
-//
-// private:
-//    Napi::ObjectReference object;
-//    Napi::FunctionReference destructor;
-//};
-//
-
 template <class T>
 class PointerHolder : public Napi::ObjectWrap<PointerHolder<T>> {
 public:
@@ -103,119 +74,134 @@ public:
 	}
 
 	template <>
-	static Napi::Value ToJS(Napi::Env &env, duckdb_state val) {
+	Napi::Value ToJS(Napi::Env &env, duckdb_state val) {
 		return Napi::Number::New(env, (uint8_t)val);
 	}
 
 	template <>
-	static Napi::Value ToJS(Napi::Env &env, duckdb_pending_state val) {
+	Napi::Value ToJS(Napi::Env &env, duckdb_result_type val) {
 		return Napi::Number::New(env, (uint8_t)val);
 	}
 
 	template <>
-	static Napi::Value ToJS(Napi::Env &env, duckdb_type val) {
+	Napi::Value ToJS(Napi::Env &env, duckdb_pending_state val) {
 		return Napi::Number::New(env, (uint8_t)val);
 	}
 
 	template <>
-	static Napi::Value ToJS(Napi::Env &env, duckdb_data_chunk val) {
+	Napi::Value ToJS(Napi::Env &env, duckdb_type val) {
+		return Napi::Number::New(env, (uint8_t)val);
+	}
+
+	template <>
+	Napi::Value ToJS(Napi::Env &env, duckdb_data_chunk val) {
 		return PointerHolder<duckdb_data_chunk>::NewAndSet(env, val);
 	}
 
 	template <>
-	static Napi::Value ToJS(Napi::Env &env, duckdb_vector val) {
+	Napi::Value ToJS(Napi::Env &env, duckdb_query_progress_type val) {
+		return PointerHolder<duckdb_query_progress_type>::NewAndSet(env, val);
+	}
+
+	template <>
+	Napi::Value ToJS(Napi::Env &env, duckdb_value val) {
+		return PointerHolder<duckdb_value>::NewAndSet(env, val);
+	}
+
+	template <>
+	Napi::Value ToJS(Napi::Env &env, duckdb_vector val) {
 		return PointerHolder<duckdb_vector>::NewAndSet(env, val);
 	}
 
 	template <>
-	static Napi::Value ToJS(Napi::Env &env, duckdb_logical_type val) {
+	Napi::Value ToJS(Napi::Env &env, duckdb_logical_type val) {
 		return PointerHolder<duckdb_logical_type>::NewAndSet(env, val);
 	}
 
 	template <>
-	static Napi::Value ToJS(Napi::Env &env, void *val) {
+	Napi::Value ToJS(Napi::Env &env, void *val) {
 		return PointerHolder<void *>::NewAndSet(env, val);
 	}
 
 	template <>
-	static Napi::Value ToJS(Napi::Env &env, uint64_t *val) {
+	Napi::Value ToJS(Napi::Env &env, uint64_t *val) {
 		return PointerHolder<uint64_t *>::NewAndSet(env, val);
 	}
 
 	template <>
-	static Napi::Value ToJS(Napi::Env &env, duckdb_string val) {
+	Napi::Value ToJS(Napi::Env &env, duckdb_string val) {
 		auto ret = Napi::String::New(env, val.data, val.size);
 		duckdb_free(val.data);
 		return ret;
 	}
 
 	template <>
-	static Napi::Value ToJS(Napi::Env &env, const char *val) {
+	Napi::Value ToJS(Napi::Env &env, const char *val) {
 		return Napi::String::New(env, val);
 	}
 
 	template <>
-	static Napi::Value ToJS(Napi::Env &env, char *val) {
+	Napi::Value ToJS(Napi::Env &env, char *val) {
 		return Napi::String::New(env, val);
 	}
 
 	template <>
-	static Napi::Value ToJS(Napi::Env &env, int32_t val) {
+	Napi::Value ToJS(Napi::Env &env, int32_t val) {
 		return Napi::Number::New(env, val);
 	}
 
 	template <>
-	static Napi::Value ToJS(Napi::Env &env, uint32_t val) {
+	Napi::Value ToJS(Napi::Env &env, uint32_t val) {
 		return Napi::Number::New(env, val);
 	}
 
 	template <>
-	static Napi::Value ToJS(Napi::Env &env, idx_t val) {
+	Napi::Value ToJS(Napi::Env &env, idx_t val) {
 		return Napi::Number::New(env, val);
 	}
 
 	template <>
-	static Napi::Value ToJS(Napi::Env &env, bool val) {
+	Napi::Value ToJS(Napi::Env &env, bool val) {
 		return Napi::Boolean::New(env, val);
 	}
 
 	template <>
-	static Napi::Value ToJS(Napi::Env &env, double val) {
+	Napi::Value ToJS(Napi::Env &env, double val) {
 		return Napi::Number::New(env, val);
 	}
 
 	template <>
-	static Napi::Value ToJS(Napi::Env &env, size_t val) {
+	Napi::Value ToJS(Napi::Env &env, size_t val) {
 		return Napi::Number::New(env, val);
 	}
 
 	template <>
-	static Napi::Value ToJS(Napi::Env &env, int8_t val) {
+	Napi::Value ToJS(Napi::Env &env, int8_t val) {
 		return Napi::Number::New(env, val);
 	}
 
 	template <>
-	static Napi::Value ToJS(Napi::Env &env, int16_t val) {
+	Napi::Value ToJS(Napi::Env &env, int16_t val) {
 		return Napi::Number::New(env, val);
 	}
 
 	template <>
-	static Napi::Value ToJS(Napi::Env &env, int64_t val) {
+	Napi::Value ToJS(Napi::Env &env, int64_t val) {
 		return Napi::Number::New(env, val);
 	}
 
 	template <>
-	static Napi::Value ToJS(Napi::Env &env, uint8_t val) {
+	Napi::Value ToJS(Napi::Env &env, uint8_t val) {
 		return Napi::Number::New(env, val);
 	}
 
 	template <>
-	static Napi::Value ToJS(Napi::Env &env, uint16_t val) {
+	Napi::Value ToJS(Napi::Env &env, uint16_t val) {
 		return Napi::Number::New(env, val);
 	}
 
 	template <>
-	static Napi::Value ToJS(Napi::Env &env, float val) {
+	Napi::Value ToJS(Napi::Env &env, float val) {
 		return Napi::Number::New(env, val);
 	}
 
@@ -237,6 +223,16 @@ public:
 	template <>
 	duckdb_database FromJS(const Napi::CallbackInfo &info, idx_t offset) {
 		return *FromJS<duckdb_database *>(info, offset);
+	}
+
+	template <>
+	duckdb_query_progress_type *FromJS(const Napi::CallbackInfo &info, idx_t offset) {
+		return PointerHolder<duckdb_query_progress_type>::FromInfo(info, offset);
+	}
+
+	template <>
+	duckdb_query_progress_type FromJS(const Napi::CallbackInfo &info, idx_t offset) {
+		return *FromJS<duckdb_query_progress_type *>(info, offset);
 	}
 
 	template <>
@@ -330,6 +326,16 @@ public:
 	}
 
 	template <>
+	duckdb_pending_state FromJS(const Napi::CallbackInfo &info, idx_t offset) {
+		return (duckdb_pending_state)GetValue(info, offset).As<Napi::Number>().Int32Value();
+	}
+
+	template <>
+	duckdb_type FromJS(const Napi::CallbackInfo &info, idx_t offset) {
+		return (duckdb_type)GetValue(info, offset).As<Napi::Number>().Int32Value();
+	}
+
+	template <>
 	duckdb_logical_type FromJS(const Napi::CallbackInfo &info, idx_t offset) {
 		return *FromJS<duckdb_logical_type *>(info, offset);
 	}
@@ -340,8 +346,23 @@ public:
 	}
 
 	template <>
+	duckdb_value FromJS(const Napi::CallbackInfo &info, idx_t offset) {
+		return *FromJS<duckdb_value *>(info, offset);
+	}
+
+	template <>
+	duckdb_value *FromJS(const Napi::CallbackInfo &info, idx_t offset) {
+		return PointerHolder<duckdb_value>::FromInfo(info, offset);
+	}
+
+	template <>
 	void *FromJS(const Napi::CallbackInfo &info, idx_t offset) {
 		return *PointerHolder<void *>::FromInfo(info, offset);
+	}
+
+	template <>
+	const void *FromJS(const Napi::CallbackInfo &info, idx_t offset) {
+		return *PointerHolder<const void *>::FromInfo(info, offset);
 	}
 
 	template <>
