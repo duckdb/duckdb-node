@@ -35,8 +35,8 @@ fi
 export PATH=$(npm bin):$PATH
 ./node_modules/.bin/node-pre-gyp package testpackage testbinary --target_arch="$TARGET_ARCH"
 
-LOCAL_BINARY=$(./node_modules/.bin/node-pre-gyp reveal staged_tarball --silent)
-REMOTE_BINARY=$(./node_modules/.bin/node-pre-gyp reveal hosted_tarball --silent)
+LOCAL_BINARY=$(./node_modules/.bin/node-pre-gyp reveal staged_tarball --silent --target_arch="$TARGET_ARCH")
+REMOTE_BINARY=$(./node_modules/.bin/node-pre-gyp reveal hosted_tarball --silent --target_arch="$TARGET_ARCH")
 S3_ENDPOINT_BINARY="s3://duckdb-npm/"${REMOTE_BINARY:23}
 
 pip install awscli
