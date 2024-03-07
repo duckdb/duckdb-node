@@ -108,8 +108,8 @@ jobs:
 
       - name: Node ${{ matrix.node }}
         env:
-          AWS_ACCESS_KEY_ID: ${{secrets.S3_ID}}
-          AWS_SECRET_ACCESS_KEY: ${{secrets.S3_KEY}}
+          AWS_ACCESS_KEY_ID: ${{secrets.S3_DUCKDB_ORG_DEPLOY_ID}}
+          AWS_SECRET_ACCESS_KEY: ${{secrets.S3_DUCKDB_ORG_DEPLOY_KEY}}
           AWS_DEFAULT_REGION: us-east-1
         shell: bash
         run: ./scripts/node_build.sh ${{ matrix.node }}
@@ -176,8 +176,8 @@ jobs:
 
       - name: Node ${{ matrix.node }}
         env:
-          AWS_ACCESS_KEY_ID: ${{secrets.S3_ID}}
-          AWS_SECRET_ACCESS_KEY: ${{secrets.S3_KEY}}
+          AWS_ACCESS_KEY_ID: ${{secrets.S3_DUCKDB_ORG_DEPLOY_ID}}
+          AWS_SECRET_ACCESS_KEY: ${{secrets.S3_DUCKDB_ORG_DEPLOY_KEY}}
           AWS_DEFAULT_REGION: us-east-1
         shell: bash
         run: ./scripts/node_build.sh ${{ matrix.node }}
@@ -253,8 +253,8 @@ jobs:
 
       - name: Node
         env:
-          AWS_ACCESS_KEY_ID: ${{secrets.S3_ID}}
-          AWS_SECRET_ACCESS_KEY: ${{secrets.S3_KEY}}
+          AWS_ACCESS_KEY_ID: ${{secrets.S3_DUCKDB_ORG_DEPLOY_ID}}
+          AWS_SECRET_ACCESS_KEY: ${{secrets.S3_DUCKDB_ORG_DEPLOY_KEY}}
           AWS_DEFAULT_REGION: us-east-1
         shell: bash
         run: ./scripts/node_build_win.sh
