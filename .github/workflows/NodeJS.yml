@@ -11,8 +11,8 @@ concurrency:
 
 env:
   GH_TOKEN: ${{ secrets.GH_TOKEN }}
-  AWS_ACCESS_KEY_ID: ${{secrets.S3_DUCKDB_ORG_DEPLOY_ID}}
-  AWS_SECRET_ACCESS_KEY: ${{secrets.S3_DUCKDB_ORG_DEPLOY_KEY}}
+  AWS_ACCESS_KEY_ID: ${{secrets.S3_DUCKDB_NODE_ID}}
+  AWS_SECRET_ACCESS_KEY: ${{secrets.S3_DUCKDB_NODE_KEY}}
   AWS_DEFAULT_REGION: us-east-1
 
 jobs:
