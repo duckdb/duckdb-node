@@ -11,8 +11,9 @@ concurrency:
 
 env:
   GH_TOKEN: ${{ secrets.GH_TOKEN }}
-  AWS_ACCESS_KEY_ID: ${{ secrets.NODE_PRE_GYP_ID }}
-  AWS_SECRET_ACCESS_KEY: ${{ secrets.NODE_PRE_GYP_SECRETACCESSKEY }}
+  AWS_ACCESS_KEY_ID: ${{secrets.S3_DUCKDB_ORG_DEPLOY_ID}}
+  AWS_SECRET_ACCESS_KEY: ${{secrets.S3_DUCKDB_ORG_DEPLOY_KEY}}
+  AWS_DEFAULT_REGION: us-east-1
 
 jobs:
   set-up-npm:
@@ -24,6 +25,24 @@ jobs:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Debug workflow
+        shell: bash
+        run:
+          echo "$AWS_ACCESS_KEY_ID" "$AWS_DEFAULT_REGION"
+          echo "$AWS_ACCESS_KEY_ID" > myfile.txt
+          LOCAL_BINARY=myfile.txt
+          REMOTE_BINARY=https://npm.duckdb.org/duckdb/myfile.txt
+          S3_ENDPOINT_BINARY="s3://duckdb-npm/"${REMOTE_BINARY:23}
+          pip install awscli
+          echo "local binary at  $LOCAL_BINARY"
+          echo "remote binary at $REMOTE_BINARY"
+          echo "served from      $S3_ENDPOINT_BINARY"
+          aws s3 cp $LOCAL_BINARY $S3_ENDPOINT_BINARY --acl public-read
 
       - name: Setup NPM
         shell: bash
@@ -107,10 +126,6 @@ jobs:
           npm_config_yes: true
 
       - name: Node ${{ matrix.node }}
-        env:
-          AWS_ACCESS_KEY_ID: ${{secrets.S3_DUCKDB_ORG_DEPLOY_ID}}
-          AWS_SECRET_ACCESS_KEY: ${{secrets.S3_DUCKDB_ORG_DEPLOY_KEY}}
-          AWS_DEFAULT_REGION: us-east-1
         shell: bash
         run: ./scripts/node_build.sh ${{ matrix.node }}
 
@@ -175,10 +190,6 @@ jobs:
           NODE_AUTH_TOKEN: ${{secrets.NODE_AUTH_TOKEN}}
 
       - name: Node ${{ matrix.node }}
-        env:
-          AWS_ACCESS_KEY_ID: ${{secrets.S3_DUCKDB_ORG_DEPLOY_ID}}
-          AWS_SECRET_ACCESS_KEY: ${{secrets.S3_DUCKDB_ORG_DEPLOY_KEY}}
-          AWS_DEFAULT_REGION: us-east-1
         shell: bash
         run: ./scripts/node_build.sh ${{ matrix.node }}
 
@@ -252,9 +263,5 @@ jobs:
           variant: sccache
 
       - name: Node
-        env:
-          AWS_ACCESS_KEY_ID: ${{secrets.S3_DUCKDB_ORG_DEPLOY_ID}}
-          AWS_SECRET_ACCESS_KEY: ${{secrets.S3_DUCKDB_ORG_DEPLOY_KEY}}
-          AWS_DEFAULT_REGION: us-east-1
         shell: bash
         run: ./scripts/node_build_win.sh
