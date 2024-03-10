@@ -234,6 +234,7 @@ export abstract class DuckDBVector<T> {
   public abstract slice(offset: number, length: number): DuckDBVector<T>;
 }
 
+// TODO: compare to converting in JS
 export class DuckDBBooleanVector extends DuckDBVector<boolean> {
   private readonly items: readonly (boolean | null)[];
   constructor(items: readonly (boolean | null)[]) {
@@ -1161,3 +1162,5 @@ export class DuckDBUnionVector extends DuckDBVector<DuckDBUnionAlternative> {
 }
 
 // TODO: BIT
+
+// TODO: TIME_TZ

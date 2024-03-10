@@ -21,6 +21,7 @@ export class DuckDBConnection {
     ddb.duckdb_interrupt(this.connection);
   }
   /** Returns -1 if no progress or a percentage of the progress. */
+  // TODO: fix for new return type
   // public get progress(): number {
   //   return ddb.duckdb_query_progress(this.connection);
   // }
