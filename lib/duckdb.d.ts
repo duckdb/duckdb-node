@@ -326,5 +326,6 @@ export function duckdb_execution_is_finished(con: duckdb_connection): boolean;
 export function duckdb_stream_fetch_chunk(result: duckdb_result): Promise<duckdb_data_chunk>;
 // bindings-defined functions
 export function copy_buffer(buffer: pointer, length: number): Uint8Array | null;
+export function copy_buffer_double(buffer: number, length: number): Uint8Array | null;
 export function out_get_string(string_wrapper: out_string_wrapper): string;
 export function convert_boolean_vector(vector: duckdb_vector, size: number): (boolean | null)[];
