@@ -21,9 +21,9 @@ export class DuckDBConnection {
     ddb.duckdb_interrupt(this.connection);
   }
   /** Returns -1 if no progress or a percentage of the progress. */
-  public get progress(): number {
-    return ddb.duckdb_query_progress(this.connection);
-  }
+  // public get progress(): number {
+  //   return ddb.duckdb_query_progress(this.connection);
+  // }
   public get finished(): boolean {
     return ddb.duckdb_execution_is_finished(this.connection);
   }
