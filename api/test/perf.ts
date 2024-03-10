@@ -136,7 +136,7 @@ describe('perf', () => {
     const connection = await instance.connect();
     console.log(await measureQueryMultiple(
       connection,
-      `select 'a' from range(1000000)`,
+      `select 'abcdefghijkl' from range(1000000)`,
       5,
     ));
     connection.dispose();
@@ -147,7 +147,7 @@ describe('perf', () => {
     const connection = await instance.connect();
     console.log(await measureQueryMultiple(
       connection,
-      `select 'abcdefghijklmnopqrst' from range(1000000)`,
+      `select 'abcdefghijklmnopqrstuvwx' from range(1000000)`,
       5,
     ));
     connection.dispose();
