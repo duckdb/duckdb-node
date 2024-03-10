@@ -327,5 +327,4 @@ export function duckdb_stream_fetch_chunk(result: duckdb_result): Promise<duckdb
 // bindings-defined functions
 export function copy_buffer(buffer: pointer, length: number): Uint8Array | null;
 export function out_get_string(string_wrapper: out_string_wrapper): string;
-export function convert_string_vector(vector: duckdb_vector, size: number): (Uint8Array | null)[];
 export function convert_boolean_vector(vector: duckdb_vector, size: number): (boolean | null)[];
