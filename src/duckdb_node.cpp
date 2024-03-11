@@ -39,29 +39,6 @@ static Napi::Value OutGetString(const Napi::CallbackInfo &info) {
 	return duckdb_node::ValueConversion::ToJS(env, *pp);
 }
 
-static Napi::Value ConvertBooleanVector(const Napi::CallbackInfo &info) {
-	Napi::Env env = info.Env();
-	auto vector = duckdb_node::ValueConversion::FromJS<duckdb_vector>(info, 0);
-	auto n = duckdb_node::ValueConversion::FromJS<idx_t>(info, 1);
-
-	auto type_id = duckdb_get_type_id(duckdb_vector_get_column_type(vector));
-	if (type_id != DUCKDB_TYPE_BOOLEAN) {
-		return env.Null();
-	}
-	auto array = Napi::Array::New(env, n);
-	auto bools = (bool *)duckdb_vector_get_data(vector);
-	auto validity = duckdb_vector_get_validity(vector);
-
-	for (idx_t row_idx = 0; row_idx < n; row_idx++) {
-		if (!duckdb_validity_row_is_valid(validity, row_idx)) {
-			array[row_idx] = env.Null();
-			continue;
-		}
-		array[row_idx] = Napi::Boolean::New(env, bools[row_idx]);
-	}
-	return array;
-}
-
 // TODO this relies on RTLD_LAZY but should probably switch to use a bunch of (generated) function pointers
 static Napi::Value Initialize(const Napi::CallbackInfo &info) {
 	Napi::Env env = info.Env();
@@ -79,6 +56,8 @@ public:
 	DuckDBNodeNative(Napi::Env env, Napi::Object exports) {
 		RegisterGenerated(env, exports);
 
+		exports.Set(Napi::String::New(env, "sizeof_bool"), Napi::Number::New(env, sizeof(bool)));
+
 		exports.Set(Napi::String::New(env, "copy_buffer"), Napi::Function::New<CopyBuffer>(env));
 
 		exports.Set(Napi::String::New(env, "copy_buffer_double"), Napi::Function::New<CopyBufferDouble>(env));
@@ -87,7 +66,6 @@ public:
 		    Napi::String::New(env, "out_string_wrapper"),
 		    duckdb_node::PointerHolder<duckdb_node::out_string_wrapper>::Init(env, "out_string_wrapper")->Value());
 		exports.Set(Napi::String::New(env, "out_get_string"), Napi::Function::New<OutGetString>(env));
-		exports.Set(Napi::String::New(env, "convert_boolean_vector"), Napi::Function::New<ConvertBooleanVector>(env));
 		exports.Set(Napi::String::New(env, "initialize"), Napi::Function::New<Initialize>(env));
 	}
 };

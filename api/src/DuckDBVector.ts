@@ -36,32 +36,64 @@ import { DuckDBTypeId } from './DuckDBTypeId';
 
 const littleEndian = os.endianness() === 'LE';
 
+function getInt8(dataView: DataView, offset: number): number {
+  return dataView.getInt8(offset);
+}
+
+function getUInt8(dataView: DataView, offset: number): number {
+  return dataView.getUint8(offset);
+}
+
+function getInt16(dataView: DataView, offset: number): number {
+  return dataView.getInt16(offset, littleEndian);
+}
+
+function getUInt16(dataView: DataView, offset: number): number {
+  return dataView.getUint16(offset, littleEndian);
+}
+
 function getInt32(dataView: DataView, offset: number): number {
   return dataView.getInt32(offset, littleEndian);
+}
+
+function getUInt32(dataView: DataView, offset: number): number {
+  return dataView.getUint32(offset, littleEndian);
 }
 
 function getInt64(dataView: DataView, offset: number): bigint {
   return dataView.getBigInt64(offset, littleEndian);
 }
 
+function getUInt64(dataView: DataView, offset: number): bigint {
+  return dataView.getBigUint64(offset, littleEndian);
+}
+
+function getFloat32(dataView: DataView, offset: number): number {
+  return dataView.getFloat32(offset, littleEndian);
+}
+
+function getFloat64(dataView: DataView, offset: number): number {
+  return dataView.getFloat64(offset, littleEndian);
+}
+
 function getInt128(dataView: DataView, offset: number): bigint {
-  const lower = dataView.getBigUint64(offset, littleEndian);
-  const upper = dataView.getBigInt64(offset + 8, littleEndian);
+  const lower = getUInt64(dataView, offset);
+  const upper = getInt64(dataView, offset + 8);
   return (upper << BigInt(64)) + lower;
 }
 
 function getUInt128(dataView: DataView, offset: number): bigint {
-  const lower = dataView.getBigUint64(offset, littleEndian);
-  const upper = dataView.getBigUint64(offset + 8, littleEndian);
+  const lower = getUInt64(dataView, offset);
+  const upper = getUInt64(dataView, offset + 8);
   return BigInt.asUintN(64, upper) << BigInt(64) | BigInt.asUintN(64, lower);
 }
 
 function getStringBytes(dataView: DataView, offset: number): Uint8Array | null {
-  const length = dataView.getUint32(offset, littleEndian);
+  const length = getUInt32(dataView, offset);
   if (length <= 12) {
     return new Uint8Array(dataView.buffer, dataView.byteOffset + offset + 4, length);
   } else {
-    const stringPointer = dataView.getFloat64(offset + 8, littleEndian);
+    const stringPointer = getFloat64(dataView, offset + 8);
     return ddb.copy_buffer_double(stringPointer, length);
   }
 }
@@ -85,6 +117,39 @@ function getBuffer(dataView: DataView, offset: number): Buffer | null {
   }
   return Buffer.from(stringBytes);
 }
+
+function getBoolean1(dataView: DataView, offset: number): boolean {
+  return getUInt8(dataView, offset) !== 0
+}
+
+function getBoolean2(dataView: DataView, offset: number): boolean {
+  return getUInt16(dataView, offset) !== 0
+}
+
+function getBoolean4(dataView: DataView, offset: number): boolean {
+  return getUInt32(dataView, offset) !== 0
+}
+
+function getBoolean8(dataView: DataView, offset: number): boolean {
+  return getUInt64(dataView, offset) !== BigInt(0)
+}
+
+function makeGetBoolean(): (dataView: DataView, offset: number) => boolean {
+  switch (ddb.sizeof_bool) {
+    case 1:
+      return getBoolean1;
+    case 2:
+      return getBoolean2;
+    case 4:
+      return getBoolean4;
+    case 8:
+      return getBoolean8;
+    default:
+      throw new Error(`Unsupported boolean size: ${ddb.sizeof_bool}`);
+  }
+}
+
+const getBoolean = makeGetBoolean();
 
 function vectorData(vector: ddb.duckdb_vector, byteCount: number): Uint8Array {
   const pointer = ddb.duckdb_vector_get_data(vector);
@@ -234,28 +299,37 @@ export abstract class DuckDBVector<T> {
   public abstract slice(offset: number, length: number): DuckDBVector<T>;
 }
 
-// TODO: compare to converting in JS
 export class DuckDBBooleanVector extends DuckDBVector<boolean> {
-  private readonly items: readonly (boolean | null)[];
-  constructor(items: readonly (boolean | null)[]) {
+  private readonly dataView: DataView;
+  private readonly validity: DuckDBValidity;
+  private readonly _itemCount: number;
+  constructor(dataView: DataView, validity: DuckDBValidity, itemCount: number) {
     super();
-    this.items = items
+    this.dataView = dataView;
+    this.validity = validity;
+    this._itemCount = itemCount;
   }
   static fromRawVector(vector: ddb.duckdb_vector, itemCount: number): DuckDBBooleanVector {
-    const items = ddb.convert_boolean_vector(vector, itemCount);
-    return new DuckDBBooleanVector(items);
+    const data = vectorData(vector, itemCount * ddb.sizeof_bool);
+    const dataView = new DataView(data.buffer, data.byteOffset, data.byteLength);
+    const validity = DuckDBValidity.fromVector(vector, itemCount);
+    return new DuckDBBooleanVector(dataView, validity, itemCount);
   }
   public override get type(): DuckDBBooleanType {
     return DuckDBBooleanType.instance;
   }
   public override get itemCount(): number {
-    return this.items.length;
+    return this._itemCount;
   }
   public override getItem(itemIndex: number): boolean | null {
-    return this.items[itemIndex];
+    return this.validity.itemValid(itemIndex) ? getBoolean(this.dataView, itemIndex * ddb.sizeof_bool) : null;
   }
   public override slice(offset: number, length: number): DuckDBBooleanVector {
-    return new DuckDBBooleanVector(this.items.slice(offset, offset + length));
+    return new DuckDBBooleanVector(
+      new DataView(this.dataView.buffer, offset * ddb.sizeof_bool, length * ddb.sizeof_bool),
+      this.validity.slice(offset),
+      length,
+    );
   }
 }
 
