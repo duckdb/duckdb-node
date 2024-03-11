@@ -709,7 +709,6 @@ export class DuckDBInterval {
   }
 }
 
-// TODO: INTERVAL
 export class DuckDBIntervalVector extends DuckDBVector<DuckDBInterval> {
   private readonly dataView: DataView;
   private readonly validity: DuckDBValidity;
