@@ -20,10 +20,12 @@ export class DuckDBConnection {
   public interrupt() {
     ddb.duckdb_interrupt(this.connection);
   }
-  /** Returns -1 if no progress or a percentage of the progress. */
-  public get progress(): number {
-    return ddb.duckdb_query_progress(this.connection);
-  }
+  // TODO: duckdb_query_progress returns a duckdb_query_progress_type struct containing three values: percentage,
+  // rows_processed, and total_rows_to_process. Unfortunately there is no current way for JS to access the fields of
+  // this struct.
+  // public get progress(): number {
+  //   return ddb.duckdb_query_progress(this.connection);
+  // }
   public get finished(): boolean {
     return ddb.duckdb_execution_is_finished(this.connection);
   }

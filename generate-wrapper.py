@@ -273,8 +273,10 @@ if __name__ == "__main__":
         types_out.write('// generated types and functions\n'.encode())
         types_out.write(types_result.encode())
 
+        types_out.write('// bindings-defined constants\n'.encode())
+        types_out.write('export const sizeof_bool: number;\n'.encode())
+
         types_out.write('// bindings-defined functions\n'.encode())
         types_out.write('export function copy_buffer(buffer: pointer, length: number): Uint8Array | null;\n'.encode())
+        types_out.write('export function copy_buffer_double(buffer: number, length: number): Uint8Array | null;\n'.encode())
         types_out.write('export function out_get_string(string_wrapper: out_string_wrapper): string;\n'.encode())
-        types_out.write('export function convert_string_vector(vector: duckdb_vector, size: number): (Uint8Array | null)[];\n'.encode())
-

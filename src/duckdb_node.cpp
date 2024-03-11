@@ -56,6 +56,8 @@ public:
 	DuckDBNodeNative(Napi::Env env, Napi::Object exports) {
 		RegisterGenerated(env, exports);
 
+		exports.Set(Napi::String::New(env, "sizeof_bool"), Napi::Number::New(env, sizeof(bool)));
+
 		exports.Set(Napi::String::New(env, "copy_buffer"), Napi::Function::New<CopyBuffer>(env));
 
 		exports.Set(Napi::String::New(env, "copy_buffer_double"), Napi::Function::New<CopyBufferDouble>(env));

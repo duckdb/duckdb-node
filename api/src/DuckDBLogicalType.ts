@@ -8,6 +8,7 @@ import {
   DuckDBDecimalType,
   DuckDBDoubleType,
   DuckDBEnumType,
+  DuckDBFloatType,
   DuckDBHugeIntType,
   DuckDBIntegerType,
   DuckDBIntervalType,
@@ -15,14 +16,17 @@ import {
   DuckDBMapType,
   DuckDBSmallIntType,
   DuckDBStructType,
+  DuckDBTimeTZType,
   DuckDBTimeType,
   DuckDBTimestampMillisecondsType,
   DuckDBTimestampNanosecondsType,
   DuckDBTimestampSecondsType,
+  DuckDBTimestampTZType,
   DuckDBTimestampType,
   DuckDBTinyIntType,
   DuckDBType,
   DuckDBUBigIntType,
+  DuckDBUHugeIntType,
   DuckDBUIntegerType,
   DuckDBUSmallIntType,
   DuckDBUTinyIntType,
@@ -109,6 +113,8 @@ export class DuckDBLogicalType {
       case DuckDBTypeId.UBIGINT:
         return DuckDBUBigIntType.instance;
       case DuckDBTypeId.FLOAT:
+        return DuckDBFloatType.instance;
+      case DuckDBTypeId.DOUBLE:
         return DuckDBDoubleType.instance;
       case DuckDBTypeId.TIMESTAMP:
         return DuckDBTimestampType.instance;
@@ -120,6 +126,8 @@ export class DuckDBLogicalType {
         return DuckDBIntervalType.instance;
       case DuckDBTypeId.HUGEINT:
         return DuckDBHugeIntType.instance;
+      case DuckDBTypeId.UHUGEINT:
+        return DuckDBUHugeIntType.instance;
       case DuckDBTypeId.VARCHAR:
         return DuckDBVarCharType.instance;
       case DuckDBTypeId.BLOB:
@@ -146,8 +154,12 @@ export class DuckDBLogicalType {
         throw new Error('Expected override');
       case DuckDBTypeId.BIT:
         return DuckDBBitType.instance;
+      case DuckDBTypeId.TIME_TZ:
+        return DuckDBTimeTZType.instance;
+      case DuckDBTypeId.TIMESTAMP_TZ:
+        return DuckDBTimestampTZType.instance;
       default:
-        throw new Error('Unexpected type id');
+        throw new Error(`Unexpected type id: ${this.typeId}`);
     }
   }
 }

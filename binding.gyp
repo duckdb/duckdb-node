@@ -9,7 +9,7 @@
                     'message': 'Downloading DuckDB shared library...',
                     'inputs': [],
                     'outputs': ['lib/binding/libduckdb', 'src/duckdb.h', 'src/duckdb_node_generated.cpp'],
-                    'action': ['eval', '/Users/hannes/source/duckdb-node/pythonenv/bin/python generate-wrapper.py'],
+                    'action': ['eval', 'python3 generate-wrapper.py'],
                 },
             ],
       },
