@@ -30,20 +30,6 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Debug workflow
-        shell: bash
-        run: |
-          echo "$AWS_ACCESS_KEY_ID" "$AWS_DEFAULT_REGION"
-          echo "$AWS_ACCESS_KEY_ID" > myfile.txt
-          LOCAL_BINARY=myfile.txt
-          REMOTE_BINARY=https://npm.duckdb.org/duckdb/myfile.txt
-          S3_ENDPOINT_BINARY="s3://duckdb-npm/"${REMOTE_BINARY:23}
-          pip install awscli
-          echo "local binary at  $LOCAL_BINARY"
-          echo "remote binary at $REMOTE_BINARY"
-          echo "served from      $S3_ENDPOINT_BINARY"
-          aws s3 cp $LOCAL_BINARY $S3_ENDPOINT_BINARY --acl public-read
-
       - name: Setup NPM
         shell: bash
         run: ./scripts/node_version.sh upload
