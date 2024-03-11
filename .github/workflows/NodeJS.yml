@@ -83,6 +83,16 @@ jobs:
         run: |
           sudo apt-get install -y git ninja-build make gcc-multilib g++-multilib wget libssl-dev
 
+      # Default Python (3.12) doesn't have support for distutils
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python3 -m pip install pycparser
+
+
       - name: Setup Ccache
         uses: hendrikmuhs/ccache-action@main
         with:
@@ -147,6 +157,10 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Install dependencies
+        run: |
+          python3 -m pip install pycparser
+
       - name: Setup Ccache
         uses: hendrikmuhs/ccache-action@main
         with:
@@ -202,6 +216,10 @@ jobs:
       - uses: actions/setup-python@v4
         with:
           python-version: '3.8'
+
+      - name: Install dependencies
+        run: |
+          python3 -m pip install pycparser
 
       - uses: actions/checkout@v3
         with:
