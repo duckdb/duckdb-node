@@ -131,6 +131,50 @@ describe('perf', () => {
     connection.dispose();
     instance.dispose();
   });
+  it('of decimal (2 bytes)', async () => {
+    const instance = await DuckDBInstance.create();
+    const connection = await instance.connect();
+    console.log(await measureQueryMultiple(
+      connection,
+      `select 999.9::decimal(4,1) from range(1000000)`,
+      5,
+    ));
+    connection.dispose();
+    instance.dispose();
+  });
+  it('of decimal (4 bytes)', async () => {
+    const instance = await DuckDBInstance.create();
+    const connection = await instance.connect();
+    console.log(await measureQueryMultiple(
+      connection,
+      `select 99999.9999::decimal(9,4) from range(1000000)`,
+      5,
+    ));
+    connection.dispose();
+    instance.dispose();
+  });
+  it('of decimal (8 bytes)', async () => {
+    const instance = await DuckDBInstance.create();
+    const connection = await instance.connect();
+    console.log(await measureQueryMultiple(
+      connection,
+      `select 999999999999.999999::decimal(18,6) from range(1000000)`,
+      5,
+    ));
+    connection.dispose();
+    instance.dispose();
+  });
+  it('of decimal (16 bytes)', async () => {
+    const instance = await DuckDBInstance.create();
+    const connection = await instance.connect();
+    console.log(await measureQueryMultiple(
+      connection,
+      `select 9999999999999999999999999999.9999999999::decimal(38,10) from range(1000000)`,
+      5,
+    ));
+    connection.dispose();
+    instance.dispose();
+  });
   it('of varchar (short)', async () => {
     const instance = await DuckDBInstance.create();
     const connection = await instance.connect();

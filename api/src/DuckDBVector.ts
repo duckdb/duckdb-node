@@ -6,6 +6,7 @@ import {
   DuckDBBlobType,
   DuckDBBooleanType,
   DuckDBDateType,
+  DuckDBDecimalType,
   DuckDBDoubleType,
   DuckDBFloatType,
   DuckDBHugeIntType,
@@ -151,6 +152,46 @@ function makeGetBoolean(): (dataView: DataView, offset: number) => boolean {
 
 const getBoolean = makeGetBoolean();
 
+export class DuckDBSmallDecimal {
+  public readonly scaledValue: number;
+  public readonly type: DuckDBDecimalType;
+
+  public constructor(scaledValue: number, type: DuckDBDecimalType) {
+    this.scaledValue = scaledValue;
+    this.type = type;
+  }
+}
+
+export class DuckDBLargeDecimal {
+  public readonly scaledValue: bigint;
+  public readonly type: DuckDBDecimalType;
+
+  public constructor(scaledValue: bigint, type: DuckDBDecimalType) {
+    this.scaledValue = scaledValue;
+    this.type = type;
+  }
+}
+
+function getDecimal2(dataView: DataView, offset: number, type: DuckDBDecimalType): DuckDBSmallDecimal {
+  const scaledValue = getInt16(dataView, offset);
+  return new DuckDBSmallDecimal(scaledValue, type);
+}
+
+function getDecimal4(dataView: DataView, offset: number, type: DuckDBDecimalType): DuckDBSmallDecimal {
+  const scaledValue = getInt32(dataView, offset);
+  return new DuckDBSmallDecimal(scaledValue, type);
+}
+
+function getDecimal8(dataView: DataView, offset: number, type: DuckDBDecimalType): DuckDBLargeDecimal {
+  const scaledValue = getInt64(dataView, offset);
+  return new DuckDBLargeDecimal(scaledValue, type);
+}
+
+function getDecimal16(dataView: DataView, offset: number, type: DuckDBDecimalType): DuckDBLargeDecimal {
+  const scaledValue = getInt128(dataView, offset);
+  return new DuckDBLargeDecimal(scaledValue, type);
+}
+
 function vectorData(vector: ddb.duckdb_vector, byteCount: number): Uint8Array {
   const pointer = ddb.duckdb_vector_get_data(vector);
   const buffer = ddb.copy_buffer(pointer, byteCount);
@@ -251,8 +292,24 @@ export abstract class DuckDBVector<T> {
         return DuckDBVarCharVector.fromRawVector(vector, itemCount);
       case DuckDBTypeId.BLOB:
         return DuckDBBlobVector.fromRawVector(vector, itemCount);
-      case DuckDBTypeId.DECIMAL: // variable: Int8, Int16, Int32, Int64
-        throw new Error('not yet implemented');
+      case DuckDBTypeId.DECIMAL:
+        if (vectorType instanceof DuckDBDecimalType) {
+          const { width } = vectorType;
+          if (width <= 0) {
+            throw new Error(`DECIMAL width not positive: ${width}`);
+          } else if (width <= 4) {
+            return DuckDBDecimal2Vector.fromRawVector(vectorType, vector, itemCount);
+          } else if (width <= 9) {
+            return DuckDBDecimal4Vector.fromRawVector(vectorType, vector, itemCount);
+          } else if (width <= 18) {
+            return DuckDBDecimal8Vector.fromRawVector(vectorType, vector, itemCount);
+          } else if (width <= 38) {
+            return DuckDBDecimal16Vector.fromRawVector(vectorType, vector, itemCount);
+          } else {
+            throw new Error(`DECIMAL width too large: ${width}`);
+          }
+        }
+        throw new Error('DuckDBType has DECIMAL type id but is not an instance of DuckDBDecimalType');
       case DuckDBTypeId.TIMESTAMP_S:
         return DuckDBTimestampSecondsVector.fromRawVector(vector, itemCount);
       case DuckDBTypeId.TIMESTAMP_MS:
@@ -698,9 +755,9 @@ export class DuckDBTimeVector extends DuckDBVector<bigint> {
 }
 
 export class DuckDBInterval {
-  private readonly months: number;
-  private readonly days: number;
-  private readonly micros: bigint;
+  public readonly months: number;
+  public readonly days: number;
+  public readonly micros: bigint;
 
   public constructor(months: number, days: number, micros: bigint) {
     this.months = months;
@@ -886,7 +943,165 @@ export class DuckDBBlobVector extends DuckDBVector<Uint8Array> {
   }
 }
 
-// TODO: DECIMAL
+export class DuckDBDecimal2Vector extends DuckDBVector<DuckDBSmallDecimal> {
+  private readonly decimalType: DuckDBDecimalType;
+  private readonly dataView: DataView;
+  private readonly validity: DuckDBValidity;
+  private readonly _itemCount: number;
+  constructor(decimalType: DuckDBDecimalType, dataView: DataView, validity: DuckDBValidity, itemCount: number) {
+    super();
+    this.decimalType = decimalType;
+    this.dataView = dataView;
+    this.validity = validity;
+    this._itemCount = itemCount;
+  }
+  static fromRawVector(decimalType: DuckDBDecimalType, vector: ddb.duckdb_vector, itemCount: number): DuckDBDecimal2Vector {
+    const data = vectorData(vector, itemCount * 2);
+    const dataView = new DataView(data.buffer, data.byteOffset, data.byteLength);
+    const validity = DuckDBValidity.fromVector(vector, itemCount);
+    return new DuckDBDecimal2Vector(decimalType, dataView, validity, itemCount);
+  }
+  public override get type(): DuckDBDecimalType {
+    return this.decimalType;
+  }
+  public override get itemCount(): number {
+    return this._itemCount;
+  }
+  public override getItem(itemIndex: number): DuckDBSmallDecimal | null {
+    return this.validity.itemValid(itemIndex) ? getDecimal2(this.dataView, itemIndex * 2, this.decimalType) : null;
+  }
+  public getScaledValue(itemIndex: number): number | null {
+    return this.validity.itemValid(itemIndex) ? getInt16(this.dataView, itemIndex * 2) : null;
+  }
+  public override slice(offset: number, length: number): DuckDBDecimal2Vector {
+    return new DuckDBDecimal2Vector(
+      this.decimalType,
+      new DataView(this.dataView.buffer, offset * 2, length * 2),
+      this.validity.slice(offset),
+      length,
+    );
+  }
+}
+
+export class DuckDBDecimal4Vector extends DuckDBVector<DuckDBSmallDecimal> {
+  private readonly decimalType: DuckDBDecimalType;
+  private readonly dataView: DataView;
+  private readonly validity: DuckDBValidity;
+  private readonly _itemCount: number;
+  constructor(decimalType: DuckDBDecimalType, dataView: DataView, validity: DuckDBValidity, itemCount: number) {
+    super();
+    this.decimalType = decimalType;
+    this.dataView = dataView;
+    this.validity = validity;
+    this._itemCount = itemCount;
+  }
+  static fromRawVector(decimalType: DuckDBDecimalType, vector: ddb.duckdb_vector, itemCount: number): DuckDBDecimal4Vector {
+    const data = vectorData(vector, itemCount * 4);
+    const dataView = new DataView(data.buffer, data.byteOffset, data.byteLength);
+    const validity = DuckDBValidity.fromVector(vector, itemCount);
+    return new DuckDBDecimal4Vector(decimalType, dataView, validity, itemCount);
+  }
+  public override get type(): DuckDBDecimalType {
+    return this.decimalType;
+  }
+  public override get itemCount(): number {
+    return this._itemCount;
+  }
+  public override getItem(itemIndex: number): DuckDBSmallDecimal | null {
+    return this.validity.itemValid(itemIndex) ? getDecimal4(this.dataView, itemIndex * 4, this.decimalType) : null;
+  }
+  public getScaledValue(itemIndex: number): number | null {
+    return this.validity.itemValid(itemIndex) ? getInt32(this.dataView, itemIndex * 4) : null;
+  }
+  public override slice(offset: number, length: number): DuckDBDecimal4Vector {
+    return new DuckDBDecimal4Vector(
+      this.decimalType,
+      new DataView(this.dataView.buffer, offset * 4, length * 4),
+      this.validity.slice(offset),
+      length,
+    );
+  }
+}
+
+export class DuckDBDecimal8Vector extends DuckDBVector<DuckDBLargeDecimal> {
+  private readonly decimalType: DuckDBDecimalType;
+  private readonly dataView: DataView;
+  private readonly validity: DuckDBValidity;
+  private readonly _itemCount: number;
+  constructor(decimalType: DuckDBDecimalType, dataView: DataView, validity: DuckDBValidity, itemCount: number) {
+    super();
+    this.decimalType = decimalType;
+    this.dataView = dataView;
+    this.validity = validity;
+    this._itemCount = itemCount;
+  }
+  static fromRawVector(decimalType: DuckDBDecimalType, vector: ddb.duckdb_vector, itemCount: number): DuckDBDecimal8Vector {
+    const data = vectorData(vector, itemCount * 8);
+    const dataView = new DataView(data.buffer, data.byteOffset, data.byteLength);
+    const validity = DuckDBValidity.fromVector(vector, itemCount);
+    return new DuckDBDecimal8Vector(decimalType, dataView, validity, itemCount);
+  }
+  public override get type(): DuckDBDecimalType {
+    return this.decimalType;
+  }
+  public override get itemCount(): number {
+    return this._itemCount;
+  }
+  public override getItem(itemIndex: number): DuckDBLargeDecimal | null {
+    return this.validity.itemValid(itemIndex) ? getDecimal8(this.dataView, itemIndex * 8, this.decimalType) : null;
+  }
+  public getScaledValue(itemIndex: number): bigint | null {
+    return this.validity.itemValid(itemIndex) ? getInt64(this.dataView, itemIndex * 8) : null;
+  }
+  public override slice(offset: number, length: number): DuckDBDecimal8Vector {
+    return new DuckDBDecimal8Vector(
+      this.decimalType,
+      new DataView(this.dataView.buffer, offset * 8, length * 8),
+      this.validity.slice(offset),
+      length,
+    );
+  }
+}
+
+export class DuckDBDecimal16Vector extends DuckDBVector<DuckDBLargeDecimal> {
+  private readonly decimalType: DuckDBDecimalType;
+  private readonly dataView: DataView;
+  private readonly validity: DuckDBValidity;
+  private readonly _itemCount: number;
+  constructor(decimalType: DuckDBDecimalType, dataView: DataView, validity: DuckDBValidity, itemCount: number) {
+    super();
+    this.decimalType = decimalType;
+    this.dataView = dataView;
+    this.validity = validity;
+    this._itemCount = itemCount;
+  }
+  static fromRawVector(decimalType: DuckDBDecimalType, vector: ddb.duckdb_vector, itemCount: number): DuckDBDecimal16Vector {
+    const data = vectorData(vector, itemCount * 16);
+    const dataView = new DataView(data.buffer, data.byteOffset, data.byteLength);
+    const validity = DuckDBValidity.fromVector(vector, itemCount);
+    return new DuckDBDecimal16Vector(decimalType, dataView, validity, itemCount);
+  }
+  public override get type(): DuckDBDecimalType {
+    return this.decimalType;
+  }
+  public override get itemCount(): number {
+    return this._itemCount;
+  }
+  public override getItem(itemIndex: number): DuckDBLargeDecimal | null {
+    return this.validity.itemValid(itemIndex) ? getDecimal16(this.dataView, itemIndex * 16, this.decimalType) : null;
+  }
+  public getScaledValue(itemIndex: number): bigint | null {
+    return this.validity.itemValid(itemIndex) ? getInt128(this.dataView, itemIndex * 16) : null;
+  }
+  public override slice(offset: number, length: number): DuckDBDecimal16Vector {
+    return new DuckDBDecimal16Vector(
+      this.decimalType,
+      new DataView(this.dataView.buffer, offset * 16, length * 16),
+      this.validity.slice(offset),
+      length,
+    );
+  }
+}
 
 export class DuckDBTimestampSecondsVector extends DuckDBVector<bigint> {
   private readonly items: BigInt64Array;

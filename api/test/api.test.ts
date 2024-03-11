@@ -11,6 +11,10 @@ import {
   DuckDBDataChunk,
   DuckDBDateType,
   DuckDBDateVector,
+  DuckDBDecimal16Vector,
+  DuckDBDecimal2Vector,
+  DuckDBDecimal4Vector,
+  DuckDBDecimal8Vector,
   DuckDBDecimalType,
   DuckDBDoubleType,
   DuckDBDoubleVector,
@@ -25,6 +29,7 @@ import {
   DuckDBInterval,
   DuckDBIntervalType,
   DuckDBIntervalVector,
+  DuckDBLargeDecimal,
   DuckDBListType,
   DuckDBListVector,
   DuckDBMapEntry,
@@ -32,6 +37,7 @@ import {
   DuckDBMapVector,
   DuckDBPendingResultState,
   DuckDBResult,
+  DuckDBSmallDecimal,
   DuckDBSmallIntType,
   DuckDBSmallIntVector,
   DuckDBStructEntry,
@@ -90,6 +96,10 @@ const BI_2_63 = BI_1 << BigInt(63);
 const BI_2_64 = BI_1 << BigInt(64);
 const BI_2_127 = BI_1 << BigInt(127);
 const BI_2_128 = BI_1 << BigInt(128);
+const BI_10_8 = BigInt(100000000);
+const BI_10_10 = BigInt(10000000000);
+const BI_18_9s = BI_10_8 * BI_10_10 - BI_1;
+const BI_38_9s = BI_10_8 * BI_10_10 * BI_10_10 * BI_10_10 - BI_1;
 
 const MinInt8 = -N_2_7;
 const MaxInt8 = N_2_7 - 1;
@@ -499,10 +509,26 @@ describe('api', () => {
           assertValues(chunk, 18, DuckDBTimestampVector, [MinTS_US, MaxTS_US, null]);
           assertValues(chunk, 19, DuckDBFloatVector, [MinFloat32, MaxFloat32, null]);
           assertValues(chunk, 20, DuckDBDoubleVector, [MinFloat64, MaxFloat64, null]);
-          // TODO: DECIMAL (int16)
-          // TODO: DECIMAL (int32)
-          // TODO: DECIMAL (int64)
-          // TODO: DECIMAL (int128)
+          assertValues(chunk, 21, DuckDBDecimal2Vector, [
+            new DuckDBSmallDecimal(-9999, new DuckDBDecimalType(4, 1)),
+            new DuckDBSmallDecimal(9999, new DuckDBDecimalType(4, 1)),
+            null,
+          ]);
+          assertValues(chunk, 22, DuckDBDecimal4Vector, [
+            new DuckDBSmallDecimal(-999999999, new DuckDBDecimalType(9, 4)),
+            new DuckDBSmallDecimal(999999999, new DuckDBDecimalType(9, 4)),
+            null,
+          ]);
+          assertValues(chunk, 23, DuckDBDecimal8Vector, [
+            new DuckDBLargeDecimal(-BI_18_9s, new DuckDBDecimalType(18, 6)),
+            new DuckDBLargeDecimal(BI_18_9s, new DuckDBDecimalType(18, 6)),
+            null,
+          ]);
+          assertValues(chunk, 24, DuckDBDecimal16Vector, [
+            new DuckDBLargeDecimal(-BI_38_9s, new DuckDBDecimalType(38, 10)),
+            new DuckDBLargeDecimal(BI_38_9s, new DuckDBDecimalType(38, 10)),
+            null,
+          ]);
           assertValues(chunk, 25, DuckDBUUIDVector, [MinUUID, MaxUUID, null]);
           assertValues(chunk, 26, DuckDBIntervalVector, [
             new DuckDBInterval(0, 0, BigInt(0)),
