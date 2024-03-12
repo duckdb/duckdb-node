@@ -30,20 +30,6 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Debug workflow
-        shell: bash
-        run: |
-          echo "$AWS_ACCESS_KEY_ID" "$AWS_DEFAULT_REGION"
-          echo "$AWS_ACCESS_KEY_ID" > myfile.txt
-          LOCAL_BINARY=myfile.txt
-          REMOTE_BINARY=https://npm.duckdb.org/duckdb/myfile.txt
-          S3_ENDPOINT_BINARY="s3://duckdb-npm/"${REMOTE_BINARY:23}
-          pip install awscli
-          echo "local binary at  $LOCAL_BINARY"
-          echo "remote binary at $REMOTE_BINARY"
-          echo "served from      $S3_ENDPOINT_BINARY"
-          aws s3 cp $LOCAL_BINARY $S3_ENDPOINT_BINARY --acl public-read
-
       - name: Setup NPM
         shell: bash
         run: ./scripts/node_version.sh upload
@@ -62,7 +48,7 @@ jobs:
     strategy:
       matrix:
         # node.js current support policy to be found at https://github.com/duckdb/duckdb-node/tree/main/#Supported-Node-versions
-        node: [ '16', '17', '18', '19', '20', '21']
+        node: [ '12', '14', '16', '17', '18', '19', '20', '21']
         target_arch: [ x64, arm64 ]
         isRelease:
           - ${{ startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' }}
@@ -95,7 +81,7 @@ jobs:
       # Default Python (3.12) doesn't have support for distutils
       - uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          python-version: '3.10'
 
       - name: Update apt
         shell: bash
