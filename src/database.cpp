@@ -141,6 +141,7 @@ static void TaskCompleteCallback(napi_env e, napi_status status, void *data) {
 	duckdb::unique_ptr<TaskHolder> holder((TaskHolder *)data);
 	holder->db->TaskComplete(e);
 	holder->task->DoCallback();
+	napi_delete_async_work(e, holder->request);
 }
 
 void Database::TaskComplete(Napi::Env env) {
