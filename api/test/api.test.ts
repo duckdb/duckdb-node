@@ -3,6 +3,8 @@ import {
   DuckDBBigIntType,
   DuckDBBigIntVector,
   DuckDBBitType,
+  DuckDBBitValue,
+  DuckDBBitVector,
   DuckDBBlobType,
   DuckDBBlobVector,
   DuckDBBooleanType,
@@ -541,7 +543,11 @@ describe('api', () => {
             blobFromString('\x00\x00\x00a'),
             null,
           ]);
-          // TODO: BIT
+          assertValues(chunk, 29, DuckDBBitVector, [
+            DuckDBBitValue.fromString('0010001001011100010101011010111'),
+            DuckDBBitValue.fromString('10101'),
+            null,
+          ]);
           // TODO: ENUM (small)
           // TODO: ENUM (medium)
           // TODO: ENUM (large)

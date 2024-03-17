@@ -3,6 +3,7 @@ import * as ddb from '../..';
 import { DuckDBLogicalType } from './DuckDBLogicalType';
 import {
   DuckDBBigIntType,
+  DuckDBBitType,
   DuckDBBlobType,
   DuckDBBooleanType,
   DuckDBDateType,
@@ -340,8 +341,8 @@ export abstract class DuckDBVector<T> {
           return DuckDBUnionVector.fromRawVector(vectorType, vector, itemCount);
         }
         throw new Error('DuckDBType has UNION type id but is not an instance of DuckDBUnionType');
-      case DuckDBTypeId.BIT: // binary
-        throw new Error('not yet implemented');
+      case DuckDBTypeId.BIT:
+      return DuckDBBitVector.fromRawVector(vector, itemCount);
       case DuckDBTypeId.TIME_TZ:
         throw new Error('not yet implemented');
       case DuckDBTypeId.TIMESTAMP_TZ:
@@ -1449,6 +1450,117 @@ export class DuckDBUnionVector extends DuckDBVector<DuckDBUnionAlternative> {
   }
 }
 
-// TODO: BIT
+export class DuckDBBitValue {
+  private readonly data: Uint8Array;
+
+  constructor(data: Uint8Array) {
+    this.data = data;
+  }
+
+  public static fromString(str: string): DuckDBBitValue {
+    if (!/^[01]*$/.test(str)) {
+      throw new Error(`input string must only contain '0's and '1's`);
+    }
+
+    const byteCount = Math.ceil(str.length / 8) + 1;
+    const paddingBitCount = (8 - (str.length % 8)) % 8;
+
+    const data = new Uint8Array(byteCount);
+    let byteIndex = 0;
+
+    // first byte contains count of padding bits
+    data[byteIndex++] = paddingBitCount;
+
+    let byte = 0;
+    let bitIndex = 0;
+
+    // padding consists of 1s in MSB of second byte
+    while (bitIndex < paddingBitCount) {
+      byte <<= 1;
+      byte |= 1;
+      bitIndex++;
+    }
+
+    let charIndex = 0;
+
+    while (byteIndex < byteCount) {
+      while (bitIndex < 8) {
+        byte <<= 1;
+        if (str[charIndex++] === '1') {
+          byte |= 1;
+        }
+        bitIndex++;
+      }
+      data[byteIndex++] = byte;
+      byte = 0;
+      bitIndex = 0;
+    }
+
+    return new DuckDBBitValue(data);
+  }
+
+  private padding(): number {
+    return this.data[0];
+  }
+
+  public length(): number {
+    return (this.data.length - 1) * 8 - this.padding();
+  }
+
+  public getBool(index: number): boolean {
+    const dataIndex = Math.floor(index / 8) + 1;
+    return (this.data[dataIndex] & (1 << (index % 8))) !== 0;
+  }
+
+  public getBit(index: number): 0 | 1 {
+    return this.getBool(index) ? 1 : 0;
+  }
+
+  public toString(): string {
+    const chars = Array.from<string>({ length: this.length() });
+    for (let i = 0; i < this.length(); i++) {
+      chars[i] = this.getBool(i) ? '1' : '0';
+    }
+    return chars.join('');
+  }
+}
+
+export class DuckDBBitVector extends DuckDBVector<DuckDBBitValue> {
+  private readonly dataView: DataView;
+  private readonly validity: DuckDBValidity;
+  private readonly _itemCount: number;
+  constructor(dataView: DataView, validity: DuckDBValidity, itemCount: number) {
+    super();
+    this.dataView = dataView;
+    this.validity = validity;
+    this._itemCount = itemCount;
+  }
+  static fromRawVector(vector: ddb.duckdb_vector, itemCount: number): DuckDBBitVector {
+    const data = vectorData(vector, itemCount * 16);
+    const dataView = new DataView(data.buffer, data.byteOffset, data.byteLength);
+    const validity = DuckDBValidity.fromVector(vector, itemCount);
+    return new DuckDBBitVector(dataView, validity, itemCount);
+  }
+  public override get type(): DuckDBBitType {
+    return DuckDBBitType.instance;
+  }
+  public override get itemCount(): number {
+    return this._itemCount;
+  }
+  public override getItem(itemIndex: number): DuckDBBitValue | null {
+    if (!this.validity.itemValid(itemIndex)) {
+      return null;
+    }
+    const bytes = getStringBytes(this.dataView, itemIndex * 16);
+    return bytes ? new DuckDBBitValue(bytes) : null;
+  }
+  public override slice(offset: number, length: number): DuckDBBitVector {
+    return new DuckDBBitVector(
+      new DataView(this.dataView.buffer, offset * 16, length * 16),
+      this.validity.slice(offset),
+      length,
+    );
+  }
+}
 
 // TODO: TIME_TZ
