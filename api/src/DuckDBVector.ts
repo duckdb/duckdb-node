@@ -342,7 +342,7 @@ export abstract class DuckDBVector<T> {
         }
         throw new Error('DuckDBType has UNION type id but is not an instance of DuckDBUnionType');
       case DuckDBTypeId.BIT:
-      return DuckDBBitVector.fromRawVector(vector, itemCount);
+        return DuckDBBitVector.fromRawVector(vector, itemCount);
       case DuckDBTypeId.TIME_TZ:
         throw new Error('not yet implemented');
       case DuckDBTypeId.TIMESTAMP_TZ:
