@@ -389,6 +389,9 @@
                     {
                         "defines": [
                             "DUCKDB_BUILD_LIBRARY"
+                        ],
+                        "libraries": [
+                            "rstrtmgr.lib", "bcrypt.lib"
                         ]
                     }
                 ]
