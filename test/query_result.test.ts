@@ -20,4 +20,13 @@ describe('QueryResult', () => {
         }
         assert.equal(total, retrieved)
     })
+
+    it('streams results using the database object', async () => {
+        let retrieved = 0;
+        const stream = db.stream('SELECT * FROM range(0, ?)', total);
+        for await (const row of stream) {
+            retrieved++;
+        }
+        assert.equal(total, retrieved)
+    })
 })
