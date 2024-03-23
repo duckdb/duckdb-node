@@ -646,7 +646,8 @@ Napi::FunctionReference QueryResult::Init(Napi::Env env, Napi::Object exports) {
 
 	Napi::Function t = DefineClass(env, "QueryResult",
 	                               {InstanceMethod("nextChunk", &QueryResult::NextChunk),
-	                                InstanceMethod("nextIpcBuffer", &QueryResult::NextIpcBuffer)});
+	                                InstanceMethod("nextIpcBuffer", &QueryResult::NextIpcBuffer),
+	                                InstanceMethod("columns", &QueryResult::Columns)});
 
 	exports.Set("QueryResult", t);
 
@@ -750,6 +751,26 @@ Napi::Value QueryResult::NextIpcBuffer(const Napi::CallbackInfo &info) {
 	auto deferred = Napi::Promise::Deferred::New(env);
 	database_ref->Schedule(env, duckdb::make_uniq<GetNextArrowIpcTask>(*this, deferred));
 	return deferred.Promise();
+}
+
+Napi::Value QueryResult::Columns(const Napi::CallbackInfo &info)
+{
+	auto env = info.Env();
+	auto result = Napi::Array::New(env, this->result->ColumnCount());
+
+	for (duckdb::idx_t column_idx = 0; column_idx < this->result->ColumnCount(); column_idx++)
+	{
+		auto column_name = this->result->ColumnName(column_idx);
+		auto column_type = this->result->types[column_idx];
+
+		auto obj = Napi::Object::New(env);
+		obj.Set("name", Napi::String::New(env, column_name));
+		obj.Set("type", TypeToObject(env, column_type));
+
+		result.Set(column_idx, obj);
+	}
+
+	return result;
 }
 
 Napi::Object QueryResult::NewInstance(const Napi::Object &db) {
