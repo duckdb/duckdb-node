@@ -49,7 +49,7 @@ pointer_wrappers = [
 deprecated_functions = [
     'duckdb_column_data',
     'duckdb_nullmask_data',
-    #'duckdb_validity_row_is_valid',
+    'duckdb_validity_row_is_valid',
     'duckdb_validity_set_row_invalid',
     'duckdb_validity_set_row_valid',
     'duckdb_validity_set_row_validity',
