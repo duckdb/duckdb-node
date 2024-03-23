@@ -131,6 +131,39 @@ describe('perf', () => {
     connection.dispose();
     instance.dispose();
   });
+  it('of interval', async () => {
+    const instance = await DuckDBInstance.create();
+    const connection = await instance.connect();
+    console.log(await measureQueryMultiple(
+      connection,
+      `select interval 1 minute from range(1000000)`,
+      5,
+    ));
+    connection.dispose();
+    instance.dispose();
+  });
+  it('of hugeint', async () => {
+    const instance = await DuckDBInstance.create();
+    const connection = await instance.connect();
+    console.log(await measureQueryMultiple(
+      connection,
+      `select 1::hugeint from range(1000000)`,
+      5,
+    ));
+    connection.dispose();
+    instance.dispose();
+  });
+  it('of uhugeint', async () => {
+    const instance = await DuckDBInstance.create();
+    const connection = await instance.connect();
+    console.log(await measureQueryMultiple(
+      connection,
+      `select 1::uhugeint from range(1000000)`,
+      5,
+    ));
+    connection.dispose();
+    instance.dispose();
+  });
   it('of decimal (2 bytes)', async () => {
     const instance = await DuckDBInstance.create();
     const connection = await instance.connect();
@@ -236,6 +269,17 @@ describe('perf', () => {
     console.log(await measureQueryMultiple(
       connection,
       `select {a:'a'} from range(1000000)`,
+      5,
+    ));
+    connection.dispose();
+    instance.dispose();
+  });
+  it('of time_tz', async () => {
+    const instance = await DuckDBInstance.create();
+    const connection = await instance.connect();
+    console.log(await measureQueryMultiple(
+      connection,
+      `select '12:34:56-15:59:59'::timetz from range(1000000)`,
       5,
     ));
     connection.dispose();

@@ -46,6 +46,8 @@ import {
   DuckDBStructType,
   DuckDBStructVector,
   DuckDBTimeTZType,
+  DuckDBTimeTZValue,
+  DuckDBTimeTZVector,
   DuckDBTimeType,
   DuckDBTimeVector,
   DuckDBTimestampMillisecondsType,
@@ -129,6 +131,12 @@ const MaxDate = MaxInt32 - 1;
 const DateInf = MaxInt32;
 const MinTime = BI_0;
 const MaxTime = BI_24 * BI_60 * BI_60 * BI_1000 * BI_1000; // 86400000000
+const MinTimeTZMicroseconds = 0;
+const MaxTimeTZMicroseconds = 24 * 60 * 60 * 1000 * 1000; // 86400000000
+const MaxTimeTZOffset = 16 * 60 * 60 - 1; // from dtime_tz_t (MAX_OFFSET)
+const MinTimeTZOffset = -MaxTimeTZOffset;
+const MinTimeTZ = new DuckDBTimeTZValue(MinTimeTZMicroseconds, MaxTimeTZOffset);
+const MaxTimeTZ = new DuckDBTimeTZValue(MaxTimeTZMicroseconds, MinTimeTZOffset);
 const MinTS_S = BigInt(-9223372022400); // from test_all_types() select epoch(timestamp_s)::bigint;
 const MaxTS_S = BigInt(9223372036854);
 const MinTS_MS = MinTS_S * BI_1000;
@@ -507,7 +515,7 @@ describe('api', () => {
           assertValues(chunk, 14, DuckDBTimestampSecondsVector, [MinTS_S, MaxTS_S, null]);
           assertValues(chunk, 15, DuckDBTimestampMillisecondsVector, [MinTS_MS, MaxTS_MS, null]);
           assertValues(chunk, 16, DuckDBTimestampNanosecondsVector, [MinTS_NS, MaxTS_NS, null]);
-          // TODO: TIME_TZ
+          assertValues(chunk, 17, DuckDBTimeTZVector, [MinTimeTZ, MaxTimeTZ, null]);
           assertValues(chunk, 18, DuckDBTimestampVector, [MinTS_US, MaxTS_US, null]);
           assertValues(chunk, 19, DuckDBFloatVector, [MinFloat32, MaxFloat32, null]);
           assertValues(chunk, 20, DuckDBDoubleVector, [MinFloat64, MaxFloat64, null]);

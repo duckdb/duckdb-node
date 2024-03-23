@@ -18,6 +18,7 @@ import {
   DuckDBSmallIntType,
   DuckDBStructEntryType,
   DuckDBStructType,
+  DuckDBTimeTZType,
   DuckDBTimeType,
   DuckDBTimestampMillisecondsType,
   DuckDBTimestampNanosecondsType,
@@ -344,7 +345,7 @@ export abstract class DuckDBVector<T> {
       case DuckDBTypeId.BIT:
         return DuckDBBitVector.fromRawVector(vector, itemCount);
       case DuckDBTypeId.TIME_TZ:
-        throw new Error('not yet implemented');
+        return DuckDBTimeTZVector.fromRawVector(vector, itemCount);
       case DuckDBTypeId.TIMESTAMP_TZ:
         return DuckDBTimestampVector.fromRawVector(vector, itemCount);
       default:
@@ -1563,4 +1564,53 @@ export class DuckDBBitVector extends DuckDBVector<DuckDBBitValue> {
   }
 }
 
-// TODO: TIME_TZ
+export class DuckDBTimeTZValue {
+  /** Ranges from 0 to 86400000000 (= 24 * 60 * 60 * 1000 * 1000) */
+  public readonly microseconds: number;
+
+  /** In seconds, ranges from -57599 to 57599 (= 16 * 60 * 60 - 1) */
+  public readonly offset: number;
+
+  public constructor(microseconds: number, offset: number) {
+    this.microseconds = microseconds;
+    this.offset = offset;
+  }
+
+  public static TIME_BITS = 40;
+	public static OFFSET_BITS = 24;
+	public static MAX_OFFSET = 16 * 60 * 60 - 1; // ±15:59:59 = 57599 seconds
+
+  public static fromBits(bits: bigint): DuckDBTimeTZValue {
+    const microseconds = Number(BigInt.asUintN(DuckDBTimeTZValue.TIME_BITS, bits >> BigInt(DuckDBTimeTZValue.OFFSET_BITS)));
+    const offset = DuckDBTimeTZValue.MAX_OFFSET - Number(BigInt.asUintN(DuckDBTimeTZValue.OFFSET_BITS, bits));
+    return new DuckDBTimeTZValue(microseconds, offset);
+  }
+}
+
+export class DuckDBTimeTZVector extends DuckDBVector<DuckDBTimeTZValue> {
+  private readonly items: BigUint64Array;
+  private readonly validity: DuckDBValidity;
+  constructor(items: BigUint64Array, validity: DuckDBValidity) {
+    super();
+    this.items = items;
+    this.validity = validity;
+  }
+  static fromRawVector(vector: ddb.duckdb_vector, itemCount: number): DuckDBTimeTZVector {
+    const data = vectorData(vector, itemCount * BigUint64Array.BYTES_PER_ELEMENT);
+    const items = new BigUint64Array(data.buffer, data.byteOffset, itemCount);
+    const validity = DuckDBValidity.fromVector(vector, itemCount);
+    return new DuckDBTimeTZVector(items, validity);
+  }
+  public override get type(): DuckDBTimeTZType {
+    return DuckDBTimeTZType.instance;
+  }
+  public override get itemCount(): number {
+    return this.items.length;
+  }
+  public override getItem(itemIndex: number): DuckDBTimeTZValue | null {
+    return this.validity.itemValid(itemIndex) ? DuckDBTimeTZValue.fromBits(this.items[itemIndex]) : null;
+  }
+  public override slice(offset: number, length: number): DuckDBTimeTZVector {
+    return new DuckDBTimeTZVector(this.items.slice(offset, offset + length), this.validity.slice(offset));
+  }
+}
