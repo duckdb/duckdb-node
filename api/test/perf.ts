@@ -274,6 +274,50 @@ describe('perf', () => {
     connection.dispose();
     instance.dispose();
   });
+  it('of bit (small)', async () => {
+    const instance = await DuckDBInstance.create();
+    const connection = await instance.connect();
+    console.log(await measureQueryMultiple(
+      connection,
+      `select '101010'::bit from range(1000000)`,
+      5,
+    ));
+    connection.dispose();
+    instance.dispose();
+  });
+  it('of bit (short)', async () => {
+    const instance = await DuckDBInstance.create();
+    const connection = await instance.connect();
+    console.log(await measureQueryMultiple(
+      connection,
+      `select bitstring('0101011', 11 * 8) from range(1000000)`,
+      5,
+    ));
+    connection.dispose();
+    instance.dispose();
+  });
+  it('of bit (short + 1 = smallest long)', async () => {
+    const instance = await DuckDBInstance.create();
+    const connection = await instance.connect();
+    console.log(await measureQueryMultiple(
+      connection,
+      `select bitstring('0101011', 11 * 8 + 1) from range(1000000)`,
+      5,
+    ));
+    connection.dispose();
+    instance.dispose();
+  });
+  it('of bit (long)', async () => {
+    const instance = await DuckDBInstance.create();
+    const connection = await instance.connect();
+    console.log(await measureQueryMultiple(
+      connection,
+      `select bitstring('0101011', 11 * 8 + 12 * 8) from range(1000000)`,
+      5,
+    ));
+    connection.dispose();
+    instance.dispose();
+  });
   it('of time_tz', async () => {
     const instance = await DuckDBInstance.create();
     const connection = await instance.connect();
