@@ -20,6 +20,9 @@ import {
   DuckDBDecimalType,
   DuckDBDoubleType,
   DuckDBDoubleVector,
+  DuckDBEnum1Vector,
+  DuckDBEnum2Vector,
+  DuckDBEnum4Vector,
   DuckDBEnumType,
   DuckDBFloatType,
   DuckDBFloatVector,
@@ -62,6 +65,7 @@ import {
   DuckDBTinyIntType,
   DuckDBTinyIntVector,
   DuckDBType,
+  DuckDBTypeId,
   DuckDBUBigIntType,
   DuckDBUBigIntVector,
   DuckDBUHugeIntType,
@@ -429,8 +433,11 @@ describe('api', () => {
   });
   it('should support all data types', async () => {
     await withConnection(async (connection) => {
-      const result = await connection.run('from test_all_types()');
+      const result = await connection.run('from test_all_types(use_large_enum=true)');
       try {
+        const smallEnumValues = ['DUCK_DUCK_ENUM', 'GOOSE'];
+        const mediumEnumValues = Array.from({ length: 300 }).map((_, i) => `enum_${i}`);
+        const largeEnumValues = Array.from({ length: 70000 }).map((_, i) => `enum_${i}`);
         assertColumns(result, [
           { name: 'bool', type: DuckDBBooleanType.instance },
           { name: 'tinyint', type: DuckDBTinyIntType.instance },
@@ -462,9 +469,9 @@ describe('api', () => {
           { name: 'varchar', type: DuckDBVarCharType.instance },
           { name: 'blob', type: DuckDBBlobType.instance },
           { name: 'bit', type: DuckDBBitType.instance },
-          { name: 'small_enum', type: new DuckDBEnumType(['DUCK_DUCK_ENUM', 'GOOSE']) },
-          { name: 'medium_enum', type: new DuckDBEnumType(Array.from({ length: 300 }).map((_, i) => `enum_${i}`)) },
-          { name: 'large_enum', type: new DuckDBEnumType(['enum_0', 'enum_69999']) },
+          { name: 'small_enum', type: new DuckDBEnumType(smallEnumValues, DuckDBTypeId.UTINYINT) },
+          { name: 'medium_enum', type: new DuckDBEnumType(mediumEnumValues, DuckDBTypeId.USMALLINT) },
+          { name: 'large_enum', type: new DuckDBEnumType(largeEnumValues, DuckDBTypeId.UINTEGER) },
           { name: 'int_array', type: new DuckDBListType(DuckDBIntegerType.instance) },
           { name: 'double_array', type: new DuckDBListType(DuckDBDoubleType.instance) },
           { name: 'date_array', type: new DuckDBListType(DuckDBDateType.instance) },
@@ -556,9 +563,21 @@ describe('api', () => {
             DuckDBBitValue.fromString('10101'),
             null,
           ]);
-          // TODO: ENUM (small)
-          // TODO: ENUM (medium)
-          // TODO: ENUM (large)
+          assertValues(chunk, 30, DuckDBEnum1Vector, [
+            smallEnumValues[0],
+            smallEnumValues[smallEnumValues.length - 1],
+            null,
+          ]);
+          assertValues(chunk, 31, DuckDBEnum2Vector, [
+            mediumEnumValues[0],
+            mediumEnumValues[mediumEnumValues.length - 1],
+            null,
+          ]);
+          assertValues(chunk, 32, DuckDBEnum4Vector, [
+            largeEnumValues[0],
+            largeEnumValues[largeEnumValues.length - 1],
+            null,
+          ]);
           assertNestedValues<DuckDBVector<number>, DuckDBListVector<number>>(chunk, 33, DuckDBListVector, [
             (v, n) => assertVectorValues(v, [], n),
             (v, n) => assertVectorValues(v, [42, 999, null, null, -42], n),

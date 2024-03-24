@@ -9,6 +9,7 @@ import {
   DuckDBDateType,
   DuckDBDecimalType,
   DuckDBDoubleType,
+  DuckDBEnumType,
   DuckDBFloatType,
   DuckDBHugeIntType,
   DuckDBIntegerType,
@@ -318,8 +319,21 @@ export abstract class DuckDBVector<T> {
         return DuckDBTimestampMillisecondsVector.fromRawVector(vector, itemCount);
       case DuckDBTypeId.TIMESTAMP_NS:
         return DuckDBTimestampNanosecondsVector.fromRawVector(vector, itemCount);
-      case DuckDBTypeId.ENUM: // variable: Uint8, Uint16, Uint32, Uint64
-        throw new Error('not yet implemented');
+      case DuckDBTypeId.ENUM:
+      if (vectorType instanceof DuckDBEnumType) {
+        const { internalTypeId } = vectorType;
+        switch (internalTypeId) {
+          case DuckDBTypeId.UTINYINT:
+            return DuckDBEnum1Vector.fromRawVector(vectorType, vector, itemCount);
+          case DuckDBTypeId.USMALLINT:
+            return DuckDBEnum2Vector.fromRawVector(vectorType, vector, itemCount);
+          case DuckDBTypeId.UINTEGER:
+            return DuckDBEnum4Vector.fromRawVector(vectorType, vector, itemCount);
+          default:
+            throw new Error(`unsupported ENUM internal type: ${internalTypeId}`);
+        }
+      }
+      throw new Error('DuckDBType has ENUM type id but is not an instance of DuckDBEnumType');
       case DuckDBTypeId.LIST:
         if (vectorType instanceof DuckDBListType) {
           return DuckDBListVector.fromRawVector(vectorType, vector, itemCount);
@@ -1189,7 +1203,95 @@ export class DuckDBTimestampNanosecondsVector extends DuckDBVector<bigint> {
   }
 }
 
-// TODO: ENUM
+export class DuckDBEnum1Vector extends DuckDBVector<string> {
+  private readonly enumType: DuckDBEnumType;
+  private readonly items: Uint8Array;
+  private readonly validity: DuckDBValidity;
+  constructor(enumType: DuckDBEnumType, items: Uint8Array, validity: DuckDBValidity) {
+    super();
+    this.enumType = enumType;
+    this.items = items
+    this.validity = validity;
+  }
+  static fromRawVector(enumType: DuckDBEnumType, vector: ddb.duckdb_vector, itemCount: number): DuckDBEnum1Vector {
+    const data = vectorData(vector, itemCount);
+    const items = new Uint8Array(data.buffer, data.byteOffset, itemCount);
+    const validity = DuckDBValidity.fromVector(vector, itemCount);
+    return new DuckDBEnum1Vector(enumType, items, validity);
+  }
+  public override get type(): DuckDBEnumType {
+    return this.enumType;
+  }
+  public override get itemCount(): number {
+    return this.items.length;
+  }
+  public override getItem(itemIndex: number): string | null {
+    return this.validity.itemValid(itemIndex) ? this.enumType.values[this.items[itemIndex]] : null;
+  }
+  public override slice(offset: number, length: number): DuckDBEnum1Vector {
+    return new DuckDBEnum1Vector(this.enumType, this.items.slice(offset, offset + length), this.validity.slice(offset));
+  }
+}
+
+export class DuckDBEnum2Vector extends DuckDBVector<string> {
+  private readonly enumType: DuckDBEnumType;
+  private readonly items: Uint16Array;
+  private readonly validity: DuckDBValidity;
+  constructor(enumType: DuckDBEnumType, items: Uint16Array, validity: DuckDBValidity) {
+    super();
+    this.enumType = enumType;
+    this.items = items
+    this.validity = validity;
+  }
+  static fromRawVector(enumType: DuckDBEnumType, vector: ddb.duckdb_vector, itemCount: number): DuckDBEnum2Vector {
+    const data = vectorData(vector, itemCount * 2);
+    const items = new Uint16Array(data.buffer, data.byteOffset, itemCount);
+    const validity = DuckDBValidity.fromVector(vector, itemCount);
+    return new DuckDBEnum2Vector(enumType, items, validity);
+  }
+  public override get type(): DuckDBEnumType {
+    return this.enumType;
+  }
+  public override get itemCount(): number {
+    return this.items.length;
+  }
+  public override getItem(itemIndex: number): string | null {
+    return this.validity.itemValid(itemIndex) ? this.enumType.values[this.items[itemIndex]] : null;
+  }
+  public override slice(offset: number, length: number): DuckDBEnum2Vector {
+    return new DuckDBEnum2Vector(this.enumType, this.items.slice(offset, offset + length), this.validity.slice(offset));
+  }
+}
+
+export class DuckDBEnum4Vector extends DuckDBVector<string> {
+  private readonly enumType: DuckDBEnumType;
+  private readonly items: Uint32Array;
+  private readonly validity: DuckDBValidity;
+  constructor(enumType: DuckDBEnumType, items: Uint32Array, validity: DuckDBValidity) {
+    super();
+    this.enumType = enumType;
+    this.items = items
+    this.validity = validity;
+  }
+  static fromRawVector(enumType: DuckDBEnumType, vector: ddb.duckdb_vector, itemCount: number): DuckDBEnum4Vector {
+    const data = vectorData(vector, itemCount * 4);
+    const items = new Uint32Array(data.buffer, data.byteOffset, itemCount);
+    const validity = DuckDBValidity.fromVector(vector, itemCount);
+    return new DuckDBEnum4Vector(enumType, items, validity);
+  }
+  public override get type(): DuckDBEnumType {
+    return this.enumType;
+  }
+  public override get itemCount(): number {
+    return this.items.length;
+  }
+  public override getItem(itemIndex: number): string | null {
+    return this.validity.itemValid(itemIndex) ? this.enumType.values[this.items[itemIndex]] : null;
+  }
+  public override slice(offset: number, length: number): DuckDBEnum4Vector {
+    return new DuckDBEnum4Vector(this.enumType, this.items.slice(offset, offset + length), this.validity.slice(offset));
+  }
+}
 
 export class DuckDBListVector<TValue = any> extends DuckDBVector<DuckDBVector<TValue>> {
   private readonly listType: DuckDBListType;

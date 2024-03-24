@@ -176,9 +176,11 @@ export class DuckDBTimestampNanosecondsType extends BaseDuckDBType {
 
 export class DuckDBEnumType extends BaseDuckDBType {
   public readonly values: readonly string[];
-  public constructor(values: readonly string[]) {
+  public readonly internalTypeId: DuckDBTypeId;
+  public constructor(values: readonly string[], internalTypeId: DuckDBTypeId) {
     super(DuckDBTypeId.ENUM);
     this.values = values;
+    this.internalTypeId = internalTypeId;
   }
 }
 
