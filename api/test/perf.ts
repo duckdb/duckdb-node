@@ -230,6 +230,43 @@ describe('perf', () => {
     connection.dispose();
     instance.dispose();
   });
+  it('of enum (small)', async () => {
+    const instance = await DuckDBInstance.create();
+    const connection = await instance.connect();
+    await connection.run(`create type small_enum as enum ('a', 'b')`);
+    console.log(await measureQueryMultiple(
+      connection,
+      `select 'a'::small_enum from range(1000000)`,
+      5,
+    ));
+    connection.dispose();
+    instance.dispose();
+  });
+  it('of enum (medium)', async () => {
+    const instance = await DuckDBInstance.create();
+    const connection = await instance.connect();
+    await connection.run(`create type medium_enum as enum (select 'enum_' || i from range(300) t(i))`);
+    console.log(await measureQueryMultiple(
+      connection,
+      `select 'enum_0'::medium_enum from range(1000000)`,
+      5,
+    ));
+    connection.dispose();
+    instance.dispose();
+  });
+  // This runs out of memory!
+  xit('of enum (large)', async () => {
+    const instance = await DuckDBInstance.create();
+    const connection = await instance.connect();
+    await connection.run(`create type large_enum as enum (select 'enum_' || i from range(70000) t(i))`);
+    console.log(await measureQueryMultiple(
+      connection,
+      `select 'enum_0'::large_enum from range(1000000)`,
+      5,
+    ));
+    connection.dispose();
+    instance.dispose();
+  });
   it('of list[int]', async () => {
     const instance = await DuckDBInstance.create();
     const connection = await instance.connect();
