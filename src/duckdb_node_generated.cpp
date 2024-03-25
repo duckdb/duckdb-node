@@ -691,11 +691,6 @@ static void RegisterGenerated(Napi::Env env, Napi::Object exports) {
 	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_vector, duckdb_vector, idx_t,
 	                                                                        "duckdb_struct_vector_get_child">>(env));
 	exports.Set(
-	    Napi::String::New(env, "duckdb_validity_row_is_valid"),
-	    Napi::Function::New<
-	        duckdb_node::FunctionWrappers::FunctionWrapper2<bool, uint64_t *, idx_t, "duckdb_validity_row_is_valid">>(
-	        env));
-	exports.Set(
 	    Napi::String::New(env, "duckdb_bind_get_extra_info"),
 	    Napi::Function::New<
 	        duckdb_node::FunctionWrappers::FunctionWrapper1<void *, duckdb_bind_info, "duckdb_bind_get_extra_info">>(

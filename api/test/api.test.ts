@@ -3,6 +3,8 @@ import {
   DuckDBBigIntType,
   DuckDBBigIntVector,
   DuckDBBitType,
+  DuckDBBitValue,
+  DuckDBBitVector,
   DuckDBBlobType,
   DuckDBBlobVector,
   DuckDBBooleanType,
@@ -18,6 +20,9 @@ import {
   DuckDBDecimalType,
   DuckDBDoubleType,
   DuckDBDoubleVector,
+  DuckDBEnum1Vector,
+  DuckDBEnum2Vector,
+  DuckDBEnum4Vector,
   DuckDBEnumType,
   DuckDBFloatType,
   DuckDBFloatVector,
@@ -44,6 +49,8 @@ import {
   DuckDBStructType,
   DuckDBStructVector,
   DuckDBTimeTZType,
+  DuckDBTimeTZValue,
+  DuckDBTimeTZVector,
   DuckDBTimeType,
   DuckDBTimeVector,
   DuckDBTimestampMillisecondsType,
@@ -58,6 +65,7 @@ import {
   DuckDBTinyIntType,
   DuckDBTinyIntVector,
   DuckDBType,
+  DuckDBTypeId,
   DuckDBUBigIntType,
   DuckDBUBigIntVector,
   DuckDBUHugeIntType,
@@ -127,6 +135,12 @@ const MaxDate = MaxInt32 - 1;
 const DateInf = MaxInt32;
 const MinTime = BI_0;
 const MaxTime = BI_24 * BI_60 * BI_60 * BI_1000 * BI_1000; // 86400000000
+const MinTimeTZMicroseconds = 0;
+const MaxTimeTZMicroseconds = 24 * 60 * 60 * 1000 * 1000; // 86400000000
+const MaxTimeTZOffset = 16 * 60 * 60 - 1; // from dtime_tz_t (MAX_OFFSET)
+const MinTimeTZOffset = -MaxTimeTZOffset;
+const MinTimeTZ = new DuckDBTimeTZValue(MinTimeTZMicroseconds, MaxTimeTZOffset);
+const MaxTimeTZ = new DuckDBTimeTZValue(MaxTimeTZMicroseconds, MinTimeTZOffset);
 const MinTS_S = BigInt(-9223372022400); // from test_all_types() select epoch(timestamp_s)::bigint;
 const MaxTS_S = BigInt(9223372036854);
 const MinTS_MS = MinTS_S * BI_1000;
@@ -419,8 +433,11 @@ describe('api', () => {
   });
   it('should support all data types', async () => {
     await withConnection(async (connection) => {
-      const result = await connection.run('from test_all_types()');
+      const result = await connection.run('from test_all_types(use_large_enum=true)');
       try {
+        const smallEnumValues = ['DUCK_DUCK_ENUM', 'GOOSE'];
+        const mediumEnumValues = Array.from({ length: 300 }).map((_, i) => `enum_${i}`);
+        const largeEnumValues = Array.from({ length: 70000 }).map((_, i) => `enum_${i}`);
         assertColumns(result, [
           { name: 'bool', type: DuckDBBooleanType.instance },
           { name: 'tinyint', type: DuckDBTinyIntType.instance },
@@ -452,9 +469,9 @@ describe('api', () => {
           { name: 'varchar', type: DuckDBVarCharType.instance },
           { name: 'blob', type: DuckDBBlobType.instance },
           { name: 'bit', type: DuckDBBitType.instance },
-          { name: 'small_enum', type: new DuckDBEnumType(['DUCK_DUCK_ENUM', 'GOOSE']) },
-          { name: 'medium_enum', type: new DuckDBEnumType(Array.from({ length: 300 }).map((_, i) => `enum_${i}`)) },
-          { name: 'large_enum', type: new DuckDBEnumType(['enum_0', 'enum_69999']) },
+          { name: 'small_enum', type: new DuckDBEnumType(smallEnumValues, DuckDBTypeId.UTINYINT) },
+          { name: 'medium_enum', type: new DuckDBEnumType(mediumEnumValues, DuckDBTypeId.USMALLINT) },
+          { name: 'large_enum', type: new DuckDBEnumType(largeEnumValues, DuckDBTypeId.UINTEGER) },
           { name: 'int_array', type: new DuckDBListType(DuckDBIntegerType.instance) },
           { name: 'double_array', type: new DuckDBListType(DuckDBDoubleType.instance) },
           { name: 'date_array', type: new DuckDBListType(DuckDBDateType.instance) },
@@ -505,7 +522,7 @@ describe('api', () => {
           assertValues(chunk, 14, DuckDBTimestampSecondsVector, [MinTS_S, MaxTS_S, null]);
           assertValues(chunk, 15, DuckDBTimestampMillisecondsVector, [MinTS_MS, MaxTS_MS, null]);
           assertValues(chunk, 16, DuckDBTimestampNanosecondsVector, [MinTS_NS, MaxTS_NS, null]);
-          // TODO: TIME_TZ
+          assertValues(chunk, 17, DuckDBTimeTZVector, [MinTimeTZ, MaxTimeTZ, null]);
           assertValues(chunk, 18, DuckDBTimestampVector, [MinTS_US, MaxTS_US, null]);
           assertValues(chunk, 19, DuckDBFloatVector, [MinFloat32, MaxFloat32, null]);
           assertValues(chunk, 20, DuckDBDoubleVector, [MinFloat64, MaxFloat64, null]);
@@ -541,10 +558,26 @@ describe('api', () => {
             blobFromString('\x00\x00\x00a'),
             null,
           ]);
-          // TODO: BIT
-          // TODO: ENUM (small)
-          // TODO: ENUM (medium)
-          // TODO: ENUM (large)
+          assertValues(chunk, 29, DuckDBBitVector, [
+            DuckDBBitValue.fromString('0010001001011100010101011010111'),
+            DuckDBBitValue.fromString('10101'),
+            null,
+          ]);
+          assertValues(chunk, 30, DuckDBEnum1Vector, [
+            smallEnumValues[0],
+            smallEnumValues[smallEnumValues.length - 1],
+            null,
+          ]);
+          assertValues(chunk, 31, DuckDBEnum2Vector, [
+            mediumEnumValues[0],
+            mediumEnumValues[mediumEnumValues.length - 1],
+            null,
+          ]);
+          assertValues(chunk, 32, DuckDBEnum4Vector, [
+            largeEnumValues[0],
+            largeEnumValues[largeEnumValues.length - 1],
+            null,
+          ]);
           assertNestedValues<DuckDBVector<number>, DuckDBListVector<number>>(chunk, 33, DuckDBListVector, [
             (v, n) => assertVectorValues(v, [], n),
             (v, n) => assertVectorValues(v, [42, 999, null, null, -42], n),

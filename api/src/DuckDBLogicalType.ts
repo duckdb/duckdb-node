@@ -198,7 +198,7 @@ export class DuckDBEnumLogicalType extends DuckDBLogicalType {
     return ddb.duckdb_enum_internal_type(this.logical_type) as unknown as DuckDBTypeId;
   }
   public override asType(): DuckDBEnumType {
-    return new DuckDBEnumType(this.values());
+    return new DuckDBEnumType(this.values(), this.internalTypeId);
   }
 }
 

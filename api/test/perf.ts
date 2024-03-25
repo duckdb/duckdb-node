@@ -131,6 +131,39 @@ describe('perf', () => {
     connection.dispose();
     instance.dispose();
   });
+  it('of interval', async () => {
+    const instance = await DuckDBInstance.create();
+    const connection = await instance.connect();
+    console.log(await measureQueryMultiple(
+      connection,
+      `select interval 1 minute from range(1000000)`,
+      5,
+    ));
+    connection.dispose();
+    instance.dispose();
+  });
+  it('of hugeint', async () => {
+    const instance = await DuckDBInstance.create();
+    const connection = await instance.connect();
+    console.log(await measureQueryMultiple(
+      connection,
+      `select 1::hugeint from range(1000000)`,
+      5,
+    ));
+    connection.dispose();
+    instance.dispose();
+  });
+  it('of uhugeint', async () => {
+    const instance = await DuckDBInstance.create();
+    const connection = await instance.connect();
+    console.log(await measureQueryMultiple(
+      connection,
+      `select 1::uhugeint from range(1000000)`,
+      5,
+    ));
+    connection.dispose();
+    instance.dispose();
+  });
   it('of decimal (2 bytes)', async () => {
     const instance = await DuckDBInstance.create();
     const connection = await instance.connect();
@@ -197,6 +230,43 @@ describe('perf', () => {
     connection.dispose();
     instance.dispose();
   });
+  it('of enum (small)', async () => {
+    const instance = await DuckDBInstance.create();
+    const connection = await instance.connect();
+    await connection.run(`create type small_enum as enum ('a', 'b')`);
+    console.log(await measureQueryMultiple(
+      connection,
+      `select 'a'::small_enum from range(1000000)`,
+      5,
+    ));
+    connection.dispose();
+    instance.dispose();
+  });
+  it('of enum (medium)', async () => {
+    const instance = await DuckDBInstance.create();
+    const connection = await instance.connect();
+    await connection.run(`create type medium_enum as enum (select 'enum_' || i from range(300) t(i))`);
+    console.log(await measureQueryMultiple(
+      connection,
+      `select 'enum_0'::medium_enum from range(1000000)`,
+      5,
+    ));
+    connection.dispose();
+    instance.dispose();
+  });
+  // This runs out of memory!
+  xit('of enum (large)', async () => {
+    const instance = await DuckDBInstance.create();
+    const connection = await instance.connect();
+    await connection.run(`create type large_enum as enum (select 'enum_' || i from range(70000) t(i))`);
+    console.log(await measureQueryMultiple(
+      connection,
+      `select 'enum_0'::large_enum from range(1000000)`,
+      5,
+    ));
+    connection.dispose();
+    instance.dispose();
+  });
   it('of list[int]', async () => {
     const instance = await DuckDBInstance.create();
     const connection = await instance.connect();
@@ -236,6 +306,61 @@ describe('perf', () => {
     console.log(await measureQueryMultiple(
       connection,
       `select {a:'a'} from range(1000000)`,
+      5,
+    ));
+    connection.dispose();
+    instance.dispose();
+  });
+  it('of bit (small)', async () => {
+    const instance = await DuckDBInstance.create();
+    const connection = await instance.connect();
+    console.log(await measureQueryMultiple(
+      connection,
+      `select '101010'::bit from range(1000000)`,
+      5,
+    ));
+    connection.dispose();
+    instance.dispose();
+  });
+  it('of bit (short)', async () => {
+    const instance = await DuckDBInstance.create();
+    const connection = await instance.connect();
+    console.log(await measureQueryMultiple(
+      connection,
+      `select bitstring('0101011', 11 * 8) from range(1000000)`,
+      5,
+    ));
+    connection.dispose();
+    instance.dispose();
+  });
+  it('of bit (short + 1 = smallest long)', async () => {
+    const instance = await DuckDBInstance.create();
+    const connection = await instance.connect();
+    console.log(await measureQueryMultiple(
+      connection,
+      `select bitstring('0101011', 11 * 8 + 1) from range(1000000)`,
+      5,
+    ));
+    connection.dispose();
+    instance.dispose();
+  });
+  it('of bit (long)', async () => {
+    const instance = await DuckDBInstance.create();
+    const connection = await instance.connect();
+    console.log(await measureQueryMultiple(
+      connection,
+      `select bitstring('0101011', 11 * 8 + 12 * 8) from range(1000000)`,
+      5,
+    ));
+    connection.dispose();
+    instance.dispose();
+  });
+  it('of time_tz', async () => {
+    const instance = await DuckDBInstance.create();
+    const connection = await instance.connect();
+    console.log(await measureQueryMultiple(
+      connection,
+      `select '12:34:56-15:59:59'::timetz from range(1000000)`,
       5,
     ));
     connection.dispose();
