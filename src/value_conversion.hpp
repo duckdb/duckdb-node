@@ -28,12 +28,14 @@ static Napi::Value GetValue(const Napi::CallbackInfo &info, size_t offset) {
 template <class T>
 class PointerHolder : public Napi::ObjectWrap<PointerHolder<T>> {
 public:
-	static Napi::FunctionReference *Init(Napi::Env env, const char *name) {
+	static void Init(Napi::Env env, Napi::Object exports, const char *name) {
 		auto func = Napi::ObjectWrap<PointerHolder<T>>::DefineClass(env, name, {});
-		auto constructor = new Napi::FunctionReference();
-		*constructor = Napi::Persistent(func);                     // weird
-		env.SetInstanceData<Napi::FunctionReference>(constructor); // is this so this is eventually freed?
-		return constructor;
+		constructor = Napi::Persistent(func); // set initial reference count to 1
+		exports.Set(name, func);
+		// How does the following interact with the static storage of constructor?
+		// Does not doing this create problems for multiple instance of this add-on, in multiple worker threads?
+		// See: https://github.com/nodejs/node-addon-api/blob/main/doc/object_wrap.md#example
+		// env.SetInstanceData<Napi::FunctionReference>(&constructor); // is this so this is eventually freed?
 	}
 
 	PointerHolder(const Napi::CallbackInfo &info) : Napi::ObjectWrap<PointerHolder<T>>(info) {
@@ -45,8 +47,7 @@ public:
 	}
 
 	static Napi::Value NewAndSet(Napi::Env &env, T val) {
-		// TODO use actual constructor here ?
-		auto res = PointerHolder<T>::DefineClass(env, "duckdb_pointer_holder", {}, nullptr).New({});
+		auto res = constructor.New({});
 		Napi::ObjectWrap<PointerHolder<T>>::Unwrap(res)->Set(val);
 		return res;
 	}
@@ -59,8 +60,11 @@ public:
 	}
 
 private:
+	static Napi::FunctionReference constructor;
 	std::unique_ptr<data_t[]> ptr;
 };
+
+template<class T> Napi::FunctionReference PointerHolder<T>::constructor;
 
 struct out_string_wrapper {
 	const char *ptr;

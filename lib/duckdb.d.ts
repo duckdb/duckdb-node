@@ -1,8 +1,8 @@
 // placeholder interfaces for pointer types
-export interface pointer {}
-export interface uint64_pointer extends pointer {}
 export interface idx_pointer extends pointer {}
 // bindings-defined types
+export class pointer {}
+export class uint64_pointer {}
 export class out_string_wrapper {}
 // generated types and functions
 export enum duckdb_type {

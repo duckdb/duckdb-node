@@ -127,7 +127,7 @@ class DuckDBHeaderVisitor(pycparser.c_ast.NodeVisitor):
             return
 
         if isinstance(node.type, pycparser.c_ast.Struct):
-            self.cpp_result += f'exports.Set(Napi::String::New(env, "{name}"), duckdb_node::PointerHolder<{name}>::Init(env, "{name}")->Value());\n'
+            self.cpp_result += f'duckdb_node::PointerHolder<{name}>::Init(env, exports, "{name}");\n'
             self.types_result += f'export class {name} {{}}\n'
             self.c_type_to_ts_type[name] = name
             self.c_type_to_ts_type[f'{name}*'] = name
@@ -263,11 +263,11 @@ if __name__ == "__main__":
         types_out = open('lib/duckdb.d.ts', 'wb')
         
         types_out.write('// placeholder interfaces for pointer types\n'.encode())
-        types_out.write('export interface pointer {}\n'.encode())
-        types_out.write('export interface uint64_pointer extends pointer {}\n'.encode())
         types_out.write('export interface idx_pointer extends pointer {}\n'.encode())
 
         types_out.write('// bindings-defined types\n'.encode())
+        types_out.write('export class pointer {}\n'.encode())
+        types_out.write('export class uint64_pointer {}\n'.encode())
         types_out.write('export class out_string_wrapper {}\n'.encode())
 
         types_out.write('// generated types and functions\n'.encode())
