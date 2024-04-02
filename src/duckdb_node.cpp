@@ -56,16 +56,17 @@ public:
 	DuckDBNodeNative(Napi::Env env, Napi::Object exports) {
 		RegisterGenerated(env, exports);
 
+		duckdb_node::PointerHolder<void *>::Init(env, exports, "pointer");
+		duckdb_node::PointerHolder<uint64_t *>::Init(env, exports, "uint64_pointer");
+		// TODO: add idx_pointer?
+		duckdb_node::PointerHolder<duckdb_node::out_string_wrapper>::Init(env, exports, "out_string_wrapper");
+
 		exports.Set(Napi::String::New(env, "sizeof_bool"), Napi::Number::New(env, sizeof(bool)));
-
 		exports.Set(Napi::String::New(env, "copy_buffer"), Napi::Function::New<CopyBuffer>(env));
-
 		exports.Set(Napi::String::New(env, "copy_buffer_double"), Napi::Function::New<CopyBufferDouble>(env));
-
-		exports.Set(
-		    Napi::String::New(env, "out_string_wrapper"),
-		    duckdb_node::PointerHolder<duckdb_node::out_string_wrapper>::Init(env, "out_string_wrapper")->Value());
 		exports.Set(Napi::String::New(env, "out_get_string"), Napi::Function::New<OutGetString>(env));
+
+		// for binding; not exposed in TypeScript
 		exports.Set(Napi::String::New(env, "initialize"), Napi::Function::New<Initialize>(env));
 	}
 };

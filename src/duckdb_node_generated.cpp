@@ -93,76 +93,40 @@ static void RegisterGenerated(Napi::Env env, Napi::Object exports) {
 	exports.DefineProperty(
 	    Napi::PropertyDescriptor::Value("duckdb_statement_type", duckdb_statement_type_enum,
 	                                    static_cast<napi_property_attributes>(napi_enumerable | napi_configurable)));
-	exports.Set(Napi::String::New(env, "duckdb_date"),
-	            duckdb_node::PointerHolder<duckdb_date>::Init(env, "duckdb_date")->Value());
-	exports.Set(Napi::String::New(env, "duckdb_date_struct"),
-	            duckdb_node::PointerHolder<duckdb_date_struct>::Init(env, "duckdb_date_struct")->Value());
-	exports.Set(Napi::String::New(env, "duckdb_time"),
-	            duckdb_node::PointerHolder<duckdb_time>::Init(env, "duckdb_time")->Value());
-	exports.Set(Napi::String::New(env, "duckdb_time_struct"),
-	            duckdb_node::PointerHolder<duckdb_time_struct>::Init(env, "duckdb_time_struct")->Value());
-	exports.Set(Napi::String::New(env, "duckdb_time_tz"),
-	            duckdb_node::PointerHolder<duckdb_time_tz>::Init(env, "duckdb_time_tz")->Value());
-	exports.Set(Napi::String::New(env, "duckdb_time_tz_struct"),
-	            duckdb_node::PointerHolder<duckdb_time_tz_struct>::Init(env, "duckdb_time_tz_struct")->Value());
-	exports.Set(Napi::String::New(env, "duckdb_timestamp"),
-	            duckdb_node::PointerHolder<duckdb_timestamp>::Init(env, "duckdb_timestamp")->Value());
-	exports.Set(Napi::String::New(env, "duckdb_timestamp_struct"),
-	            duckdb_node::PointerHolder<duckdb_timestamp_struct>::Init(env, "duckdb_timestamp_struct")->Value());
-	exports.Set(Napi::String::New(env, "duckdb_interval"),
-	            duckdb_node::PointerHolder<duckdb_interval>::Init(env, "duckdb_interval")->Value());
-	exports.Set(Napi::String::New(env, "duckdb_hugeint"),
-	            duckdb_node::PointerHolder<duckdb_hugeint>::Init(env, "duckdb_hugeint")->Value());
-	exports.Set(Napi::String::New(env, "duckdb_uhugeint"),
-	            duckdb_node::PointerHolder<duckdb_uhugeint>::Init(env, "duckdb_uhugeint")->Value());
-	exports.Set(Napi::String::New(env, "duckdb_decimal"),
-	            duckdb_node::PointerHolder<duckdb_decimal>::Init(env, "duckdb_decimal")->Value());
-	exports.Set(
-	    Napi::String::New(env, "duckdb_query_progress_type"),
-	    duckdb_node::PointerHolder<duckdb_query_progress_type>::Init(env, "duckdb_query_progress_type")->Value());
-	exports.Set(Napi::String::New(env, "duckdb_string_t"),
-	            duckdb_node::PointerHolder<duckdb_string_t>::Init(env, "duckdb_string_t")->Value());
-	exports.Set(Napi::String::New(env, "duckdb_list_entry"),
-	            duckdb_node::PointerHolder<duckdb_list_entry>::Init(env, "duckdb_list_entry")->Value());
-	exports.Set(Napi::String::New(env, "duckdb_column"),
-	            duckdb_node::PointerHolder<duckdb_column>::Init(env, "duckdb_column")->Value());
-	exports.Set(Napi::String::New(env, "duckdb_vector"),
-	            duckdb_node::PointerHolder<duckdb_vector>::Init(env, "duckdb_vector")->Value());
-	exports.Set(Napi::String::New(env, "duckdb_string"),
-	            duckdb_node::PointerHolder<duckdb_string>::Init(env, "duckdb_string")->Value());
-	exports.Set(Napi::String::New(env, "duckdb_blob"),
-	            duckdb_node::PointerHolder<duckdb_blob>::Init(env, "duckdb_blob")->Value());
-	exports.Set(Napi::String::New(env, "duckdb_result"),
-	            duckdb_node::PointerHolder<duckdb_result>::Init(env, "duckdb_result")->Value());
-	exports.Set(Napi::String::New(env, "duckdb_database"),
-	            duckdb_node::PointerHolder<duckdb_database>::Init(env, "duckdb_database")->Value());
-	exports.Set(Napi::String::New(env, "duckdb_connection"),
-	            duckdb_node::PointerHolder<duckdb_connection>::Init(env, "duckdb_connection")->Value());
-	exports.Set(Napi::String::New(env, "duckdb_prepared_statement"),
-	            duckdb_node::PointerHolder<duckdb_prepared_statement>::Init(env, "duckdb_prepared_statement")->Value());
-	exports.Set(
-	    Napi::String::New(env, "duckdb_extracted_statements"),
-	    duckdb_node::PointerHolder<duckdb_extracted_statements>::Init(env, "duckdb_extracted_statements")->Value());
-	exports.Set(Napi::String::New(env, "duckdb_pending_result"),
-	            duckdb_node::PointerHolder<duckdb_pending_result>::Init(env, "duckdb_pending_result")->Value());
-	exports.Set(Napi::String::New(env, "duckdb_appender"),
-	            duckdb_node::PointerHolder<duckdb_appender>::Init(env, "duckdb_appender")->Value());
-	exports.Set(Napi::String::New(env, "duckdb_config"),
-	            duckdb_node::PointerHolder<duckdb_config>::Init(env, "duckdb_config")->Value());
-	exports.Set(Napi::String::New(env, "duckdb_logical_type"),
-	            duckdb_node::PointerHolder<duckdb_logical_type>::Init(env, "duckdb_logical_type")->Value());
-	exports.Set(Napi::String::New(env, "duckdb_data_chunk"),
-	            duckdb_node::PointerHolder<duckdb_data_chunk>::Init(env, "duckdb_data_chunk")->Value());
-	exports.Set(Napi::String::New(env, "duckdb_value"),
-	            duckdb_node::PointerHolder<duckdb_value>::Init(env, "duckdb_value")->Value());
-	exports.Set(Napi::String::New(env, "duckdb_arrow"),
-	            duckdb_node::PointerHolder<duckdb_arrow>::Init(env, "duckdb_arrow")->Value());
-	exports.Set(Napi::String::New(env, "duckdb_arrow_stream"),
-	            duckdb_node::PointerHolder<duckdb_arrow_stream>::Init(env, "duckdb_arrow_stream")->Value());
-	exports.Set(Napi::String::New(env, "duckdb_arrow_schema"),
-	            duckdb_node::PointerHolder<duckdb_arrow_schema>::Init(env, "duckdb_arrow_schema")->Value());
-	exports.Set(Napi::String::New(env, "duckdb_arrow_array"),
-	            duckdb_node::PointerHolder<duckdb_arrow_array>::Init(env, "duckdb_arrow_array")->Value());
+	duckdb_node::PointerHolder<duckdb_date>::Init(env, exports, "duckdb_date");
+	duckdb_node::PointerHolder<duckdb_date_struct>::Init(env, exports, "duckdb_date_struct");
+	duckdb_node::PointerHolder<duckdb_time>::Init(env, exports, "duckdb_time");
+	duckdb_node::PointerHolder<duckdb_time_struct>::Init(env, exports, "duckdb_time_struct");
+	duckdb_node::PointerHolder<duckdb_time_tz>::Init(env, exports, "duckdb_time_tz");
+	duckdb_node::PointerHolder<duckdb_time_tz_struct>::Init(env, exports, "duckdb_time_tz_struct");
+	duckdb_node::PointerHolder<duckdb_timestamp>::Init(env, exports, "duckdb_timestamp");
+	duckdb_node::PointerHolder<duckdb_timestamp_struct>::Init(env, exports, "duckdb_timestamp_struct");
+	duckdb_node::PointerHolder<duckdb_interval>::Init(env, exports, "duckdb_interval");
+	duckdb_node::PointerHolder<duckdb_hugeint>::Init(env, exports, "duckdb_hugeint");
+	duckdb_node::PointerHolder<duckdb_uhugeint>::Init(env, exports, "duckdb_uhugeint");
+	duckdb_node::PointerHolder<duckdb_decimal>::Init(env, exports, "duckdb_decimal");
+	duckdb_node::PointerHolder<duckdb_query_progress_type>::Init(env, exports, "duckdb_query_progress_type");
+	duckdb_node::PointerHolder<duckdb_string_t>::Init(env, exports, "duckdb_string_t");
+	duckdb_node::PointerHolder<duckdb_list_entry>::Init(env, exports, "duckdb_list_entry");
+	duckdb_node::PointerHolder<duckdb_column>::Init(env, exports, "duckdb_column");
+	duckdb_node::PointerHolder<duckdb_vector>::Init(env, exports, "duckdb_vector");
+	duckdb_node::PointerHolder<duckdb_string>::Init(env, exports, "duckdb_string");
+	duckdb_node::PointerHolder<duckdb_blob>::Init(env, exports, "duckdb_blob");
+	duckdb_node::PointerHolder<duckdb_result>::Init(env, exports, "duckdb_result");
+	duckdb_node::PointerHolder<duckdb_database>::Init(env, exports, "duckdb_database");
+	duckdb_node::PointerHolder<duckdb_connection>::Init(env, exports, "duckdb_connection");
+	duckdb_node::PointerHolder<duckdb_prepared_statement>::Init(env, exports, "duckdb_prepared_statement");
+	duckdb_node::PointerHolder<duckdb_extracted_statements>::Init(env, exports, "duckdb_extracted_statements");
+	duckdb_node::PointerHolder<duckdb_pending_result>::Init(env, exports, "duckdb_pending_result");
+	duckdb_node::PointerHolder<duckdb_appender>::Init(env, exports, "duckdb_appender");
+	duckdb_node::PointerHolder<duckdb_config>::Init(env, exports, "duckdb_config");
+	duckdb_node::PointerHolder<duckdb_logical_type>::Init(env, exports, "duckdb_logical_type");
+	duckdb_node::PointerHolder<duckdb_data_chunk>::Init(env, exports, "duckdb_data_chunk");
+	duckdb_node::PointerHolder<duckdb_value>::Init(env, exports, "duckdb_value");
+	duckdb_node::PointerHolder<duckdb_arrow>::Init(env, exports, "duckdb_arrow");
+	duckdb_node::PointerHolder<duckdb_arrow_stream>::Init(env, exports, "duckdb_arrow_stream");
+	duckdb_node::PointerHolder<duckdb_arrow_schema>::Init(env, exports, "duckdb_arrow_schema");
+	duckdb_node::PointerHolder<duckdb_arrow_array>::Init(env, exports, "duckdb_arrow_array");
 	exports.Set(Napi::String::New(env, "duckdb_open"),
 	            Napi::Function::New<duckdb_node::FunctionWrappers::AsyncFunctionWrapper2<
 	                duckdb_state, const char *, duckdb_database *, "duckdb_open">>(env));
