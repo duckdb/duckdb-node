@@ -1,7 +1,8 @@
 #pragma once
 
-#include "napi.h"
 #include "duckdb.h"
+#include "duckdb_node_addon.hpp"
+#include "napi.h"
 
 namespace duckdb_node {
 
@@ -28,14 +29,12 @@ static Napi::Value GetValue(const Napi::CallbackInfo &info, size_t offset) {
 template <class T>
 class PointerHolder : public Napi::ObjectWrap<PointerHolder<T>> {
 public:
-	static void Init(Napi::Env env, Napi::Object exports, const char *name) {
+	static void Init(Napi::Env env, Napi::Object exports,
+	                 std::unordered_map<const char *, Napi::FunctionReference> &constructors, const char *name) {
 		auto func = Napi::ObjectWrap<PointerHolder<T>>::DefineClass(env, name, {});
-		constructor = Napi::Persistent(func); // set initial reference count to 1
+		constructor_key = name;
+		constructors[constructor_key] = Napi::Persistent(func); // set initial reference count to 1
 		exports.Set(name, func);
-		// How does the following interact with the static storage of constructor?
-		// Does not doing this create problems for multiple instance of this add-on, in multiple worker threads?
-		// See: https://github.com/nodejs/node-addon-api/blob/main/doc/object_wrap.md#example
-		// env.SetInstanceData<Napi::FunctionReference>(&constructor); // is this so this is eventually freed?
 	}
 
 	PointerHolder(const Napi::CallbackInfo &info) : Napi::ObjectWrap<PointerHolder<T>>(info) {
@@ -47,7 +46,8 @@ public:
 	}
 
 	static Napi::Value NewAndSet(Napi::Env &env, T val) {
-		auto res = constructor.New({});
+		auto addon = env.GetInstanceData<DuckDBNodeAddon>();
+		auto res = addon->constructors[constructor_key].New({});
 		Napi::ObjectWrap<PointerHolder<T>>::Unwrap(res)->Set(val);
 		return res;
 	}
@@ -60,11 +60,12 @@ public:
 	}
 
 private:
-	static Napi::FunctionReference constructor;
+	static const char *constructor_key;
 	std::unique_ptr<data_t[]> ptr;
 };
 
-template<class T> Napi::FunctionReference PointerHolder<T>::constructor;
+template <class T>
+const char *PointerHolder<T>::constructor_key;
 
 struct out_string_wrapper {
 	const char *ptr;
@@ -75,6 +76,7 @@ public:
 	template <class T>
 	static Napi::Value ToJS(Napi::Env &env, T val) {
 		// static_assert(false, "Unimplemented value conversion to JS");
+		throw "Unimplemented value conversion to JS";
 	}
 
 	template <>
@@ -212,6 +214,7 @@ public:
 	template <class T>
 	static T FromJS(const Napi::CallbackInfo &info, idx_t offset) {
 		// static_assert(false, "Unimplemented value conversion from JS");
+		throw "Unimplemented value conversion to JS";
 	}
 
 	template <>
