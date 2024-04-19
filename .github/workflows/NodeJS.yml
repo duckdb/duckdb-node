@@ -198,10 +198,6 @@ jobs:
           - isRelease: false
             node: 14
           - isRelease: false
-            node: 16
-          - isRelease: false
-            node: 17
-          - isRelease: false
             node: 18
           - isRelease: false
             node: 19
