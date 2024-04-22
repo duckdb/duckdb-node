@@ -2,6 +2,7 @@ import * as duckdb from '..';
 import * as assert from 'assert';
 import {ArrowArray} from "..";
 
+if (process?.platform != 'win32') {
 describe('arrow IPC API fails neatly when extension not loaded', function() {
     // Note: arrow IPC api requires the arrow extension to be loaded. The tests for this functionality reside in:
     //       https://github.com/duckdblabs/arrow
@@ -53,3 +54,4 @@ describe('arrow IPC API fails neatly when extension not loaded', function() {
         });
     });
 });
+}
