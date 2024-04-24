@@ -3,7 +3,8 @@
 #include "duckdb.h"
 #include "function_wrappers.hpp"
 
-static void RegisterGenerated(Napi::Env env, Napi::Object exports) {
+static void RegisterGenerated(Napi::Env env, Napi::Object exports,
+                              std::unordered_map<const char *, Napi::FunctionReference> &constructors) {
 	auto duckdb_type_enum = Napi::Object::New(env);
 	duckdb_type_enum.Set("DUCKDB_TYPE_INVALID", 0);
 	duckdb_type_enum.Set("DUCKDB_TYPE_BOOLEAN", 1);
@@ -93,40 +94,43 @@ static void RegisterGenerated(Napi::Env env, Napi::Object exports) {
 	exports.DefineProperty(
 	    Napi::PropertyDescriptor::Value("duckdb_statement_type", duckdb_statement_type_enum,
 	                                    static_cast<napi_property_attributes>(napi_enumerable | napi_configurable)));
-	duckdb_node::PointerHolder<duckdb_date>::Init(env, exports, "duckdb_date");
-	duckdb_node::PointerHolder<duckdb_date_struct>::Init(env, exports, "duckdb_date_struct");
-	duckdb_node::PointerHolder<duckdb_time>::Init(env, exports, "duckdb_time");
-	duckdb_node::PointerHolder<duckdb_time_struct>::Init(env, exports, "duckdb_time_struct");
-	duckdb_node::PointerHolder<duckdb_time_tz>::Init(env, exports, "duckdb_time_tz");
-	duckdb_node::PointerHolder<duckdb_time_tz_struct>::Init(env, exports, "duckdb_time_tz_struct");
-	duckdb_node::PointerHolder<duckdb_timestamp>::Init(env, exports, "duckdb_timestamp");
-	duckdb_node::PointerHolder<duckdb_timestamp_struct>::Init(env, exports, "duckdb_timestamp_struct");
-	duckdb_node::PointerHolder<duckdb_interval>::Init(env, exports, "duckdb_interval");
-	duckdb_node::PointerHolder<duckdb_hugeint>::Init(env, exports, "duckdb_hugeint");
-	duckdb_node::PointerHolder<duckdb_uhugeint>::Init(env, exports, "duckdb_uhugeint");
-	duckdb_node::PointerHolder<duckdb_decimal>::Init(env, exports, "duckdb_decimal");
-	duckdb_node::PointerHolder<duckdb_query_progress_type>::Init(env, exports, "duckdb_query_progress_type");
-	duckdb_node::PointerHolder<duckdb_string_t>::Init(env, exports, "duckdb_string_t");
-	duckdb_node::PointerHolder<duckdb_list_entry>::Init(env, exports, "duckdb_list_entry");
-	duckdb_node::PointerHolder<duckdb_column>::Init(env, exports, "duckdb_column");
-	duckdb_node::PointerHolder<duckdb_vector>::Init(env, exports, "duckdb_vector");
-	duckdb_node::PointerHolder<duckdb_string>::Init(env, exports, "duckdb_string");
-	duckdb_node::PointerHolder<duckdb_blob>::Init(env, exports, "duckdb_blob");
-	duckdb_node::PointerHolder<duckdb_result>::Init(env, exports, "duckdb_result");
-	duckdb_node::PointerHolder<duckdb_database>::Init(env, exports, "duckdb_database");
-	duckdb_node::PointerHolder<duckdb_connection>::Init(env, exports, "duckdb_connection");
-	duckdb_node::PointerHolder<duckdb_prepared_statement>::Init(env, exports, "duckdb_prepared_statement");
-	duckdb_node::PointerHolder<duckdb_extracted_statements>::Init(env, exports, "duckdb_extracted_statements");
-	duckdb_node::PointerHolder<duckdb_pending_result>::Init(env, exports, "duckdb_pending_result");
-	duckdb_node::PointerHolder<duckdb_appender>::Init(env, exports, "duckdb_appender");
-	duckdb_node::PointerHolder<duckdb_config>::Init(env, exports, "duckdb_config");
-	duckdb_node::PointerHolder<duckdb_logical_type>::Init(env, exports, "duckdb_logical_type");
-	duckdb_node::PointerHolder<duckdb_data_chunk>::Init(env, exports, "duckdb_data_chunk");
-	duckdb_node::PointerHolder<duckdb_value>::Init(env, exports, "duckdb_value");
-	duckdb_node::PointerHolder<duckdb_arrow>::Init(env, exports, "duckdb_arrow");
-	duckdb_node::PointerHolder<duckdb_arrow_stream>::Init(env, exports, "duckdb_arrow_stream");
-	duckdb_node::PointerHolder<duckdb_arrow_schema>::Init(env, exports, "duckdb_arrow_schema");
-	duckdb_node::PointerHolder<duckdb_arrow_array>::Init(env, exports, "duckdb_arrow_array");
+	duckdb_node::PointerHolder<duckdb_date>::Init(env, exports, constructors, "duckdb_date");
+	duckdb_node::PointerHolder<duckdb_date_struct>::Init(env, exports, constructors, "duckdb_date_struct");
+	duckdb_node::PointerHolder<duckdb_time>::Init(env, exports, constructors, "duckdb_time");
+	duckdb_node::PointerHolder<duckdb_time_struct>::Init(env, exports, constructors, "duckdb_time_struct");
+	duckdb_node::PointerHolder<duckdb_time_tz>::Init(env, exports, constructors, "duckdb_time_tz");
+	duckdb_node::PointerHolder<duckdb_time_tz_struct>::Init(env, exports, constructors, "duckdb_time_tz_struct");
+	duckdb_node::PointerHolder<duckdb_timestamp>::Init(env, exports, constructors, "duckdb_timestamp");
+	duckdb_node::PointerHolder<duckdb_timestamp_struct>::Init(env, exports, constructors, "duckdb_timestamp_struct");
+	duckdb_node::PointerHolder<duckdb_interval>::Init(env, exports, constructors, "duckdb_interval");
+	duckdb_node::PointerHolder<duckdb_hugeint>::Init(env, exports, constructors, "duckdb_hugeint");
+	duckdb_node::PointerHolder<duckdb_uhugeint>::Init(env, exports, constructors, "duckdb_uhugeint");
+	duckdb_node::PointerHolder<duckdb_decimal>::Init(env, exports, constructors, "duckdb_decimal");
+	duckdb_node::PointerHolder<duckdb_query_progress_type>::Init(env, exports, constructors,
+	                                                             "duckdb_query_progress_type");
+	duckdb_node::PointerHolder<duckdb_string_t>::Init(env, exports, constructors, "duckdb_string_t");
+	duckdb_node::PointerHolder<duckdb_list_entry>::Init(env, exports, constructors, "duckdb_list_entry");
+	duckdb_node::PointerHolder<duckdb_column>::Init(env, exports, constructors, "duckdb_column");
+	duckdb_node::PointerHolder<duckdb_vector>::Init(env, exports, constructors, "duckdb_vector");
+	duckdb_node::PointerHolder<duckdb_string>::Init(env, exports, constructors, "duckdb_string");
+	duckdb_node::PointerHolder<duckdb_blob>::Init(env, exports, constructors, "duckdb_blob");
+	duckdb_node::PointerHolder<duckdb_result>::Init(env, exports, constructors, "duckdb_result");
+	duckdb_node::PointerHolder<duckdb_database>::Init(env, exports, constructors, "duckdb_database");
+	duckdb_node::PointerHolder<duckdb_connection>::Init(env, exports, constructors, "duckdb_connection");
+	duckdb_node::PointerHolder<duckdb_prepared_statement>::Init(env, exports, constructors,
+	                                                            "duckdb_prepared_statement");
+	duckdb_node::PointerHolder<duckdb_extracted_statements>::Init(env, exports, constructors,
+	                                                              "duckdb_extracted_statements");
+	duckdb_node::PointerHolder<duckdb_pending_result>::Init(env, exports, constructors, "duckdb_pending_result");
+	duckdb_node::PointerHolder<duckdb_appender>::Init(env, exports, constructors, "duckdb_appender");
+	duckdb_node::PointerHolder<duckdb_config>::Init(env, exports, constructors, "duckdb_config");
+	duckdb_node::PointerHolder<duckdb_logical_type>::Init(env, exports, constructors, "duckdb_logical_type");
+	duckdb_node::PointerHolder<duckdb_data_chunk>::Init(env, exports, constructors, "duckdb_data_chunk");
+	duckdb_node::PointerHolder<duckdb_value>::Init(env, exports, constructors, "duckdb_value");
+	duckdb_node::PointerHolder<duckdb_arrow>::Init(env, exports, constructors, "duckdb_arrow");
+	duckdb_node::PointerHolder<duckdb_arrow_stream>::Init(env, exports, constructors, "duckdb_arrow_stream");
+	duckdb_node::PointerHolder<duckdb_arrow_schema>::Init(env, exports, constructors, "duckdb_arrow_schema");
+	duckdb_node::PointerHolder<duckdb_arrow_array>::Init(env, exports, constructors, "duckdb_arrow_array");
 	exports.Set(Napi::String::New(env, "duckdb_open"),
 	            Napi::Function::New<duckdb_node::FunctionWrappers::AsyncFunctionWrapper2<
 	                duckdb_state, const char *, duckdb_database *, "duckdb_open">>(env));
