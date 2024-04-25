@@ -101,10 +101,10 @@ var stmt = con.prepare('select ?::INTEGER as fortytwo', function(err, stmt) {
 ```
 
 ## Supported Node versions
-We actively support only LTS and In-Support Node versions, as per July 2023, they are: Node 18, Node 20 and Node 21.
+We actively support only LTS and In-Support Node versions, as per July 2023, they are: Node 18, Node 20 and Node 21. For OSX and Linux targets, also Node 22 is available.
 Release schedule for Node.js can be checked here: https://github.com/nodejs/release#release-schedule.
 
-We currently bundle and test DuckDB also for Node 10, 12, 14, 16, 17 and 19. We plan of going so going forward as long as the tooling supports it.
+We currently bundle and test DuckDB also for Node 12, 14, 16, 17 and 19. We plan of going so going forward as long as the tooling supports it.
 As per July 2023, Node 15 has been removed from the supported versions.
 
 ## Development
