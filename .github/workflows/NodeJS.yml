@@ -115,15 +115,77 @@ jobs:
         shell: bash
         run: ./scripts/node_build.sh ${{ matrix.node }}
 
-  osx-nodejs:
-    if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' || github.repository != 'duckdb/duckdb-node'
+  osx-nodejs-arm64:
     name: node.js OSX
-    runs-on: macos-latest
+    runs-on: macos-14
     needs: set-up-npm
     continue-on-error: ${{ matrix.node != '18' && matrix.node != '20' && matrix.node != '21' }}
     strategy:
       matrix:
-        target_arch: [ x64, arm64 ]
+        target_arch: [ arm64 ]
+        node: [ '16', '17', '18', '19', '20', '21', '22']
+        isRelease:
+          - ${{ startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' }}
+        exclude:
+          - isRelease: false
+            node: 12
+          - isRelease: false
+            node: 14
+          - isRelease: false
+            node: 16
+          - isRelease: false
+            node: 17
+          - isRelease: false
+            node: 19
+          - target_arch: arm64
+            node: 12
+          - target_arch: arm64
+            node: 14
+        # these older versions of NodeJS don't have M1 support
+
+    env:
+      TARGET_ARCH: ${{ matrix.target_arch }}
+      DUCKDB_NODE_BUILD_CACHE: 0
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      # Default Python (3.12) doesn't have support for distutils
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Setup Ccache
+        uses: hendrikmuhs/ccache-action@main
+        with:
+          key: ${{ github.job }}-${{ matrix.target_arch }}
+          save: ${{ ( github.ref == 'refs/heads/main' || github.repository != 'duckdb/duckdb-node' ) && ( matrix.node == '19' ) }}
+
+      - name: Downgrade curl # fixes a bug with the brew curl that lead to failed downloads
+        shell: bash
+        run: |
+          brew uninstall --ignore-dependencies curl
+          which curl
+
+      - name: Setup
+        shell: bash
+        run: ./scripts/node_version.sh
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.NODE_AUTH_TOKEN}}
+
+      - name: Node ${{ matrix.node }}
+        shell: bash
+        run: ./scripts/node_build.sh ${{ matrix.node }}
+
+  osx-nodejs-x64:
+    name: node.js OSX
+    runs-on: macos-13
+    needs: set-up-npm
+    continue-on-error: ${{ matrix.node != '18' && matrix.node != '20' && matrix.node != '21' }}
+    strategy:
+      matrix:
+        target_arch: [ x64 ]
         node: [ '16', '17', '18', '19', '20', '21', '22']
         isRelease:
           - ${{ startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' }}
