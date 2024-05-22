@@ -309,10 +309,10 @@ void DuckDBNodeRSLauncher(Napi::Env env, Napi::Function jsrs, std::nullptr_t *, 
 }
 
 static duckdb::unique_ptr<duckdb::TableRef>
-ScanReplacement(duckdb::ClientContext &context, const std::string &table_name, duckdb::ReplacementScanData *data) {
+ScanReplacement(duckdb::ClientContext &context, duckdb::ReplacementScanInput& info, duckdb::optional_ptr<duckdb::ReplacementScanData> data) {
 	JSRSArgs jsargs;
-	jsargs.table = table_name;
-	((NodeReplacementScanData *)data)->rs.BlockingCall(&jsargs);
+	jsargs.table = info.table_name;
+	((NodeReplacementScanData *)data.get())->rs.BlockingCall(&jsargs);
 	while (!jsargs.done) {
 		std::this_thread::yield();
 	}
