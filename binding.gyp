@@ -58,7 +58,6 @@
                 "src/duckdb/ub_src_core_functions_scalar_math.cpp", 
                 "src/duckdb/ub_src_core_functions_scalar_operators.cpp", 
                 "src/duckdb/ub_src_core_functions_scalar_random.cpp", 
-                "src/duckdb/ub_src_core_functions_scalar_secret.cpp", 
                 "src/duckdb/ub_src_core_functions_scalar_string.cpp", 
                 "src/duckdb/ub_src_core_functions_scalar_struct.cpp", 
                 "src/duckdb/ub_src_core_functions_scalar_union.cpp", 
@@ -232,6 +231,7 @@
                 "src/duckdb/third_party/mbedtls/library/sha256.cpp", 
                 "src/duckdb/third_party/mbedtls/library/sha512.cpp", 
                 "src/duckdb/third_party/mbedtls/mbedtls_wrapper.cpp", 
+                "src/duckdb/third_party/yyjson/yyjson.cpp", 
                 "src/duckdb/extension/parquet/column_reader.cpp", 
                 "src/duckdb/extension/parquet/column_writer.cpp", 
                 "src/duckdb/extension/parquet/parquet_crypto.cpp", 
@@ -296,8 +296,7 @@
                 "src/duckdb/extension/json/json_serializer.cpp", 
                 "src/duckdb/extension/json/json_deserializer.cpp", 
                 "src/duckdb/extension/json/serialize_json.cpp", 
-                "src/duckdb/ub_extension_json_json_functions.cpp", 
-                "src/duckdb/extension/json/yyjson/yyjson.cpp"
+                "src/duckdb/ub_extension_json_json_functions.cpp"
             ], 
             "include_dirs": [
                 "<!(node -p \"require('node-addon-api').include_dir\")", 
@@ -324,6 +323,7 @@
                 "src/duckdb/third_party/tdigest", 
                 "src/duckdb/third_party/utf8proc", 
                 "src/duckdb/third_party/utf8proc/include", 
+                "src/duckdb/third_party/yyjson/include", 
                 "src/duckdb/extension/parquet/include", 
                 "src/duckdb/third_party/parquet", 
                 "src/duckdb/third_party/thrift", 
@@ -335,8 +335,7 @@
                 "src/duckdb/extension/icu/include", 
                 "src/duckdb/extension/icu/third_party/icu/common", 
                 "src/duckdb/extension/icu/third_party/icu/i18n", 
-                "src/duckdb/extension/json/include", 
-                "src/duckdb/extension/json/yyjson/include"
+                "src/duckdb/extension/json/include"
             ], 
             "defines": [
                 "NAPI_VERSION=6", 
