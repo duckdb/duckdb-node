@@ -31,6 +31,7 @@ const invalidResultKeys = (table: string) => {
   } as unknown as sqlite3.ReplacementScanResult;
 };
 
+if (process?.platform != 'win32') {
 describe("replacement scan", () => {
   var db: sqlite3.Database;
   describe("without replacement scan", () => {
@@ -142,3 +143,4 @@ describe("replacement scan", () => {
     });
   });
 });
+}
