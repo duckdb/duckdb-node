@@ -40,44 +40,9 @@ pointer_wrappers = [
     'duckdb_prepared_statement',
     'duckdb_value',
     'duckdb_vector',
-    #'duckdb_arrow',
-    #'duckdb_arrow_array',
-    #'duckdb_arrow_schema',
-    #'duckdb_arrow_stream',
 ]
 
 deprecated_functions = [
-    'duckdb_column_data',
-    'duckdb_nullmask_data',
-    'duckdb_validity_row_is_valid',
-    'duckdb_validity_set_row_invalid',
-    'duckdb_validity_set_row_valid',
-    'duckdb_validity_set_row_validity',
-    'duckdb_vector_ensure_validity_writable',
-    'duckdb_value_blob',
-    'duckdb_value_boolean',
-    'duckdb_value_date',
-    'duckdb_value_decimal',
-    'duckdb_value_double',
-    'duckdb_value_float',
-    'duckdb_value_hugeint',
-    'duckdb_value_int16',
-    'duckdb_value_int32',
-    'duckdb_value_int64',
-    'duckdb_value_int8',
-    'duckdb_value_interval',
-    'duckdb_value_is_null',
-    'duckdb_value_string',
-    'duckdb_value_string_internal',
-    'duckdb_value_time',
-    'duckdb_value_timestamp',
-    'duckdb_value_uint16',
-    'duckdb_value_uint32',
-    'duckdb_value_uint64',
-    'duckdb_value_uint8',
-    'duckdb_value_varchar',
-    'duckdb_value_varchar_internal',
-    "duckdb_bind_set_bind_data",
 ]
 
 def typename(decl):
@@ -257,7 +222,7 @@ if __name__ == "__main__":
         zip.extract("duckdb.h", tmp)
 
         os.system("sed -i -e 's/#include <stdlib.h>/#include <stddef.h>/' %s" % os.path.join(tmp, "duckdb.h")) # until 0.10.0 has been released
-        os.system("gcc -DDUCKDB_API_NO_DEPRECATED -E -D__builtin_va_list=int %s > %s" % (os.path.join(tmp, "duckdb.h"), os.path.join(tmp, "duckdb-preprocessed.h")))
+        os.system("gcc -DDUCKDB_NO_EXTENSION_FUNCTIONS -DDUCKDB_API_NO_DEPRECATED -E -D__builtin_va_list=int %s > %s" % (os.path.join(tmp, "duckdb.h"), os.path.join(tmp, "duckdb-preprocessed.h")))
 
         cpp_result, types_result = create_func_defs(os.path.join(tmp, "duckdb-preprocessed.h"))
 

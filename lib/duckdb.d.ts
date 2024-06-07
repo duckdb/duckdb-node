@@ -119,11 +119,6 @@ export class duckdb_config {}
 export class duckdb_logical_type {}
 export class duckdb_data_chunk {}
 export class duckdb_value {}
-export class duckdb_table_function {}
-export class duckdb_bind_info {}
-export class duckdb_init_info {}
-export class duckdb_function_info {}
-export class duckdb_replacement_scan_info {}
 export class duckdb_arrow {}
 export class duckdb_arrow_stream {}
 export class duckdb_arrow_schema {}
@@ -262,6 +257,7 @@ export function duckdb_data_chunk_set_size(chunk: duckdb_data_chunk, size: numbe
 export function duckdb_vector_get_column_type(vector: duckdb_vector): duckdb_logical_type;
 export function duckdb_vector_get_data(vector: duckdb_vector): pointer;
 export function duckdb_vector_get_validity(vector: duckdb_vector): uint64_pointer;
+export function duckdb_vector_ensure_validity_writable(vector: duckdb_vector): void;
 export function duckdb_vector_assign_string_element(vector: duckdb_vector, index: number, str: string): void;
 export function duckdb_vector_assign_string_element_len(vector: duckdb_vector, index: number, str: string, str_len: number): void;
 export function duckdb_list_vector_get_child(vector: duckdb_vector): duckdb_vector;
@@ -270,18 +266,10 @@ export function duckdb_list_vector_set_size(vector: duckdb_vector, size: number)
 export function duckdb_list_vector_reserve(vector: duckdb_vector, required_capacity: number): duckdb_state;
 export function duckdb_struct_vector_get_child(vector: duckdb_vector, index: number): duckdb_vector;
 export function duckdb_array_vector_get_child(vector: duckdb_vector): duckdb_vector;
-export function duckdb_bind_get_extra_info(info: duckdb_bind_info): pointer;
-export function duckdb_bind_add_result_column(info: duckdb_bind_info, name: string, type: duckdb_logical_type): void;
-export function duckdb_bind_get_parameter_count(info: duckdb_bind_info): number;
-export function duckdb_bind_get_parameter(info: duckdb_bind_info, index: number): duckdb_value;
-export function duckdb_bind_get_named_parameter(info: duckdb_bind_info, name: string): duckdb_value;
-export function duckdb_bind_set_cardinality(info: duckdb_bind_info, cardinality: number, is_exact: boolean): void;
-export function duckdb_bind_set_error(info: duckdb_bind_info, error: string): void;
-export function duckdb_function_get_extra_info(info: duckdb_function_info): pointer;
-export function duckdb_function_get_bind_data(info: duckdb_function_info): pointer;
-export function duckdb_function_get_init_data(info: duckdb_function_info): pointer;
-export function duckdb_function_get_local_init_data(info: duckdb_function_info): pointer;
-export function duckdb_function_set_error(info: duckdb_function_info, error: string): void;
+export function duckdb_validity_row_is_valid(validity: uint64_pointer, row: number): boolean;
+export function duckdb_validity_set_row_validity(validity: uint64_pointer, row: number, valid: boolean): void;
+export function duckdb_validity_set_row_invalid(validity: uint64_pointer, row: number): void;
+export function duckdb_validity_set_row_valid(validity: uint64_pointer, row: number): void;
 export function duckdb_appender_create(connection: duckdb_connection, schema: string, table: string, out_appender: duckdb_appender): Promise<duckdb_state>;
 export function duckdb_appender_column_count(appender: duckdb_appender): number;
 export function duckdb_appender_column_type(appender: duckdb_appender, col_idx: number): duckdb_logical_type;
@@ -313,14 +301,6 @@ export function duckdb_append_varchar_length(appender: duckdb_appender, val: str
 export function duckdb_append_blob(appender: duckdb_appender, data: pointer, length: number): duckdb_state;
 export function duckdb_append_null(appender: duckdb_appender): duckdb_state;
 export function duckdb_append_data_chunk(appender: duckdb_appender, chunk: duckdb_data_chunk): duckdb_state;
-export function duckdb_execute_tasks(database: duckdb_database, max_tasks: number): Promise<void>;
-export function duckdb_create_task_state(database: duckdb_database): duckdb_task_state;
-export function duckdb_execute_tasks_state(state: duckdb_task_state): void;
-export function duckdb_execute_n_tasks_state(state: duckdb_task_state, max_tasks: number): number;
-export function duckdb_finish_execution(state: duckdb_task_state): void;
-export function duckdb_task_state_is_finished(state: duckdb_task_state): boolean;
-export function duckdb_destroy_task_state(state: duckdb_task_state): void;
-export function duckdb_execution_is_finished(con: duckdb_connection): boolean;
 export function duckdb_fetch_chunk(result: duckdb_result): duckdb_data_chunk;
 // bindings-defined constants
 export const sizeof_bool: number;

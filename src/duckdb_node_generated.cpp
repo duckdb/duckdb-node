@@ -534,6 +534,9 @@ static void RegisterGenerated(Napi::Env env, Napi::Object exports,
 	    Napi::String::New(env, "duckdb_vector_get_validity"),
 	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<uint64_t*, duckdb_vector, "duckdb_vector_get_validity">>(env));
 	exports.Set(
+	    Napi::String::New(env, "duckdb_vector_ensure_validity_writable"),
+	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1Void<duckdb_vector, "duckdb_vector_ensure_validity_writable">>(env));
+	exports.Set(
 	    Napi::String::New(env, "duckdb_vector_assign_string_element"),
 	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper3Void<duckdb_vector, idx_t, const char*, "duckdb_vector_assign_string_element">>(env));
 	exports.Set(
@@ -558,41 +561,17 @@ static void RegisterGenerated(Napi::Env env, Napi::Object exports,
 	    Napi::String::New(env, "duckdb_array_vector_get_child"),
 	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<duckdb_vector, duckdb_vector, "duckdb_array_vector_get_child">>(env));
 	exports.Set(
-	    Napi::String::New(env, "duckdb_bind_get_extra_info"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<void*, duckdb_bind_info, "duckdb_bind_get_extra_info">>(env));
+	    Napi::String::New(env, "duckdb_validity_row_is_valid"),
+	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<bool, uint64_t*, idx_t, "duckdb_validity_row_is_valid">>(env));
 	exports.Set(
-	    Napi::String::New(env, "duckdb_bind_add_result_column"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper3Void<duckdb_bind_info, const char*, duckdb_logical_type, "duckdb_bind_add_result_column">>(env));
+	    Napi::String::New(env, "duckdb_validity_set_row_validity"),
+	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper3Void<uint64_t*, idx_t, bool, "duckdb_validity_set_row_validity">>(env));
 	exports.Set(
-	    Napi::String::New(env, "duckdb_bind_get_parameter_count"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<idx_t, duckdb_bind_info, "duckdb_bind_get_parameter_count">>(env));
+	    Napi::String::New(env, "duckdb_validity_set_row_invalid"),
+	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2Void<uint64_t*, idx_t, "duckdb_validity_set_row_invalid">>(env));
 	exports.Set(
-	    Napi::String::New(env, "duckdb_bind_get_parameter"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_value, duckdb_bind_info, idx_t, "duckdb_bind_get_parameter">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_bind_get_named_parameter"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_value, duckdb_bind_info, const char*, "duckdb_bind_get_named_parameter">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_bind_set_cardinality"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper3Void<duckdb_bind_info, idx_t, bool, "duckdb_bind_set_cardinality">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_bind_set_error"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2Void<duckdb_bind_info, const char*, "duckdb_bind_set_error">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_function_get_extra_info"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<void*, duckdb_function_info, "duckdb_function_get_extra_info">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_function_get_bind_data"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<void*, duckdb_function_info, "duckdb_function_get_bind_data">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_function_get_init_data"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<void*, duckdb_function_info, "duckdb_function_get_init_data">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_function_get_local_init_data"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<void*, duckdb_function_info, "duckdb_function_get_local_init_data">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_function_set_error"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2Void<duckdb_function_info, const char*, "duckdb_function_set_error">>(env));
+	    Napi::String::New(env, "duckdb_validity_set_row_valid"),
+	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2Void<uint64_t*, idx_t, "duckdb_validity_set_row_valid">>(env));
 	exports.Set(
 	    Napi::String::New(env, "duckdb_appender_create"),
 	    Napi::Function::New<duckdb_node::FunctionWrappers::AsyncFunctionWrapper4<duckdb_state, duckdb_connection, const char*, const char*, duckdb_appender*, "duckdb_appender_create">>(env));
@@ -686,30 +665,6 @@ static void RegisterGenerated(Napi::Env env, Napi::Object exports,
 	exports.Set(
 	    Napi::String::New(env, "duckdb_append_data_chunk"),
 	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_state, duckdb_appender, duckdb_data_chunk, "duckdb_append_data_chunk">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_execute_tasks"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::AsyncFunctionWrapper2Void<duckdb_database, idx_t, "duckdb_execute_tasks">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_create_task_state"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<duckdb_task_state, duckdb_database, "duckdb_create_task_state">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_execute_tasks_state"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1Void<duckdb_task_state, "duckdb_execute_tasks_state">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_execute_n_tasks_state"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<idx_t, duckdb_task_state, idx_t, "duckdb_execute_n_tasks_state">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_finish_execution"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1Void<duckdb_task_state, "duckdb_finish_execution">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_task_state_is_finished"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<bool, duckdb_task_state, "duckdb_task_state_is_finished">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_destroy_task_state"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1Void<duckdb_task_state, "duckdb_destroy_task_state">>(env));
-	exports.Set(
-	    Napi::String::New(env, "duckdb_execution_is_finished"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<bool, duckdb_connection, "duckdb_execution_is_finished">>(env));
 	exports.Set(
 	    Napi::String::New(env, "duckdb_fetch_chunk"),
 	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<duckdb_data_chunk, duckdb_result, "duckdb_fetch_chunk">>(env));
