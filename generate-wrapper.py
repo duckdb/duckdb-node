@@ -248,7 +248,7 @@ if __name__ == "__main__":
 
     with tempfile.TemporaryDirectory() as tmp:
         zip_path = os.path.join(tmp, "libduckdb.zip")
-        urllib.request.urlretrieve("https://github.com/duckdb/duckdb/releases/download/v0.10.0/libduckdb-osx-universal.zip", zip_path)
+        urllib.request.urlretrieve("https://github.com/duckdb/duckdb/releases/download/v1.0.0/libduckdb-osx-universal.zip", zip_path)
         zip = zipfile.ZipFile(zip_path)
         zip.extract("libduckdb.dylib", tmp)
         shutil.copy(os.path.join(tmp, "libduckdb.dylib"), "lib/binding/libduckdb")
@@ -257,7 +257,7 @@ if __name__ == "__main__":
         zip.extract("duckdb.h", tmp)
 
         os.system("sed -i -e 's/#include <stdlib.h>/#include <stddef.h>/' %s" % os.path.join(tmp, "duckdb.h")) # until 0.10.0 has been released
-        os.system("gcc -E -D__builtin_va_list=int %s > %s" % (os.path.join(tmp, "duckdb.h"), os.path.join(tmp, "duckdb-preprocessed.h")))
+        os.system("gcc -DDUCKDB_API_NO_DEPRECATED -E -D__builtin_va_list=int %s > %s" % (os.path.join(tmp, "duckdb.h"), os.path.join(tmp, "duckdb-preprocessed.h")))
 
         cpp_result, types_result = create_func_defs(os.path.join(tmp, "duckdb-preprocessed.h"))
 

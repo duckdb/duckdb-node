@@ -23,22 +23,23 @@ export enum duckdb_type {
   DUCKDB_TYPE_TIME = 14,
   DUCKDB_TYPE_INTERVAL = 15,
   DUCKDB_TYPE_HUGEINT = 16,
-  DUCKDB_TYPE_UHUGEINT = 17,
-  DUCKDB_TYPE_VARCHAR = 18,
-  DUCKDB_TYPE_BLOB = 19,
-  DUCKDB_TYPE_DECIMAL = 20,
-  DUCKDB_TYPE_TIMESTAMP_S = 21,
-  DUCKDB_TYPE_TIMESTAMP_MS = 22,
-  DUCKDB_TYPE_TIMESTAMP_NS = 23,
-  DUCKDB_TYPE_ENUM = 24,
-  DUCKDB_TYPE_LIST = 25,
-  DUCKDB_TYPE_STRUCT = 26,
-  DUCKDB_TYPE_MAP = 27,
-  DUCKDB_TYPE_UUID = 28,
-  DUCKDB_TYPE_UNION = 29,
-  DUCKDB_TYPE_BIT = 30,
-  DUCKDB_TYPE_TIME_TZ = 31,
-  DUCKDB_TYPE_TIMESTAMP_TZ = 32,
+  DUCKDB_TYPE_UHUGEINT = 32,
+  DUCKDB_TYPE_VARCHAR = 17,
+  DUCKDB_TYPE_BLOB = 18,
+  DUCKDB_TYPE_DECIMAL = 19,
+  DUCKDB_TYPE_TIMESTAMP_S = 20,
+  DUCKDB_TYPE_TIMESTAMP_MS = 21,
+  DUCKDB_TYPE_TIMESTAMP_NS = 22,
+  DUCKDB_TYPE_ENUM = 23,
+  DUCKDB_TYPE_LIST = 24,
+  DUCKDB_TYPE_STRUCT = 25,
+  DUCKDB_TYPE_MAP = 26,
+  DUCKDB_TYPE_ARRAY = 33,
+  DUCKDB_TYPE_UUID = 27,
+  DUCKDB_TYPE_UNION = 28,
+  DUCKDB_TYPE_BIT = 29,
+  DUCKDB_TYPE_TIME_TZ = 30,
+  DUCKDB_TYPE_TIMESTAMP_TZ = 31,
 }
 export enum duckdb_state {
   DuckDBSuccess = 0,
@@ -147,14 +148,9 @@ export function duckdb_column_type(result: duckdb_result, col: number): duckdb_t
 export function duckdb_result_statement_type(result: duckdb_result): duckdb_statement_type;
 export function duckdb_column_logical_type(result: duckdb_result, col: number): duckdb_logical_type;
 export function duckdb_column_count(result: duckdb_result): number;
-export function duckdb_row_count(result: duckdb_result): number;
 export function duckdb_rows_changed(result: duckdb_result): number;
 export function duckdb_result_error(result: duckdb_result): string;
-export function duckdb_result_get_chunk(result: duckdb_result, chunk_index: number): duckdb_data_chunk;
-export function duckdb_result_is_streaming(result: duckdb_result): boolean;
-export function duckdb_result_chunk_count(result: duckdb_result): number;
 export function duckdb_result_return_type(result: duckdb_result): duckdb_result_type;
-export function duckdb_value_uhugeint(result: duckdb_result, col: number, row: number): duckdb_uhugeint;
 export function duckdb_malloc(size: number): pointer;
 export function duckdb_free(ptr: pointer): void;
 export function duckdb_vector_size(): number;
@@ -208,13 +204,11 @@ export function duckdb_bind_varchar_length(prepared_statement: duckdb_prepared_s
 export function duckdb_bind_blob(prepared_statement: duckdb_prepared_statement, param_idx: number, data: pointer, length: number): duckdb_state;
 export function duckdb_bind_null(prepared_statement: duckdb_prepared_statement, param_idx: number): duckdb_state;
 export function duckdb_execute_prepared(prepared_statement: duckdb_prepared_statement, out_result: duckdb_result): Promise<duckdb_state>;
-export function duckdb_execute_prepared_streaming(prepared_statement: duckdb_prepared_statement, out_result: duckdb_result): duckdb_state;
 export function duckdb_extract_statements(connection: duckdb_connection, query: string, out_extracted_statements: duckdb_extracted_statements): Promise<number>;
 export function duckdb_prepare_extracted_statement(connection: duckdb_connection, extracted_statements: duckdb_extracted_statements, index: number, out_prepared_statement: duckdb_prepared_statement): Promise<duckdb_state>;
 export function duckdb_extract_statements_error(extracted_statements: duckdb_extracted_statements): string;
 export function duckdb_destroy_extracted(extracted_statements: duckdb_extracted_statements): void;
 export function duckdb_pending_prepared(prepared_statement: duckdb_prepared_statement, out_result: duckdb_pending_result): duckdb_state;
-export function duckdb_pending_prepared_streaming(prepared_statement: duckdb_prepared_statement, out_result: duckdb_pending_result): duckdb_state;
 export function duckdb_destroy_pending(pending_result: duckdb_pending_result): void;
 export function duckdb_pending_error(pending_result: duckdb_pending_result): string;
 export function duckdb_pending_execute_task(pending_result: duckdb_pending_result): duckdb_pending_state;
@@ -227,11 +221,13 @@ export function duckdb_create_varchar_length(text: string, length: number): duck
 export function duckdb_create_int64(val: number): duckdb_value;
 export function duckdb_create_struct_value(type: duckdb_logical_type, values: duckdb_value): duckdb_value;
 export function duckdb_create_list_value(type: duckdb_logical_type, values: duckdb_value, value_count: number): duckdb_value;
+export function duckdb_create_array_value(type: duckdb_logical_type, values: duckdb_value, value_count: number): duckdb_value;
 export function duckdb_get_varchar(value: duckdb_value): string;
 export function duckdb_get_int64(value: duckdb_value): number;
 export function duckdb_create_logical_type(type: duckdb_type): duckdb_logical_type;
 export function duckdb_logical_type_get_alias(type: duckdb_logical_type): string;
 export function duckdb_create_list_type(type: duckdb_logical_type): duckdb_logical_type;
+export function duckdb_create_array_type(type: duckdb_logical_type, array_size: number): duckdb_logical_type;
 export function duckdb_create_map_type(key_type: duckdb_logical_type, value_type: duckdb_logical_type): duckdb_logical_type;
 export function duckdb_create_union_type(member_types: duckdb_logical_type, member_names: out_string_wrapper, member_count: number): duckdb_logical_type;
 export function duckdb_create_struct_type(member_types: duckdb_logical_type, member_names: out_string_wrapper, member_count: number): duckdb_logical_type;
@@ -245,6 +241,8 @@ export function duckdb_enum_internal_type(type: duckdb_logical_type): duckdb_typ
 export function duckdb_enum_dictionary_size(type: duckdb_logical_type): number;
 export function duckdb_enum_dictionary_value(type: duckdb_logical_type, index: number): string;
 export function duckdb_list_type_child_type(type: duckdb_logical_type): duckdb_logical_type;
+export function duckdb_array_type_child_type(type: duckdb_logical_type): duckdb_logical_type;
+export function duckdb_array_type_array_size(type: duckdb_logical_type): number;
 export function duckdb_map_type_key_type(type: duckdb_logical_type): duckdb_logical_type;
 export function duckdb_map_type_value_type(type: duckdb_logical_type): duckdb_logical_type;
 export function duckdb_struct_type_child_count(type: duckdb_logical_type): number;
@@ -271,6 +269,7 @@ export function duckdb_list_vector_get_size(vector: duckdb_vector): number;
 export function duckdb_list_vector_set_size(vector: duckdb_vector, size: number): duckdb_state;
 export function duckdb_list_vector_reserve(vector: duckdb_vector, required_capacity: number): duckdb_state;
 export function duckdb_struct_vector_get_child(vector: duckdb_vector, index: number): duckdb_vector;
+export function duckdb_array_vector_get_child(vector: duckdb_vector): duckdb_vector;
 export function duckdb_bind_get_extra_info(info: duckdb_bind_info): pointer;
 export function duckdb_bind_add_result_column(info: duckdb_bind_info, name: string, type: duckdb_logical_type): void;
 export function duckdb_bind_get_parameter_count(info: duckdb_bind_info): number;
@@ -322,7 +321,7 @@ export function duckdb_finish_execution(state: duckdb_task_state): void;
 export function duckdb_task_state_is_finished(state: duckdb_task_state): boolean;
 export function duckdb_destroy_task_state(state: duckdb_task_state): void;
 export function duckdb_execution_is_finished(con: duckdb_connection): boolean;
-export function duckdb_stream_fetch_chunk(result: duckdb_result): Promise<duckdb_data_chunk>;
+export function duckdb_fetch_chunk(result: duckdb_result): duckdb_data_chunk;
 // bindings-defined constants
 export const sizeof_bool: number;
 // bindings-defined functions

@@ -6,6 +6,7 @@
 
 static void *duckdb_node_dlopen_handle;
 
+#define DUCKDB_API_NO_DEPRECATED
 // this file contains generated template instantiations from duckdb.h
 #include "duckdb_node_generated.cpp"
 
