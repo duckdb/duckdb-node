@@ -2,6 +2,7 @@ import os from 'os';
 import * as ddb from '../..';
 import { DuckDBLogicalType } from './DuckDBLogicalType';
 import {
+  DuckDBArrayType,
   DuckDBBigIntType,
   DuckDBBitType,
   DuckDBBlobType,
@@ -349,6 +350,11 @@ export abstract class DuckDBVector<T> {
           return DuckDBMapVector.fromRawVector(vectorType, vector, itemCount);
         }
         throw new Error('DuckDBType has MAP type id but is not an instance of DuckDBMapType');
+      case DuckDBTypeId.ARRAY:
+        if (vectorType instanceof DuckDBArrayType) {
+          return DuckDBArrayVector.fromRawVector(vectorType, vector, itemCount);
+        }
+        throw new Error('DuckDBType has ARRAY type id but is not an instance of DuckDBArrayType');
       case DuckDBTypeId.UUID:
         return DuckDBUUIDVector.fromRawVector(vector, itemCount);
       case DuckDBTypeId.UNION:
@@ -399,7 +405,7 @@ export class DuckDBBooleanVector extends DuckDBVector<boolean> {
   }
   public override slice(offset: number, length: number): DuckDBBooleanVector {
     return new DuckDBBooleanVector(
-      new DataView(this.dataView.buffer, offset * ddb.sizeof_bool, length * ddb.sizeof_bool),
+      new DataView(this.dataView.buffer, this.dataView.byteOffset + offset * ddb.sizeof_bool, length * ddb.sizeof_bool),
       this.validity.slice(offset),
       length,
     );
@@ -816,7 +822,7 @@ export class DuckDBIntervalVector extends DuckDBVector<DuckDBInterval> {
   }
   public override slice(offset: number, length: number): DuckDBIntervalVector {
     return new DuckDBIntervalVector(
-      new DataView(this.dataView.buffer, offset * 16, length * 16),
+      new DataView(this.dataView.buffer, this.dataView.byteOffset + offset * 16, length * 16),
       this.validity.slice(offset),
       length,
     );
@@ -850,7 +856,7 @@ export class DuckDBHugeIntVector extends DuckDBVector<bigint> {
   }
   public override slice(offset: number, length: number): DuckDBHugeIntVector {
     return new DuckDBHugeIntVector(
-      new DataView(this.dataView.buffer, offset * 16, length * 16),
+      new DataView(this.dataView.buffer, this.dataView.byteOffset + offset * 16, length * 16),
       this.validity.slice(offset),
       length,
     );
@@ -884,7 +890,7 @@ export class DuckDBUHugeIntVector extends DuckDBVector<bigint> {
   }
   public override slice(offset: number, length: number): DuckDBUHugeIntVector {
     return new DuckDBUHugeIntVector(
-      new DataView(this.dataView.buffer, offset * 16, length * 16),
+      new DataView(this.dataView.buffer, this.dataView.byteOffset + offset * 16, length * 16),
       this.validity.slice(offset),
       length,
     );
@@ -918,7 +924,7 @@ export class DuckDBVarCharVector extends DuckDBVector<string> {
   }
   public override slice(offset: number, length: number): DuckDBVarCharVector {
     return new DuckDBVarCharVector(
-      new DataView(this.dataView.buffer, offset * 16, length * 16),
+      new DataView(this.dataView.buffer, this.dataView.byteOffset + offset * 16, length * 16),
       this.validity.slice(offset),
       length,
     );
@@ -952,7 +958,7 @@ export class DuckDBBlobVector extends DuckDBVector<Uint8Array> {
   }
   public override slice(offset: number, length: number): DuckDBBlobVector {
     return new DuckDBBlobVector(
-      new DataView(this.dataView.buffer, offset * 16, length * 16),
+      new DataView(this.dataView.buffer, this.dataView.byteOffset + offset * 16, length * 16),
       this.validity.slice(offset),
       length,
     );
@@ -992,7 +998,7 @@ export class DuckDBDecimal2Vector extends DuckDBVector<DuckDBSmallDecimal> {
   public override slice(offset: number, length: number): DuckDBDecimal2Vector {
     return new DuckDBDecimal2Vector(
       this.decimalType,
-      new DataView(this.dataView.buffer, offset * 2, length * 2),
+      new DataView(this.dataView.buffer, this.dataView.byteOffset + offset * 2, length * 2),
       this.validity.slice(offset),
       length,
     );
@@ -1032,7 +1038,7 @@ export class DuckDBDecimal4Vector extends DuckDBVector<DuckDBSmallDecimal> {
   public override slice(offset: number, length: number): DuckDBDecimal4Vector {
     return new DuckDBDecimal4Vector(
       this.decimalType,
-      new DataView(this.dataView.buffer, offset * 4, length * 4),
+      new DataView(this.dataView.buffer, this.dataView.byteOffset + offset * 4, length * 4),
       this.validity.slice(offset),
       length,
     );
@@ -1072,7 +1078,7 @@ export class DuckDBDecimal8Vector extends DuckDBVector<DuckDBLargeDecimal> {
   public override slice(offset: number, length: number): DuckDBDecimal8Vector {
     return new DuckDBDecimal8Vector(
       this.decimalType,
-      new DataView(this.dataView.buffer, offset * 8, length * 8),
+      new DataView(this.dataView.buffer, this.dataView.byteOffset + offset * 8, length * 8),
       this.validity.slice(offset),
       length,
     );
@@ -1112,7 +1118,7 @@ export class DuckDBDecimal16Vector extends DuckDBVector<DuckDBLargeDecimal> {
   public override slice(offset: number, length: number): DuckDBDecimal16Vector {
     return new DuckDBDecimal16Vector(
       this.decimalType,
-      new DataView(this.dataView.buffer, offset * 16, length * 16),
+      new DataView(this.dataView.buffer, this.dataView.byteOffset + offset * 16, length * 16),
       this.validity.slice(offset),
       length,
     );
@@ -1472,6 +1478,59 @@ export class DuckDBMapVector extends DuckDBVector<readonly DuckDBMapEntry[]> {
   }
 }
 
+export class DuckDBArrayVector<TValue = any> extends DuckDBVector<DuckDBVector<TValue>> {
+  private readonly arrayType: DuckDBArrayType;
+  private readonly validity: DuckDBValidity;
+  private readonly childData: DuckDBVector<TValue>;
+  private readonly _itemCount: number;
+  constructor(
+    arrayType: DuckDBArrayType,
+    validity: DuckDBValidity,
+    childData: DuckDBVector<TValue>,
+    itemCount: number,
+  ) {
+    super();
+    this.arrayType = arrayType;
+    this.validity = validity;
+    this.childData = childData;
+    this._itemCount = itemCount;
+  }
+  static fromRawVector(arrayType: DuckDBArrayType, vector: ddb.duckdb_vector, itemCount: number): DuckDBArrayVector {
+    const validity = DuckDBValidity.fromVector(vector, itemCount);
+    const child_vector = ddb.duckdb_array_vector_get_child(vector);
+    const childItemsPerArray = DuckDBArrayVector.itemSize(arrayType) * arrayType.length;
+    const childData = DuckDBVector.create(child_vector, itemCount * childItemsPerArray, arrayType.valueType);
+    return new DuckDBArrayVector(arrayType, validity, childData, itemCount);
+  }
+  private static itemSize(arrayType: DuckDBArrayType): number {
+    if (arrayType.valueType instanceof DuckDBArrayType) {
+      return DuckDBArrayVector.itemSize(arrayType.valueType);
+    } else {
+      return 1;
+    }
+  }
+  public override get type(): DuckDBArrayType {
+    return this.arrayType;
+  }
+  public override get itemCount(): number {
+    return this._itemCount;
+  }
+  public override getItem(itemIndex: number): DuckDBVector<TValue> | null {
+    if (!this.validity.itemValid(itemIndex)) {
+      return null;
+    }
+    return this.childData.slice(itemIndex * this.arrayType.length, this.arrayType.length);
+  }
+  public override slice(offset: number, length: number): DuckDBArrayVector<TValue> {
+    return new DuckDBArrayVector<TValue>(
+      this.arrayType,
+      this.validity.slice(offset),
+      this.childData.slice(offset * this.arrayType.length, length * this.arrayType.length),
+      length,
+    );
+  }
+}
+
 export class DuckDBUUIDVector extends DuckDBVector<bigint> {
   private readonly dataView: DataView;
   private readonly validity: DuckDBValidity;
@@ -1499,7 +1558,7 @@ export class DuckDBUUIDVector extends DuckDBVector<bigint> {
   }
   public override slice(offset: number, length: number): DuckDBUUIDVector {
     return new DuckDBUUIDVector(
-      new DataView(this.dataView.buffer, offset * 16, length * 16),
+      new DataView(this.dataView.buffer, this.dataView.byteOffset + offset * 16, length * 16),
       this.validity.slice(offset),
       length,
     );
@@ -1659,7 +1718,7 @@ export class DuckDBBitVector extends DuckDBVector<DuckDBBitValue> {
   }
   public override slice(offset: number, length: number): DuckDBBitVector {
     return new DuckDBBitVector(
-      new DataView(this.dataView.buffer, offset * 16, length * 16),
+      new DataView(this.dataView.buffer, this.dataView.byteOffset + offset * 16, length * 16),
       this.validity.slice(offset),
       length,
     );

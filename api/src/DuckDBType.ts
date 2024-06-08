@@ -215,6 +215,16 @@ export class DuckDBMapType extends BaseDuckDBType {
   }
 }
 
+export class DuckDBArrayType extends BaseDuckDBType {
+  public readonly valueType: DuckDBType;
+  public readonly length: number;
+  public constructor(valueType: DuckDBType, length: number) {
+    super(DuckDBTypeId.ARRAY);
+    this.valueType = valueType;
+    this.length = length;
+  }
+}
+
 export class DuckDBUUIDType extends BaseDuckDBType {
   private constructor() {
     super(DuckDBTypeId.UUID);
@@ -284,6 +294,7 @@ export type DuckDBType =
   | DuckDBListType
   | DuckDBStructType
   | DuckDBMapType
+  | DuckDBArrayType
   | DuckDBUUIDType
   | DuckDBUnionType
   | DuckDBBitType

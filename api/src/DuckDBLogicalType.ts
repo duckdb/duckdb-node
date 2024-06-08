@@ -1,5 +1,6 @@
 import * as ddb from '../..';
 import {
+  DuckDBArrayType,
   DuckDBBigIntType,
   DuckDBBitType,
   DuckDBBlobType,
@@ -55,10 +56,12 @@ export class DuckDBLogicalType {
         return new DuckDBEnumLogicalType(logical_type);
       case ddb.duckdb_type.DUCKDB_TYPE_LIST:
         return new DuckDBListLogicalType(logical_type);
-      case ddb.duckdb_type.DUCKDB_TYPE_MAP:
-        return new DuckDBMapLogicalType(logical_type);
       case ddb.duckdb_type.DUCKDB_TYPE_STRUCT:
         return new DuckDBStructLogicalType(logical_type);
+      case ddb.duckdb_type.DUCKDB_TYPE_MAP:
+        return new DuckDBMapLogicalType(logical_type);
+      case ddb.duckdb_type.DUCKDB_TYPE_ARRAY:
+        return new DuckDBArrayLogicalType(logical_type);
       case ddb.duckdb_type.DUCKDB_TYPE_UNION:
         return new DuckDBUnionLogicalType(logical_type);
       default:
@@ -75,12 +78,15 @@ export class DuckDBLogicalType {
   public static createList(valueType: DuckDBLogicalType): DuckDBListLogicalType {
     return new DuckDBListLogicalType(ddb.duckdb_create_list_type(valueType.logical_type));
   }
-  public static createMap(keyType: DuckDBLogicalType, valueType: DuckDBLogicalType): DuckDBMapLogicalType {
-    return new DuckDBMapLogicalType(ddb.duckdb_create_map_type(keyType.logical_type, valueType.logical_type));
-  }
   public static createStruct(entries: readonly DuckDBLogicalStructEntry[]): DuckDBStructLogicalType {
     // TODO: C API takes raw pointers (lists of names and types)
     throw new Error('not implemented');
+  }
+  public static createMap(keyType: DuckDBLogicalType, valueType: DuckDBLogicalType): DuckDBMapLogicalType {
+    return new DuckDBMapLogicalType(ddb.duckdb_create_map_type(keyType.logical_type, valueType.logical_type));
+  }
+  public static createArray(valueType: DuckDBLogicalType, length: number): DuckDBArrayLogicalType {
+    return new DuckDBArrayLogicalType(ddb.duckdb_create_array_type(valueType.logical_type, length));
   }
   public static createUnion(alternatives: readonly DuckDBLogicalUnionAlternative[]): DuckDBUnionLogicalType {
     // TODO: C API takes raw pointers (lists of tags and types)
@@ -211,18 +217,6 @@ export class DuckDBListLogicalType extends DuckDBLogicalType {
   }
 }
 
-export class DuckDBMapLogicalType extends DuckDBLogicalType {
-  public get keyType(): DuckDBLogicalType {
-    return DuckDBLogicalType.create(ddb.duckdb_map_type_key_type(this.logical_type));
-  }
-  public get valueType(): DuckDBLogicalType {
-    return DuckDBLogicalType.create(ddb.duckdb_map_type_value_type(this.logical_type));
-  }
-  public override asType(): DuckDBMapType {
-    return new DuckDBMapType(this.keyType.asType(), this.valueType.asType());
-  }
-}
-
 export interface DuckDBLogicalStructEntry {
   readonly name: string;
   readonly valueType: DuckDBLogicalType;
@@ -253,6 +247,30 @@ export class DuckDBStructLogicalType extends DuckDBLogicalType {
       name,
       valueType: valueType.asType(),
     })));
+  }
+}
+
+export class DuckDBMapLogicalType extends DuckDBLogicalType {
+  public get keyType(): DuckDBLogicalType {
+    return DuckDBLogicalType.create(ddb.duckdb_map_type_key_type(this.logical_type));
+  }
+  public get valueType(): DuckDBLogicalType {
+    return DuckDBLogicalType.create(ddb.duckdb_map_type_value_type(this.logical_type));
+  }
+  public override asType(): DuckDBMapType {
+    return new DuckDBMapType(this.keyType.asType(), this.valueType.asType());
+  }
+}
+
+export class DuckDBArrayLogicalType extends DuckDBLogicalType {
+  public get valueType(): DuckDBLogicalType {
+    return DuckDBLogicalType.create(ddb.duckdb_array_type_child_type(this.logical_type));
+  }
+  public get length(): number {
+    return ddb.duckdb_array_type_array_size(this.logical_type);
+  }
+  public override asType(): DuckDBListType {
+    return new DuckDBArrayType(this.valueType.asType(), this.length);
   }
 }
 

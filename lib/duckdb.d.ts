@@ -301,7 +301,7 @@ export function duckdb_append_varchar_length(appender: duckdb_appender, val: str
 export function duckdb_append_blob(appender: duckdb_appender, data: pointer, length: number): duckdb_state;
 export function duckdb_append_null(appender: duckdb_appender): duckdb_state;
 export function duckdb_append_data_chunk(appender: duckdb_appender, chunk: duckdb_data_chunk): duckdb_state;
-export function duckdb_fetch_chunk(result: duckdb_result): duckdb_data_chunk;
+export function duckdb_fetch_chunk(result: duckdb_result): Promise<duckdb_data_chunk>;
 // bindings-defined constants
 export const sizeof_bool: number;
 // bindings-defined functions

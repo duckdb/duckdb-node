@@ -16,7 +16,7 @@ async_functions = [
     'duckdb_query',
     'duckdb_prepare',
     'duckdb_execute_prepared',
-    'duckdb_stream_fetch_chunk',
+    'duckdb_fetch_chunk',
     'duckdb_execute_tasks',
     'duckdb_appender_create',
     'duckdb_appender_flush',

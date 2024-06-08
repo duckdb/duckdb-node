@@ -667,5 +667,5 @@ static void RegisterGenerated(Napi::Env env, Napi::Object exports,
 	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper2<duckdb_state, duckdb_appender, duckdb_data_chunk, "duckdb_append_data_chunk">>(env));
 	exports.Set(
 	    Napi::String::New(env, "duckdb_fetch_chunk"),
-	    Napi::Function::New<duckdb_node::FunctionWrappers::FunctionWrapper1<duckdb_data_chunk, duckdb_result, "duckdb_fetch_chunk">>(env));
+	    Napi::Function::New<duckdb_node::FunctionWrappers::AsyncFunctionWrapper1<duckdb_data_chunk, duckdb_result, "duckdb_fetch_chunk">>(env));
 }
