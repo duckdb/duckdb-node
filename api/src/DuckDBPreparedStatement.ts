@@ -1,6 +1,6 @@
 import * as ddb from '../..';
-import { DuckDBPendingMaterializedResult, DuckDBPendingStreamingResult } from './DuckDBPendingResult';
-import { DuckDBMaterializedResult } from './DuckDBResult';
+import { DuckDBPendingResult } from './DuckDBPendingResult';
+import { DuckDBResult } from './DuckDBResult';
 import { DuckDBTypeId } from './DuckDBTypeId';
 import { throwOnFailure } from './throwOnFailure';
 
@@ -90,25 +90,18 @@ export class DuckDBPreparedStatement {
     throwOnFailure(ddb.duckdb_bind_null(this.prepared_statement, parameterIndex),
       'Failed to bind null parameter', () => `index: ${parameterIndex}`);
   }
-  public async run(): Promise<DuckDBMaterializedResult> {
+  public async run(): Promise<DuckDBResult> {
     const result = new ddb.duckdb_result;
     throwOnFailure(await ddb.duckdb_execute_prepared(this.prepared_statement, result),
       'Failed to execute prepared statement', () => ddb.duckdb_result_error(result),
       () => ddb.duckdb_destroy_result(result));
-    return new DuckDBMaterializedResult(result);
+    return new DuckDBResult(result);
   }
-  public start(): DuckDBPendingMaterializedResult {
+  public start(): DuckDBPendingResult {
     const pending_result = new ddb.duckdb_pending_result;
     throwOnFailure(ddb.duckdb_pending_prepared(this.prepared_statement, pending_result),
       'Failed to start prepared statement', () => ddb.duckdb_pending_error(pending_result),
       () => ddb.duckdb_destroy_pending(pending_result));
-    return new DuckDBPendingMaterializedResult(pending_result);
-  }
-  public startStreaming(): DuckDBPendingStreamingResult {
-    const pending_result = new ddb.duckdb_pending_result;
-    throwOnFailure(ddb.duckdb_pending_prepared_streaming(this.prepared_statement, pending_result),
-      'Failed to start prepared statement (streaming)', () => ddb.duckdb_pending_error(pending_result),
-      () => ddb.duckdb_destroy_pending(pending_result));
-    return new DuckDBPendingStreamingResult(pending_result);
+    return new DuckDBPendingResult(pending_result);
   }
 }

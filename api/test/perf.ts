@@ -8,7 +8,7 @@ async function measureQuery(connection: DuckDBConnection, query: string): Promis
   const startTime = performance.now();
   const prepared = await connection.prepare(query);
   // const preparedTime = performance.now();
-  const pending = prepared.startStreaming();
+  const pending = prepared.start();
   const result = await pending.getResult();
   // const resultTime = performance.now();
   let valueCount = 0;
@@ -284,6 +284,28 @@ describe('perf', () => {
     console.log(await measureQueryMultiple(
       connection,
       `select ['a'] from range(1000000)`,
+      5,
+    ));
+    connection.dispose();
+    instance.dispose();
+  });
+  it('of array[int]', async () => {
+    const instance = await DuckDBInstance.create();
+    const connection = await instance.connect();
+    console.log(await measureQueryMultiple(
+      connection,
+      `select array_value(1) from range(1000000)`,
+      5,
+    ));
+    connection.dispose();
+    instance.dispose();
+  });
+  it('of array[varchar]', async () => {
+    const instance = await DuckDBInstance.create();
+    const connection = await instance.connect();
+    console.log(await measureQueryMultiple(
+      connection,
+      `select array_value('a') from range(1000000)`,
       5,
     ));
     connection.dispose();

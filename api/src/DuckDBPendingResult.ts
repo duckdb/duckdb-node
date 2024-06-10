@@ -1,5 +1,5 @@
 import * as ddb from '../..';
-import { DuckDBMaterializedResult, DuckDBStreamingResult } from './DuckDBResult';
+import { DuckDBResult } from './DuckDBResult';
 import { throwOnFailure } from './throwOnFailure';
 
 // Values match similar enum in C API.
@@ -9,8 +9,8 @@ export enum DuckDBPendingResultState {
   NO_TASKS_AVAILABLE = 3,
 }
 
-export abstract class DuckDBPendingResult {
-  protected readonly pending_result: ddb.duckdb_pending_result;
+export class DuckDBPendingResult {
+  private readonly pending_result: ddb.duckdb_pending_result;
   constructor(pending_result: ddb.duckdb_pending_result) {
     this.pending_result = pending_result;
   }
@@ -32,22 +32,10 @@ export abstract class DuckDBPendingResult {
         throw new Error(`Unexpected pending state: ${pending_state}`);
     }
   }
-}
-
-export class DuckDBPendingMaterializedResult extends DuckDBPendingResult {
-  public async getResult(): Promise<DuckDBMaterializedResult> {
+  public async getResult(): Promise<DuckDBResult> {
     const result = new ddb.duckdb_result;
     throwOnFailure(await ddb.duckdb_execute_pending(this.pending_result, result),
       'Failed to execute pending materialized result', () => ddb.duckdb_pending_error(this.pending_result));
-    return new DuckDBMaterializedResult(result);
-  }
-}
-
-export class DuckDBPendingStreamingResult extends DuckDBPendingResult {
-  public async getResult(): Promise<DuckDBStreamingResult> {
-    const result = new ddb.duckdb_result;
-    throwOnFailure(await ddb.duckdb_execute_pending(this.pending_result, result),
-      'Failed to execute pending streaming result', () => ddb.duckdb_pending_error(this.pending_result));
-    return new DuckDBStreamingResult(result);
+    return new DuckDBResult(result);
   }
 }
