@@ -46,7 +46,7 @@ jobs:
       DUCKDB_NODE_BUILD_CACHE: 0
     strategy:
       matrix:
-        electron: [ '18.3.0' ]
+        electron: [ '18.3.0', '20.0.0' ]
         target_arch: [ x64, arm64 ]
         isRelease:
           - ${{ startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' }}
@@ -101,7 +101,7 @@ jobs:
     needs: set-up-npm
     strategy:
       matrix:
-        electron: [ '18.3.0' ]
+        electron: [ '18.3.0', '20.0.0' ]
         target_arch: [ arm64 ]
         isRelease:
           - ${{ startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' }}
@@ -149,7 +149,7 @@ jobs:
     needs: set-up-npm
     strategy:
       matrix:
-        electron: [ '18.3.0' ]
+        electron: [ '18.3.0', '20.0.0' ]
         target_arch: [ x64 ]
         isRelease:
           - ${{ startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' }}
@@ -202,7 +202,7 @@ jobs:
     strategy:
       matrix:
         target_arch: [ arm64 ]
-        electron: [ '18.3.0' ]
+        electron: [ '18.3.0', '20.0.0' ]
         isRelease:
           - ${{ startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' }}
   
