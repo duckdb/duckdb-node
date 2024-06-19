@@ -116,7 +116,7 @@ jobs:
         run: ./scripts/node_build.sh ${{ matrix.node }}
 
   osx-nodejs-arm64:
-    name: node.js OSX
+    name: node.js OSX arm64
     runs-on: macos-14
     needs: set-up-npm
     continue-on-error: ${{ matrix.node != '18' && matrix.node != '20' && matrix.node != '21' }}
@@ -179,7 +179,7 @@ jobs:
         run: ./scripts/node_build.sh ${{ matrix.node }}
 
   osx-nodejs-x64:
-    name: node.js OSX
+    name: node.js OSX x64
     runs-on: macos-13
     needs: set-up-npm
     continue-on-error: ${{ matrix.node != '18' && matrix.node != '20' && matrix.node != '21' }}
@@ -251,7 +251,7 @@ jobs:
 
     strategy:
       matrix:
-        node: [ '16', '17', '18', '19', '20', '21']
+        node: [ '16', '17', '18', '19', '20', '21', '22' ]
         isRelease:
           - ${{ startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' }}
         exclude:
