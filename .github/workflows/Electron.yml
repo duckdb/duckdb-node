@@ -37,19 +37,36 @@ jobs:
           DUCKDB_NODE_BUILD_CACHE: 0  # create a standalone package
           NODE_AUTH_TOKEN: ${{secrets.NODE_AUTH_TOKEN}}
 
+  # From `npm show electron time --json` and https://www.electronjs.org/docs/latest/tutorial/electron-timelines
+  set-up-electron-versions:
+    name: Set up Electron version
+    runs-on: ubuntu-20.04
+    outputs:
+      matrix: ${{ steps.setup.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - id: setup
+        run: |
+          echo "matrix=$(jq -c . < scripts/electron-versions.json)" >> $GITHUB_OUTPUT
+      
+      - name: Check
+        run: |
+          jq . <<< '${{ steps.setup.outputs.matrix }}'
+
   linux-electron:
     name: Electron Linux
     runs-on: ubuntu-20.04
-    needs: set-up-npm
+    needs: [set-up-npm, set-up-electron-versions]
     env:
       TARGET_ARCH: ${{ matrix.target_arch }}
       DUCKDB_NODE_BUILD_CACHE: 0
     strategy:
-      matrix:
-        electron: [ '18.3.0', '20.0.0' ]
+      matrix: 
+        version: ${{ fromJSON(needs.set-up-electron-versions.outputs.matrix) }}
         target_arch: [ x64, arm64 ]
-        isRelease:
-          - ${{ startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' }}
 
     steps:
       - uses: actions/checkout@v3
@@ -75,7 +92,7 @@ jobs:
         uses: hendrikmuhs/ccache-action@main
         with:
           key: ${{ github.job }}
-          save: ${{ ( github.ref == 'refs/heads/main' || github.repository != 'duckdb/duckdb-node' ) && ( matrix.node == '19' ) }}
+          save: ${{ ( github.ref == 'refs/heads/main' || github.repository != 'duckdb/duckdb-node' ) && startsWith(matrix.version.node, '19') }}
 
       - name: Setup
         shell: bash
@@ -89,11 +106,11 @@ jobs:
         env:
           npm_config_yes: true
 
-      - name: Electron ${{ matrix.electron }}
+      - name: Electron ${{ matrix.version.electron }}
         shell: bash
-        run: ./scripts/node_build.sh 18
+        run: ./scripts/node_build.sh ${{ matrix.version.node }}
         env:
-          ELECTRON_VERSION: {{{ matrix.electron }}}
+          ELECTRON_VERSION: {{{ matrix.version.electron }}}
 
   osx-electron-arm64:
     name: Electron OSX
@@ -101,10 +118,8 @@ jobs:
     needs: set-up-npm
     strategy:
       matrix:
-        electron: [ '18.3.0', '20.0.0' ]
+        version: ${{ fromJSON(needs.set-up-electron-versions.outputs.matrix) }}
         target_arch: [ arm64 ]
-        isRelease:
-          - ${{ startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' }}
   
     env:
       TARGET_ARCH: ${{ matrix.target_arch }}
@@ -123,7 +138,7 @@ jobs:
         uses: hendrikmuhs/ccache-action@main
         with:
           key: ${{ github.job }}-${{ matrix.target_arch }}
-          save: ${{ ( github.ref == 'refs/heads/main' || github.repository != 'duckdb/duckdb-node' ) && ( matrix.node == '19' ) }}
+          save: ${{ ( github.ref == 'refs/heads/main' || github.repository != 'duckdb/duckdb-node' ) && startsWith(matrix.version.node, '19') }}
   
       - name: Downgrade curl # fixes a bug with the brew curl that lead to failed downloads
         shell: bash
@@ -137,11 +152,11 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{secrets.NODE_AUTH_TOKEN}}
   
-      - name: Electron ${{ matrix.electron }}
+      - name: Electron ${{ matrix.version.electron }}
         shell: bash
         run: ./scripts/node_build.sh 18
         env: 
-          ELECTRON_VERSION: {{{ matrix.electron }}}
+          ELECTRON_VERSION: {{{ matrix.version.electron }}}
   
   osx-electron-x64:
     name: Electron OSX
@@ -149,10 +164,8 @@ jobs:
     needs: set-up-npm
     strategy:
       matrix:
-        electron: [ '18.3.0', '20.0.0' ]
+        version: ${{ fromJSON(needs.set-up-electron-versions.outputs.matrix) }}
         target_arch: [ x64 ]
-        isRelease:
-          - ${{ startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' }}
   
     env:
       TARGET_ARCH: ${{ matrix.target_arch }}
@@ -171,7 +184,7 @@ jobs:
         uses: hendrikmuhs/ccache-action@main
         with:
           key: ${{ github.job }}-${{ matrix.target_arch }}
-          save: ${{ ( github.ref == 'refs/heads/main' || github.repository != 'duckdb/duckdb-node' ) && ( matrix.node == '19' ) }}
+          save: ${{ ( github.ref == 'refs/heads/main' || github.repository != 'duckdb/duckdb-node' ) && startsWith(matrix.version.node, '19') }}
   
       - name: Downgrade curl # fixes a bug with the brew curl that lead to failed downloads
         shell: bash
@@ -185,26 +198,24 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{secrets.NODE_AUTH_TOKEN}}
   
-      - name: Electron ${{ matrix.electron }}
+      - name: Electron ${{ matrix.version.electron }}
         shell: bash
         run: ./scripts/node_build.sh 18
         env:
-          ELECTRON_VERSION: {{{ matrix.electron }}}
+          ELECTRON_VERSION: {{{ matrix.version.electron }}}
   
   win-nodejs:
     name: node.js Windows
     runs-on: windows-latest
     needs: set-up-npm
-    continue-on-error: ${{ matrix.node != '18' && matrix.node != '20' && matrix.node != '21' }}
+    continue-on-error: ${{ !startsWith(matrix.version.node, '18') && !startsWith(matrix.version.node, '20') && !startsWith(matrix.version.node, '21') }}
     env:
       npm_config_msvs_version: 2019
   
     strategy:
       matrix:
         target_arch: [ arm64 ]
-        electron: [ '18.3.0', '20.0.0' ]
-        isRelease:
-          - ${{ startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' }}
+        version: ${{ fromJSON(needs.set-up-electron-versions.outputs.matrix) }}
   
     steps:
       # Default Python (3.12) doesn't have support for distutils
@@ -242,7 +253,7 @@ jobs:
       - name: Setup Ccache
         uses: hendrikmuhs/ccache-action@main
         with:
-          key: ${{ github.job }}-${{ matrix.node }}
+          key: ${{ github.job }}-${{ matrix.version.node }}
           save: ${{ github.ref == 'refs/heads/main' || github.repository != 'duckdb/duckdb-node' }}
           variant: sccache
   
@@ -250,7 +261,7 @@ jobs:
         shell: bash
         run: ./scripts/node_build_win.sh
         env:
-          ELECTRON_VERSION: {{{ matrix.electron }}}
+          ELECTRON_VERSION: {{{ matrix.version.electron }}}
 
   test_matrix:
     needs:
