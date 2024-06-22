@@ -8,6 +8,18 @@ which node
 
 make clean
 
+if [ -n "$ELECTRON_VERSION" ] ; then
+    # Electron's version.
+    export npm_config_target="$ELECTRON_VERSION"
+    # The architecture of your machine
+    export npm_config_arch="$TARGET_ARCH"
+    export npm_config_target_arch="$TARGET_ARCH"
+    # Download headers for Electron.
+    export npm_config_disturl=https://electronjs.org/headers
+    # Tell node-pre-gyp that we are building for Electron.
+    export npm_config_runtime=electron
+fi
+
 npm install --build-from-source
 # no tests on releases
 if [[ ! "$GITHUB_REF" =~ ^(refs/tags/v.+)$ ]] ; then
