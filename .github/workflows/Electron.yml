@@ -156,7 +156,7 @@ jobs:
         shell: bash
         run: ./scripts/node_build.sh 18
         env: 
-          ELECTRON_VERSION: {{{ matrix.version.electron }}}
+          ELECTRON_VERSION: ${{ matrix.version.electron }}
   
   osx-electron-x64:
     name: Electron OSX
