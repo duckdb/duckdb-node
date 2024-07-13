@@ -261,7 +261,7 @@ jobs:
         shell: bash
         run: ./scripts/node_build_win.sh
         env:
-          ELECTRON_VERSION: {{{ matrix.version.electron }}}
+          ELECTRON_VERSION: ${{ matrix.version.electron }}
 
   test_matrix:
     needs:
