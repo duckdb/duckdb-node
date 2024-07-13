@@ -204,7 +204,7 @@ jobs:
         env:
           ELECTRON_VERSION: ${{ matrix.version.electron }}
   
-  win-nodejs:
+  win-electron:
     name: node.js Windows
     runs-on: windows-latest
     needs: set-up-npm
