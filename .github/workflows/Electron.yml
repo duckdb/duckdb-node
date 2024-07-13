@@ -202,7 +202,7 @@ jobs:
         shell: bash
         run: ./scripts/node_build.sh 18
         env:
-          ELECTRON_VERSION: {{{ matrix.version.electron }}}
+          ELECTRON_VERSION: ${{ matrix.version.electron }}
   
   win-nodejs:
     name: node.js Windows
