@@ -110,7 +110,7 @@ jobs:
         shell: bash
         run: ./scripts/node_build.sh ${{ matrix.version.node }}
         env:
-          ELECTRON_VERSION: {{{ matrix.version.electron }}}
+          ELECTRON_VERSION: ${{ matrix.version.electron }}
 
   osx-electron-arm64:
     name: Electron OSX
