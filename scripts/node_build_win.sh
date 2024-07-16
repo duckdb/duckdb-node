@@ -11,9 +11,11 @@ make clean
 if [ -n "$ELECTRON_VERSION" ] ; then
     # Electron's version.
     export npm_config_target="$ELECTRON_VERSION"
-    # The architecture of your machine
-    export npm_config_arch="$TARGET_ARCH"
-    export npm_config_target_arch="$TARGET_ARCH"
+    if [ -n "$TARGET_ARCH" ] ; then
+        # The architecture of your machine
+        export npm_config_arch="$TARGET_ARCH"
+        export npm_config_target_arch="$TARGET_ARCH"
+    fi
     # Download headers for Electron.
     export npm_config_disturl=https://electronjs.org/headers
     # Tell node-pre-gyp that we are building for Electron.
