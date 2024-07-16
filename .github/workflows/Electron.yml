@@ -17,6 +17,7 @@ env:
 
 jobs:
   set-up-npm:
+    if: false
     name: Set up NPM
     runs-on: ubuntu-20.04
     env:
