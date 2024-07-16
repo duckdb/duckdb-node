@@ -115,7 +115,7 @@ jobs:
   osx-electron-arm64:
     name: Electron OSX
     runs-on: macos-14
-    needs: set-up-npm
+    needs: [set-up-npm, set-up-electron-versions]
     strategy:
       matrix:
         version: ${{ fromJSON(needs.set-up-electron-versions.outputs.matrix) }}
@@ -161,7 +161,7 @@ jobs:
   osx-electron-x64:
     name: Electron OSX
     runs-on: macos-13
-    needs: set-up-npm
+    needs: [set-up-npm, set-up-electron-versions]
     strategy:
       matrix:
         version: ${{ fromJSON(needs.set-up-electron-versions.outputs.matrix) }}
@@ -205,16 +205,15 @@ jobs:
           ELECTRON_VERSION: ${{ matrix.version.electron }}
   
   win-electron:
-    name: node.js Windows
+    name: Electron Windows
     runs-on: windows-latest
-    needs: set-up-npm
+    needs: [set-up-npm, set-up-electron-versions]
     continue-on-error: ${{ !startsWith(matrix.version.node, '18') && !startsWith(matrix.version.node, '20') && !startsWith(matrix.version.node, '21') }}
     env:
       npm_config_msvs_version: 2019
   
     strategy:
       matrix:
-        target_arch: [ arm64 ]
         version: ${{ fromJSON(needs.set-up-electron-versions.outputs.matrix) }}
   
     steps:
