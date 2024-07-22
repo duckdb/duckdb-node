@@ -1,0 +1,293 @@
+name: Electron
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+  repository_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.head_ref || '' }}-${{ github.base_ref || '' }}-${{ github.ref != 'refs/heads/main' || github.sha }}
+  cancel-in-progress: false
+
+env:
+  GH_TOKEN: ${{ secrets.GH_TOKEN }}
+  AWS_ACCESS_KEY_ID: ${{secrets.S3_DUCKDB_NODE_ID}}
+  AWS_SECRET_ACCESS_KEY: ${{secrets.S3_DUCKDB_NODE_KEY}}
+  AWS_DEFAULT_REGION: us-east-1
+
+jobs:
+  set-up-npm:
+    if: false
+    name: Set up NPM
+    runs-on: ubuntu-20.04
+    env:
+      DUCKDB_NODE_BUILD_CACHE: 0
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Setup NPM
+        shell: bash
+        run: ./scripts/node_version.sh upload
+        env:
+          DUCKDB_NODE_BUILD_CACHE: 0  # create a standalone package
+          NODE_AUTH_TOKEN: ${{secrets.NODE_AUTH_TOKEN}}
+
+  # From `npm show electron time --json` and https://www.electronjs.org/docs/latest/tutorial/electron-timelines
+  set-up-electron-versions:
+    name: Set up Electron version
+    runs-on: ubuntu-20.04
+    outputs:
+      matrix: ${{ steps.setup.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - id: setup
+        run: |
+          echo "matrix=$(jq -c '[.[] | select(.electron == ("18.3.15", "22.3.27"))]' < scripts/electron-versions.json)" >> $GITHUB_OUTPUT
+      
+      - name: Check
+        run: |
+          jq . <<< '${{ steps.setup.outputs.matrix }}'
+
+  linux-electron:
+    name: Electron Linux
+    runs-on: ubuntu-20.04
+    needs: [set-up-npm, set-up-electron-versions]
+    env:
+      TARGET_ARCH: ${{ matrix.target_arch }}
+      DUCKDB_NODE_BUILD_CACHE: 0
+    strategy:
+      matrix: 
+        version: ${{ fromJSON(needs.set-up-electron-versions.outputs.matrix) }}
+        target_arch: [ x64, arm64 ]
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      # Default Python (3.12) doesn't have support for distutils
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Update apt
+        shell: bash
+        run: |
+          sudo apt-get update -y
+
+      - name: Install requirements
+        shell: bash
+        run: |
+          sudo apt-get install -y git ninja-build make gcc-multilib g++-multilib wget libssl-dev
+
+      - name: Setup Ccache
+        uses: hendrikmuhs/ccache-action@main
+        with:
+          key: ${{ github.job }}
+          save: ${{ ( github.ref == 'refs/heads/main' || github.repository != 'duckdb/duckdb-node' ) && startsWith(matrix.version.node, '19') }}
+
+      - name: Setup
+        shell: bash
+        run: ./scripts/node_version.sh
+        env:
+          DUCKDB_NODE_BUILD_CACHE: 0  # create a standalone package
+          NODE_AUTH_TOKEN: ${{secrets.NODE_AUTH_TOKEN}}
+
+      - name: Validate Docs
+        run: npx jsdoc-to-markdown --files lib/*.js >> $GITHUB_STEP_SUMMARY
+        env:
+          npm_config_yes: true
+
+      - name: Electron ${{ matrix.version.electron }}
+        shell: bash
+        run: ./scripts/node_build.sh ${{ matrix.version.node }}
+        env:
+          ELECTRON_VERSION: ${{ matrix.version.electron }}
+
+  osx-electron-arm64:
+    name: Electron OSX
+    runs-on: macos-14
+    needs: [set-up-npm, set-up-electron-versions]
+    strategy:
+      matrix:
+        version: ${{ fromJSON(needs.set-up-electron-versions.outputs.matrix) }}
+        target_arch: [ arm64 ]
+  
+    env:
+      TARGET_ARCH: ${{ matrix.target_arch }}
+      DUCKDB_NODE_BUILD_CACHE: 0
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+  
+      # Default Python (3.12) doesn't have support for distutils
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+  
+      - name: Setup Ccache
+        uses: hendrikmuhs/ccache-action@main
+        with:
+          key: ${{ github.job }}-${{ matrix.target_arch }}
+          save: ${{ ( github.ref == 'refs/heads/main' || github.repository != 'duckdb/duckdb-node' ) && startsWith(matrix.version.node, '19') }}
+  
+      - name: Downgrade curl # fixes a bug with the brew curl that lead to failed downloads
+        shell: bash
+        run: |
+          brew uninstall --ignore-dependencies curl
+          which curl
+  
+      - name: Setup
+        shell: bash
+        run: ./scripts/node_version.sh
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.NODE_AUTH_TOKEN}}
+  
+      - name: Electron ${{ matrix.version.electron }}
+        shell: bash
+        run: ./scripts/node_build.sh 18
+        env: 
+          ELECTRON_VERSION: ${{ matrix.version.electron }}
+  
+  osx-electron-x64:
+    name: Electron OSX
+    runs-on: macos-13
+    needs: [set-up-npm, set-up-electron-versions]
+    strategy:
+      matrix:
+        version: ${{ fromJSON(needs.set-up-electron-versions.outputs.matrix) }}
+        target_arch: [ x64 ]
+  
+    env:
+      TARGET_ARCH: ${{ matrix.target_arch }}
+      DUCKDB_NODE_BUILD_CACHE: 0
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+  
+      # Default Python (3.12) doesn't have support for distutils
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+  
+      - name: Setup Ccache
+        uses: hendrikmuhs/ccache-action@main
+        with:
+          key: ${{ github.job }}-${{ matrix.target_arch }}
+          save: ${{ ( github.ref == 'refs/heads/main' || github.repository != 'duckdb/duckdb-node' ) && startsWith(matrix.version.node, '19') }}
+  
+      - name: Downgrade curl # fixes a bug with the brew curl that lead to failed downloads
+        shell: bash
+        run: |
+          brew uninstall --ignore-dependencies curl
+          which curl
+  
+      - name: Setup
+        shell: bash
+        run: ./scripts/node_version.sh
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.NODE_AUTH_TOKEN}}
+  
+      - name: Electron ${{ matrix.version.electron }}
+        shell: bash
+        run: ./scripts/node_build.sh 18
+        env:
+          ELECTRON_VERSION: ${{ matrix.version.electron }}
+  
+  win-electron:
+    name: Electron Windows
+    runs-on: windows-latest
+    needs: [set-up-npm, set-up-electron-versions]
+    continue-on-error: ${{ !startsWith(matrix.version.node, '18') && !startsWith(matrix.version.node, '20') && !startsWith(matrix.version.node, '21') }}
+    env:
+      npm_config_msvs_version: 2019
+  
+    strategy:
+      matrix:
+        version: ${{ fromJSON(needs.set-up-electron-versions.outputs.matrix) }}
+  
+    steps:
+      # Default Python (3.12) doesn't have support for distutils
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+  
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+  
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+  
+      - name: Versions
+        shell: bash
+        run: |
+          systeminfo
+          node -v
+          npm -v
+  
+      - name: Windows Build Tools
+        shell: bash
+        run: |
+          choco install visualstudio2019-workload-vctools -y
+  
+      - name: Node Version
+        shell: bash
+        run: ./scripts/node_version.sh
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.NODE_AUTH_TOKEN}}
+  
+      - name: Setup Ccache
+        uses: hendrikmuhs/ccache-action@main
+        with:
+          key: ${{ github.job }}-${{ matrix.version.node }}
+          save: ${{ github.ref == 'refs/heads/main' || github.repository != 'duckdb/duckdb-node' }}
+          variant: sccache
+  
+      - name: Electron
+        shell: bash
+        run: ./scripts/node_build_win.sh
+        env:
+          ELECTRON_VERSION: ${{ matrix.version.electron }}
+
+  test_matrix:
+    needs:
+      - linux-electron
+      - osx-electron-arm64
+      - osx-electron-x64
+      - win-electron
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest, ubuntu-22.04, ubuntu-20.04, windows-2019, macos-12, macos-13, macos-14]
+        version: [20]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.version }}
+
+      - uses: actions/checkout@v3
+        with:
+          sparse-checkout: examples
+
+      - name: Install duckdb
+        run: |
+          npm install duckdb@next
+
+      - name: Run minor test
+        shell: bash
+        run: |
+          node examples/example.js
