@@ -2,6 +2,9 @@
     "targets": [
         {
             "target_name": "<(module_name)", 
+            "variables": {
+                "include_httpfs": "<!(echo ${DUCKDB_INCLUDE_HTTPFS})"
+            }, 
             "sources": [
                 "src/duckdb_node.cpp", 
                 "src/database.cpp", 
@@ -395,6 +398,25 @@
                         "libraries": [
                             "rstrtmgr.lib", 
                             "bcrypt.lib"
+                        ]
+                    }
+                ], 
+                [
+                    "include_httpfs=='true'", 
+                    {
+                        "sources": [
+                            "src/duckdb/extension/httpfs/create_secret_functions.cpp", 
+                            "src/duckdb/extension/httpfs/crypto.cpp", 
+                            "src/duckdb/extension/httpfs/hffs.cpp", 
+                            "src/duckdb/extension/httpfs/httpfs.cpp", 
+                            "src/duckdb/extension/httpfs/httpfs_extension.cpp", 
+                            "src/duckdb/extension/httpfs/s3fs.cpp"
+                        ], 
+                        "include_dirs": [
+                            "src/duckdb/extension/httpfs/include"
+                        ], 
+                        "defines": [
+                            "DUCKDB_EXTENSION_HTTPFS_LINKED"
                         ]
                     }
                 ]

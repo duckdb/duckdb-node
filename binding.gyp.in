@@ -2,6 +2,8 @@
     "targets": [
         {
             "target_name": "<(module_name)",
+            "variables" : {
+            },
             "sources": [
                 "src/duckdb_node.cpp",
                 "src/database.cpp",
@@ -67,7 +69,8 @@
                             "rstrtmgr.lib", "bcrypt.lib"
                         ]
                     }
-                ]
+                ],
+                "${OPTIONAL_EXTENSIONS}"
             ],
             "libraries": [
                 "${LIBRARY_FILES}"
