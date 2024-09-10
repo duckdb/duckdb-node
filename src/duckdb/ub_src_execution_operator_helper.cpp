@@ -2,6 +2,8 @@
 
 #include "src/execution/operator/helper/physical_buffered_collector.cpp"
 
+#include "src/execution/operator/helper/physical_buffered_batch_collector.cpp"
+
 #include "src/execution/operator/helper/physical_create_secret.cpp"
 
 #include "src/execution/operator/helper/physical_execute.cpp"
@@ -25,6 +27,8 @@
 #include "src/execution/operator/helper/physical_result_collector.cpp"
 
 #include "src/execution/operator/helper/physical_set.cpp"
+
+#include "src/execution/operator/helper/physical_set_variable.cpp"
 
 #include "src/execution/operator/helper/physical_reset.cpp"
 
