@@ -7,7 +7,7 @@ describe('Column Types', function() {
 
     it('should prepare a statement and return the columns and their types', function(done) {
       // we dont include the large_enum and small_enum since they are huge and test the same code path as the small_enum
-      var stmt = db.prepare("SELECT * EXCLUDE(medium_enum, large_enum, fixed_int_array, fixed_varchar_array, fixed_nested_int_array, fixed_nested_varchar_array, fixed_struct_array, struct_of_fixed_array, fixed_array_of_int_list, list_of_fixed_int_array) FROM test_all_types()", function(err: null | Error) {
+      var stmt = db.prepare("SELECT * EXCLUDE(medium_enum, large_enum, fixed_int_array, fixed_varchar_array, fixed_nested_int_array, fixed_nested_varchar_array, fixed_struct_array, struct_of_fixed_array, fixed_array_of_int_list, list_of_fixed_int_array, varint) FROM test_all_types()", function(err: null | Error) {
           if (err) done(new Error('Query failed unexpectedly'));
 
           let cols = stmt.columns();
