@@ -1,4 +1,4 @@
-name: Create Internal issue when the "High Priority" label is applied
+name: Create Internal issue when the "reproduced" label is applied
 on:
   issues:
     types:
@@ -13,7 +13,7 @@ env:
 
 jobs:
   create_or_label_issue:
-    if: github.event.label.name == 'High Priority'
+    if: github.event.label.name == 'reproduced'
     runs-on: ubuntu-latest
     steps:
       - name: Get mirror issue number
