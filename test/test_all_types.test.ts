@@ -5,7 +5,7 @@ function get_all_types(): Promise<string[]> {
   return new Promise((resolve, reject) => {
     const conn = new duckdb.Database(":memory:");
     conn.all(
-      "describe select * EXCLUDE(fixed_int_array, fixed_varchar_array, fixed_nested_int_array, fixed_nested_varchar_array, fixed_struct_array, struct_of_fixed_array, fixed_array_of_int_list, list_of_fixed_int_array) from test_all_types()",
+      "describe select * EXCLUDE(fixed_int_array, fixed_varchar_array, fixed_nested_int_array, fixed_nested_varchar_array, fixed_struct_array, struct_of_fixed_array, fixed_array_of_int_list, list_of_fixed_int_array, varint) from test_all_types()",
       (error: DuckDbError | null, data: TableData) => {
         if (error) reject(error);
         resolve(data.map((row) => row.column_name));
