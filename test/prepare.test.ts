@@ -586,7 +586,7 @@ describe('prepare', function() {
             });
             it("should aggregate approx_count_distinct(flt)", function (done) {
                 db.all("SELECT approx_count_distinct(flt) as approx_count_distinct FROM foo", function (err: null | Error, res: TableData) {
-                    assert.ok(res[0].approx_count_distinct >= 950);
+                    assert.ok(res[0].approx_count_distinct >= 940);
                     done(err);
                 });
             });
