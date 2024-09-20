@@ -487,7 +487,7 @@ Napi::Value Connection::RegisterBuffer(const Napi::CallbackInfo &info) {
 		auto raw_ptr = reinterpret_cast<uint64_t>(arr.ArrayBuffer().Data());
 		auto length = (uint64_t)arr.ElementLength();
 
-		arrow_scan_function += "{'ptr': " + std::to_string(raw_ptr) + ", 'size': " + std::to_string(length) + "},";
+		arrow_scan_function += "{'ptr': " + std::to_string(raw_ptr) + "::UBIGINT, 'size': " + std::to_string(length) + "::UBIGINT},";
 	}
 	arrow_scan_function += "])";
 
