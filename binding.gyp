@@ -384,7 +384,8 @@
                 "DUCKDB_EXTENSION_ICU_LINKED", 
                 "DUCKDB_EXTENSION_JSON_LINKED", 
                 "DUCKDB_EXTENSION_AUTOLOAD_DEFAULT=1", 
-                "DUCKDB_EXTENSION_AUTOINSTALL_DEFAULT=1"
+                "DUCKDB_EXTENSION_AUTOINSTALL_DEFAULT=1",
+                "NDEBUG"
             ], 
             "cflags_cc": [
                 "-frtti", 

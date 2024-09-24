@@ -35,6 +35,7 @@ defines = ['DUCKDB_EXTENSION_{}_LINKED'.format(ext.upper()) for ext in extension
 
 # Autoloading is on by default for node distributions
 defines.extend(['DUCKDB_EXTENSION_AUTOLOAD_DEFAULT=1', 'DUCKDB_EXTENSION_AUTOINSTALL_DEFAULT=1'])
+defines.extend(['NDEBUG'])
 
 if os.environ.get('DUCKDB_NODE_BUILD_CACHE') == '1' and os.path.isfile(cache_file):
     with open(cache_file, 'rb') as f:
@@ -79,8 +80,6 @@ elif 'DUCKDB_NODE_BINDIR' in os.environ:
             cflags += ['-g']
         if '-O0' in os.environ['DUCKDB_NODE_CFLAGS']:
             cflags += ['-O0']
-        if '-DNDEBUG' in os.environ['DUCKDB_NODE_CFLAGS']:
-            defines += ['NDEBUG']
 
     if 'DUCKDB_NODE_BUILD_CACHE' in os.environ:
         cache = {
