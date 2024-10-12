@@ -420,10 +420,12 @@
             }, 
             "msvs_settings": {
                 "VCCLCompilerTool": {
-                    "ExceptionHandling": 1, 
+                    "ExceptionHandling": 1,
+                    "RuntimeLibrary": 2,
                     "AdditionalOptions": [
                         "/bigobj", 
-                        "/GR"
+                        "/GR",
+                        "/MD"
                     ]
                 }
             }, 
