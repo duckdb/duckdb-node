@@ -208,6 +208,7 @@ public:
 public:
 	Napi::Value NextChunk(const Napi::CallbackInfo &info);
 	Napi::Value NextIpcBuffer(const Napi::CallbackInfo &info);
+	Napi::Value Columns(const Napi::CallbackInfo &info);
 	duckdb::shared_ptr<ArrowSchema> cschema;
 
 private:
