@@ -4394,6 +4394,10 @@ const char* EnumUtil::ToChars<MetricsType>(MetricsType value) {
 		return "OPERATOR_ROWS_SCANNED";
 	case MetricsType::OPERATOR_TIMING:
 		return "OPERATOR_TIMING";
+	case MetricsType::LATENCY:
+		return "LATENCY";
+	case MetricsType::ROWS_RETURNED:
+		return "ROWS_RETURNED";
 	case MetricsType::RESULT_SET_SIZE:
 		return "RESULT_SET_SIZE";
 	case MetricsType::ALL_OPTIMIZERS:
@@ -4494,6 +4498,12 @@ MetricsType EnumUtil::FromString<MetricsType>(const char *value) {
 	}
 	if (StringUtil::Equals(value, "OPERATOR_TIMING")) {
 		return MetricsType::OPERATOR_TIMING;
+	}
+	if (StringUtil::Equals(value, "LATENCY")) {
+		return MetricsType::LATENCY;
+	}
+	if (StringUtil::Equals(value, "ROWS_RETURNED")) {
+		return MetricsType::ROWS_RETURNED;
 	}
 	if (StringUtil::Equals(value, "RESULT_SET_SIZE")) {
 		return MetricsType::RESULT_SET_SIZE;
@@ -6455,6 +6465,29 @@ SecretPersistType EnumUtil::FromString<SecretPersistType>(const char *value) {
 		return SecretPersistType::PERSISTENT;
 	}
 	throw NotImplementedException(StringUtil::Format("Enum value: '%s' not implemented in FromString<SecretPersistType>", value));
+}
+
+template<>
+const char* EnumUtil::ToChars<SecretSerializationType>(SecretSerializationType value) {
+	switch(value) {
+	case SecretSerializationType::CUSTOM:
+		return "CUSTOM";
+	case SecretSerializationType::KEY_VALUE_SECRET:
+		return "KEY_VALUE_SECRET";
+	default:
+		throw NotImplementedException(StringUtil::Format("Enum value: '%d' not implemented in ToChars<SecretSerializationType>", value));
+	}
+}
+
+template<>
+SecretSerializationType EnumUtil::FromString<SecretSerializationType>(const char *value) {
+	if (StringUtil::Equals(value, "CUSTOM")) {
+		return SecretSerializationType::CUSTOM;
+	}
+	if (StringUtil::Equals(value, "KEY_VALUE_SECRET")) {
+		return SecretSerializationType::KEY_VALUE_SECRET;
+	}
+	throw NotImplementedException(StringUtil::Format("Enum value: '%s' not implemented in FromString<SecretSerializationType>", value));
 }
 
 template<>
