@@ -231,14 +231,10 @@ jobs:
 
     strategy:
       matrix:
-        node: [ '16', '17', '18', '19', '20', '21', '22' ]
+        node: [ '16', '17', '18', '19', '20', '21', '22', '23' ]
         isRelease:
           - ${{ startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' }}
         exclude:
-          - isRelease: false
-            node: 12
-          - isRelease: false
-            node: 14
           - isRelease: false
             node: 16
           - isRelease: false
