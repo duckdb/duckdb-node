@@ -39,7 +39,7 @@ jobs:
 
   linux-nodejs:
     name: node.js Linux
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs: set-up-npm
     continue-on-error: ${{ matrix.node != '18' && matrix.node != '20' && matrix.node != '21' }}
     env:
@@ -48,17 +48,11 @@ jobs:
     strategy:
       matrix:
         # node.js current support policy to be found at https://github.com/duckdb/duckdb-node/tree/main/#Supported-Node-versions
-        node: [ '16', '17', '18', '19', '20', '21', '22', '23']
+        node: [ '18', '20', '22', '23']
         target_arch: [ x64, arm64 ]
         isRelease:
           - ${{ startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' }}
         exclude:
-          - isRelease: false
-            node: 16
-          - isRelease: false
-            node: 17
-          - isRelease: false
-            node: 19
           - isRelease: false
             node: 18
             target_arch: arm64
@@ -119,14 +113,10 @@ jobs:
     strategy:
       matrix:
         target_arch: [ arm64 ]
-        node: [ '16', '17', '18', '19', '20', '21', '22', '23']
+        node: [ '18', '20', '22', '23']
         isRelease:
           - ${{ startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' }}
         exclude:
-          - isRelease: false
-            node: 16
-          - isRelease: false
-            node: 17
           - isRelease: false
             node: 19
         # these older versions of NodeJS don't have M1 support
@@ -174,18 +164,9 @@ jobs:
     strategy:
       matrix:
         target_arch: [ x64 ]
-        node: [ '16', '17', '18', '19', '20', '21', '22', '23']
+        node: [ '18', '20', '22', '23']
         isRelease:
           - ${{ startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' }}
-        exclude:
-          - isRelease: false
-            node: 16
-          - isRelease: false
-            node: 17
-          - isRelease: false
-            node: 19
-        # these older versions of NodeJS don't have M1 support
-
     env:
       TARGET_ARCH: ${{ matrix.target_arch }}
       DUCKDB_NODE_BUILD_CACHE: 0
@@ -231,18 +212,12 @@ jobs:
 
     strategy:
       matrix:
-        node: [ '16', '17', '18', '19', '20', '21', '22', '23' ]
+        node: [ '18', '20', '22', '23']
         isRelease:
           - ${{ startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' }}
         exclude:
           - isRelease: false
-            node: 16
-          - isRelease: false
-            node: 17
-          - isRelease: false
             node: 18
-          - isRelease: false
-            node: 19
           - isRelease: false
             node: 20
 
