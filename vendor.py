@@ -15,7 +15,7 @@ args = parser.parse_args()
 
 
 # list of extensions to bundle
-extensions = ['parquet', 'icu', 'json']
+extensions = ['parquet', 'icu', 'json', 'core_functions']
 
 # path to target
 basedir = os.getcwd()

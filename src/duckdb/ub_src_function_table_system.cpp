@@ -12,6 +12,10 @@
 
 #include "src/function/table/system/duckdb_keywords.cpp"
 
+#include "src/function/table/system/duckdb_log.cpp"
+
+#include "src/function/table/system/duckdb_log_contexts.cpp"
+
 #include "src/function/table/system/duckdb_indexes.cpp"
 
 #include "src/function/table/system/duckdb_memory.cpp"
@@ -47,6 +51,8 @@
 #include "src/function/table/system/pragma_storage_info.cpp"
 
 #include "src/function/table/system/pragma_table_info.cpp"
+
+#include "src/function/table/system/pragma_table_sample.cpp"
 
 #include "src/function/table/system/pragma_user_agent.cpp"
 
