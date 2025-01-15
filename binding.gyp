@@ -326,7 +326,30 @@
                 "src/duckdb/extension/json/json_serializer.cpp", 
                 "src/duckdb/extension/json/json_deserializer.cpp", 
                 "src/duckdb/extension/json/serialize_json.cpp", 
-                "src/duckdb/ub_extension_json_json_functions.cpp"
+                "src/duckdb/ub_extension_json_json_functions.cpp", 
+                "src/duckdb/extension/core_functions/function_list.cpp", 
+                "src/duckdb/extension/core_functions/core_functions_extension.cpp", 
+                "src/duckdb/extension/core_functions/lambda_functions.cpp", 
+                "src/duckdb/ub_extension_core_functions_aggregate_holistic.cpp", 
+                "src/duckdb/ub_extension_core_functions_aggregate_distributive.cpp", 
+                "src/duckdb/ub_extension_core_functions_aggregate_algebraic.cpp", 
+                "src/duckdb/ub_extension_core_functions_aggregate_regression.cpp", 
+                "src/duckdb/ub_extension_core_functions_aggregate_nested.cpp", 
+                "src/duckdb/ub_extension_core_functions_scalar_bit.cpp", 
+                "src/duckdb/ub_extension_core_functions_scalar_operators.cpp", 
+                "src/duckdb/ub_extension_core_functions_scalar_array.cpp", 
+                "src/duckdb/ub_extension_core_functions_scalar_date.cpp", 
+                "src/duckdb/ub_extension_core_functions_scalar_enum.cpp", 
+                "src/duckdb/ub_extension_core_functions_scalar_math.cpp", 
+                "src/duckdb/ub_extension_core_functions_scalar_struct.cpp", 
+                "src/duckdb/ub_extension_core_functions_scalar_map.cpp", 
+                "src/duckdb/ub_extension_core_functions_scalar_list.cpp", 
+                "src/duckdb/ub_extension_core_functions_scalar_union.cpp", 
+                "src/duckdb/ub_extension_core_functions_scalar_generic.cpp", 
+                "src/duckdb/ub_extension_core_functions_scalar_string.cpp", 
+                "src/duckdb/ub_extension_core_functions_scalar_random.cpp", 
+                "src/duckdb/ub_extension_core_functions_scalar_blob.cpp", 
+                "src/duckdb/ub_extension_core_functions_scalar_debug.cpp"
             ], 
             "include_dirs": [
                 "<!(node -p \"require('node-addon-api').include_dir\")", 
@@ -374,13 +397,15 @@
                 "src/duckdb/extension/icu/include", 
                 "src/duckdb/extension/icu/third_party/icu/common", 
                 "src/duckdb/extension/icu/third_party/icu/i18n", 
-                "src/duckdb/extension/json/include"
+                "src/duckdb/extension/json/include", 
+                "src/duckdb/extension/core_functions/include"
             ], 
             "defines": [
                 "NAPI_VERSION=6", 
                 "DUCKDB_EXTENSION_PARQUET_LINKED", 
                 "DUCKDB_EXTENSION_ICU_LINKED", 
                 "DUCKDB_EXTENSION_JSON_LINKED", 
+                "DUCKDB_EXTENSION_CORE_FUNCTIONS_LINKED", 
                 "DUCKDB_EXTENSION_AUTOLOAD_DEFAULT=1", 
                 "DUCKDB_EXTENSION_AUTOINSTALL_DEFAULT=1", 
                 "NDEBUG"
