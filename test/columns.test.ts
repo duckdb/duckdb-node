@@ -10,7 +10,7 @@ describe('Column Types', function() {
       var stmt = db.prepare("SELECT * EXCLUDE(medium_enum, large_enum, fixed_int_array, fixed_varchar_array, fixed_nested_int_array, fixed_nested_varchar_array, fixed_struct_array, struct_of_fixed_array, fixed_array_of_int_list, list_of_fixed_int_array, varint) FROM test_all_types()", function(err: null | Error) {
           if (err) done(new Error('Query failed unexpectedly'));
 
-          let cols = stmt.columns();
+          let cols = stmt.columns() as duckdb.ColumnInfo[];
           
           assert.equal(cols.length, 43);
 
