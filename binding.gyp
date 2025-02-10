@@ -306,6 +306,7 @@
                 "src/duckdb/extension/icu/./icu-makedate.cpp", 
                 "src/duckdb/extension/icu/./icu-list-range.cpp", 
                 "src/duckdb/extension/icu/./icu-timebucket.cpp", 
+                "src/duckdb/extension/icu/./icu-current.cpp", 
                 "src/duckdb/extension/icu/./icu-timezone.cpp", 
                 "src/duckdb/extension/icu/./icu-dateadd.cpp", 
                 "src/duckdb/extension/icu/./icu-datetrunc.cpp", 
