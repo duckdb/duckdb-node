@@ -500,9 +500,7 @@ Napi::Value Connection::RegisterBuffer(const Napi::CallbackInfo &info) {
 	}
 
 	array_references[name] = Napi::Persistent(array);
-	auto &connection = Get<Connection>();
-	auto &con = *connection.connection;
-	auto &db = *con->context->db;
+	auto &db = *connection->context->db;
 
 	vector<duckdb::Value> values;
 	
