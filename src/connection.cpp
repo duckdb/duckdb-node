@@ -500,6 +500,9 @@ Napi::Value Connection::RegisterBuffer(const Napi::CallbackInfo &info) {
 	}
 
 	array_references[name] = Napi::Persistent(array);
+	auto &connection = Get<Connection>();
+	auto &con = *connection.connection;
+	auto &db = *con->context->db;
 
 	vector<duckdb::Value> values;
 	
@@ -512,7 +515,12 @@ Napi::Value Connection::RegisterBuffer(const Napi::CallbackInfo &info) {
 		auto raw_ptr = reinterpret_cast<uint64_t>(arr.ArrayBuffer().Data());
 		auto length = (uint64_t)arr.ElementLength();
         duckdb::child_list_t<duckdb::Value> buffer_values;
-		buffer_values.push_back({"ptr", duckdb::Value::POINTER(raw_ptr)});
+        // This is a little bit evil, but allows us to support both libraries in between 1.2 and 1.3
+        if (db.ExtensionIsLoaded("nanoarrow")){
+        	buffer_values.push_back({"ptr", duckdb::Value::POINTER(raw_ptr)});
+        } else {
+        	buffer_values.push_back({"ptr", duckdb::Value::UBIGINT(raw_ptr)});
+        }
 		buffer_values.push_back({"size", duckdb::Value::UBIGINT(length)});
 		values.push_back(duckdb::Value::STRUCT(buffer_values));
 	}
