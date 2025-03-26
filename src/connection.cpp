@@ -4,6 +4,10 @@
 #include "duckdb/parser/parser.hpp"
 #include "duckdb/parser/parsed_data/drop_info.hpp"
 #include "duckdb/parser/expression/cast_expression.hpp"
+#include "duckdb/common/types/value.hpp"
+#include "duckdb/main/relation/table_function_relation.hpp"
+
+
 #include <iostream>
 #include <thread>
 
@@ -451,6 +455,27 @@ Napi::Value Connection::Exec(const Napi::CallbackInfo &info) {
 	return Value();
 }
 
+struct CreateArrowViewTask : public Task {
+	CreateArrowViewTask(Connection &connection, duckdb::vector<duckdb::Value>& parameters, std::string &view_name)
+	    : Task(connection), parameters(parameters), view_name(view_name) {
+	}
+
+	void DoWork() override {
+		auto &connection = Get<Connection>();
+		auto &con = *connection.connection;
+		// Now we create a table function relation
+		auto table_function_relation = duckdb::make_shared_ptr<duckdb::TableFunctionRelation>(con.context,"scan_arrow_ipc",parameters);
+		// Creates a relation for a temporary view that does replace
+		auto view_relation = table_function_relation->CreateView(view_name,true,true);
+
+		view_relation->Execute();
+
+	}
+
+	duckdb::vector<duckdb::Value> parameters;
+	std::string view_name;
+};
+
 // Register Arrow IPC buffers for scanning from DuckDB
 Napi::Value Connection::RegisterBuffer(const Napi::CallbackInfo &info) {
 	auto env = info.Env();
@@ -476,8 +501,8 @@ Napi::Value Connection::RegisterBuffer(const Napi::CallbackInfo &info) {
 
 	array_references[name] = Napi::Persistent(array);
 
-	std::string arrow_scan_function = "scan_arrow_ipc([";
-
+	vector<duckdb::Value> values;
+	
 	for (uint64_t ipc_idx = 0; ipc_idx < array.Length(); ipc_idx++) {
 		Napi::Value v = array[ipc_idx];
 		if (!v.IsObject()) {
@@ -486,19 +511,15 @@ Napi::Value Connection::RegisterBuffer(const Napi::CallbackInfo &info) {
 		Napi::Uint8Array arr = v.As<Napi::Uint8Array>();
 		auto raw_ptr = reinterpret_cast<uint64_t>(arr.ArrayBuffer().Data());
 		auto length = (uint64_t)arr.ElementLength();
-
-		arrow_scan_function += "{'ptr': " + std::to_string(raw_ptr) + "::UBIGINT, 'size': " + std::to_string(length) + "::UBIGINT},";
+        duckdb::child_list_t<duckdb::Value> buffer_values;
+		buffer_values.push_back({"ptr", duckdb::Value::POINTER(raw_ptr)});
+		buffer_values.push_back({"size", duckdb::Value::UBIGINT(length)});
+		values.push_back(duckdb::Value::STRUCT(buffer_values));
 	}
-	arrow_scan_function += "])";
+	duckdb::vector<duckdb::Value> list_value;
+    list_value.push_back(duckdb::Value::LIST(values));
 
-	std::string final_query = "CREATE OR REPLACE TEMPORARY VIEW " + name + " AS SELECT * FROM " + arrow_scan_function;
-
-	Napi::Function callback;
-	if (info.Length() > 3 && info[3].IsFunction()) {
-		callback = info[3].As<Napi::Function>();
-	}
-
-	database_ref->Schedule(info.Env(), duckdb::make_uniq<ExecTask>(*this, final_query, callback));
+	database_ref->Schedule(info.Env(), duckdb::make_uniq<CreateArrowViewTask>(*this, list_value, name));
 
 	return Value();
 }
