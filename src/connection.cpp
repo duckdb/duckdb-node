@@ -17,12 +17,12 @@ Napi::FunctionReference Connection::Init(Napi::Env env, Napi::Object exports) {
 	Napi::HandleScope scope(env);
 
 	Napi::Function t = DefineClass(
-	    env, "Connection",
-	    {InstanceMethod("prepare", &Connection::Prepare), InstanceMethod("exec", &Connection::Exec),
-	     InstanceMethod("register_udf_bulk", &Connection::RegisterUdf),
-	     InstanceMethod("register_buffer", &Connection::RegisterBuffer),
-	     InstanceMethod("unregister_udf", &Connection::UnregisterUdf), InstanceMethod("close", &Connection::Close),
-	     InstanceMethod("unregister_buffer", &Connection::UnRegisterBuffer)});
+		env, "Connection",
+		{InstanceMethod("prepare", &Connection::Prepare), InstanceMethod("exec", &Connection::Exec),
+		 InstanceMethod("register_udf_bulk", &Connection::RegisterUdf),
+		 InstanceMethod("register_buffer", &Connection::RegisterBuffer),
+		 InstanceMethod("unregister_udf", &Connection::UnregisterUdf), InstanceMethod("close", &Connection::Close),
+		 InstanceMethod("unregister_buffer", &Connection::UnRegisterBuffer)});
 
 	exports.Set("Connection", t);
 
@@ -234,14 +234,14 @@ void DuckDBNodeUDFLauncher(Napi::Env env, Napi::Function jsudf, std::nullptr_t *
 
 struct RegisterUdfTask : public Task {
 	RegisterUdfTask(Connection &connection, std::string name, std::string return_type_name, Napi::Function callback)
-	    : Task(connection, callback), name(std::move(name)), return_type_name(std::move(return_type_name)) {
+		: Task(connection, callback), name(std::move(name)), return_type_name(std::move(return_type_name)) {
 	}
 
 	void DoWork() override {
 		auto &connection = Get<Connection>();
 		auto &udf_ptr = connection.udfs[name];
 		duckdb::scalar_function_t udf_function = [&udf_ptr](duckdb::DataChunk &args, duckdb::ExpressionState &state,
-		                                                    duckdb::Vector &result) -> void {
+															duckdb::Vector &result) -> void {
 			// here we can do only DuckDB stuff because we do not have a functioning env
 
 			// Flatten all args to simplify udfs
@@ -271,7 +271,7 @@ struct RegisterUdfTask : public Task {
 		auto return_type = cast.cast_type;
 
 		connection.connection->CreateVectorizedFunction(name, vector<duckdb::LogicalType> {}, return_type, udf_function,
-		                                                duckdb::LogicalType::ANY);
+														duckdb::LogicalType::ANY);
 	}
 	std::string name;
 	std::string return_type_name;
@@ -296,7 +296,7 @@ Napi::Value Connection::RegisterUdf(const Napi::CallbackInfo &info) {
 	}
 
 	auto udf = duckdb_node_udf_function_t::New(env, udf_callback, "duckdb_node_udf" + name, 0, 1, nullptr,
-	                                           [](Napi::Env, void *, std::nullptr_t *ctx) {});
+											   [](Napi::Env, void *, std::nullptr_t *ctx) {});
 
 	// we have to unref the udf because otherwise there is a circular ref with the connection somehow(?)
 	// this took far too long to figure out
@@ -304,14 +304,14 @@ Napi::Value Connection::RegisterUdf(const Napi::CallbackInfo &info) {
 	udfs[name] = udf;
 
 	database_ref->Schedule(info.Env(),
-	                       duckdb::make_uniq<RegisterUdfTask>(*this, name, return_type_name, completion_callback));
+						   duckdb::make_uniq<RegisterUdfTask>(*this, name, return_type_name, completion_callback));
 
 	return Value();
 }
 
 struct UnregisterUdfTask : public Task {
 	UnregisterUdfTask(Connection &connection, std::string name, Napi::Function callback)
-	    : Task(connection, callback), name(std::move(name)) {
+		: Task(connection, callback), name(std::move(name)) {
 	}
 
 	void DoWork() override {
@@ -354,7 +354,7 @@ Napi::Value Connection::UnregisterUdf(const Napi::CallbackInfo &info) {
 
 struct ExecTask : public Task {
 	ExecTask(Connection &connection, std::string sql, Napi::Function callback)
-	    : Task(connection, callback), sql(std::move(sql)) {
+		: Task(connection, callback), sql(std::move(sql)) {
 	}
 
 	void DoWork() override {
@@ -395,8 +395,8 @@ struct ExecTask : public Task {
 
 struct ExecTaskWithCallback : public ExecTask {
 	ExecTaskWithCallback(Connection &connection, std::string sql, Napi::Function js_callback,
-	                     std::function<void(void)> cpp_callback)
-	    : ExecTask(connection, sql, js_callback), cpp_callback(cpp_callback) {
+						 std::function<void(void)> cpp_callback)
+		: ExecTask(connection, sql, js_callback), cpp_callback(cpp_callback) {
 	}
 
 	void Callback() override {
@@ -456,24 +456,41 @@ Napi::Value Connection::Exec(const Napi::CallbackInfo &info) {
 }
 
 struct CreateArrowViewTask : public Task {
-	CreateArrowViewTask(Connection &connection, duckdb::vector<duckdb::Value>& parameters, std::string &view_name)
-	    : Task(connection), parameters(parameters), view_name(view_name) {
+	CreateArrowViewTask(Connection &connection, duckdb::vector<duckdb::Value>& parameters, std::string &view_name, Napi::Function callback)
+		: Task(connection, callback), parameters(parameters), view_name(view_name) {
 	}
 
 	void DoWork() override {
 		auto &connection = Get<Connection>();
-		auto &con = *connection.connection;
-		// Now we create a table function relation
-		auto table_function_relation = duckdb::make_shared_ptr<duckdb::TableFunctionRelation>(con.context,"scan_arrow_ipc",parameters);
-		// Creates a relation for a temporary view that does replace
-		auto view_relation = table_function_relation->CreateView(view_name,true,true);
-
-		view_relation->Execute();
-
+		success = true;
+		try {
+			auto &con = *connection.connection;
+			// Now we create a table function relation
+			auto table_function_relation = duckdb::make_shared_ptr<duckdb::TableFunctionRelation>(con.context,"scan_arrow_ipc",parameters);
+			// Creates a relation for a temporary view that does replace
+			auto view_relation = table_function_relation->CreateView(view_name,true,true);
+			auto res = view_relation->Execute();
+			if (res->HasError()) {
+				success = false;
+				error = res->GetErrorObject();
+			}
+		} catch (duckdb::Exception &e) {
+			success = false;
+			error = duckdb::ErrorData(e);
+			return;
+		}
 	}
+
+	void Callback() override {
+		auto env = object.Env();
+		Napi::HandleScope scope(env);
+		callback.Value().MakeCallback(object.Value(), {success ? env.Null() : Utils::CreateError(env, error)});
+	};
 
 	duckdb::vector<duckdb::Value> parameters;
 	std::string view_name;
+	bool success;
+	duckdb::ErrorData error;
 };
 
 // Register Arrow IPC buffers for scanning from DuckDB
@@ -512,20 +529,25 @@ Napi::Value Connection::RegisterBuffer(const Napi::CallbackInfo &info) {
 		Napi::Uint8Array arr = v.As<Napi::Uint8Array>();
 		auto raw_ptr = reinterpret_cast<uint64_t>(arr.ArrayBuffer().Data());
 		auto length = (uint64_t)arr.ElementLength();
-        duckdb::child_list_t<duckdb::Value> buffer_values;
-        // This is a little bit evil, but allows us to support both libraries in between 1.2 and 1.3
-        if (db.ExtensionIsLoaded("nanoarrow")){
-        	buffer_values.push_back({"ptr", duckdb::Value::POINTER(raw_ptr)});
-        } else {
-        	buffer_values.push_back({"ptr", duckdb::Value::UBIGINT(raw_ptr)});
-        }
+		duckdb::child_list_t<duckdb::Value> buffer_values;
+		// This is a little bit evil, but allows us to support both libraries in between 1.2 and 1.3
+		if (db.ExtensionIsLoaded("nanoarrow")){
+			buffer_values.push_back({"ptr", duckdb::Value::POINTER(raw_ptr)});
+		} else {
+			buffer_values.push_back({"ptr", duckdb::Value::UBIGINT(raw_ptr)});
+		}
 		buffer_values.push_back({"size", duckdb::Value::UBIGINT(length)});
 		values.push_back(duckdb::Value::STRUCT(buffer_values));
 	}
 	duckdb::vector<duckdb::Value> list_value;
-    list_value.push_back(duckdb::Value::LIST(values));
+	list_value.push_back(duckdb::Value::LIST(values));
 
-	database_ref->Schedule(info.Env(), duckdb::make_uniq<CreateArrowViewTask>(*this, list_value, name));
+	Napi::Function callback;
+	if (info.Length() > 3 && info[3].IsFunction()) {
+		callback = info[3].As<Napi::Function>();
+	}
+
+	database_ref->Schedule(info.Env(), duckdb::make_uniq<CreateArrowViewTask>(*this, list_value, name, callback));
 
 	return Value();
 }
@@ -551,7 +573,7 @@ Napi::Value Connection::UnRegisterBuffer(const Napi::CallbackInfo &info) {
 	};
 
 	database_ref->Schedule(info.Env(),
-	                       duckdb::make_uniq<ExecTaskWithCallback>(*this, final_query, callback, cpp_callback));
+						   duckdb::make_uniq<ExecTaskWithCallback>(*this, final_query, callback, cpp_callback));
 
 	return Value();
 }
