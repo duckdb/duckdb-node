@@ -101,7 +101,7 @@ export class Connection {
   ): void;
   unregister_udf(name: string, callback: Callback<any>): void;
 
-  stream(sql: any, ...args: any[]): QueryResult;
+  stream(sql: any, ...args: any[]): Promise<QueryResult>;
   arrowIPCStream(sql: any, ...args: any[]): Promise<IpcResultStreamIterator>;
 
   register_buffer(name: string, array: ArrowIterable, force: boolean, callback?: Callback<void>): void;
@@ -109,6 +109,7 @@ export class Connection {
 }
 
 export class QueryResult implements AsyncIterable<RowData> {
+  columns(): ColumnInfo[];
   [Symbol.asyncIterator](): AsyncIterator<RowData>;
 }
 
@@ -166,7 +167,7 @@ export class Database {
   ): void;
   unregister_udf(name: string, callback: Callback<any>): void;
 
-  stream(sql: any, ...args: any[]): QueryResult;
+  stream(sql: any, ...args: any[]): Promise<QueryResult>;
   arrowIPCStream(sql: any, ...args: any[]): Promise<IpcResultStreamIterator>;
 
   serialize(done?: Callback<void>): void;
@@ -261,7 +262,7 @@ export class Statement {
 
   run(...args: [...any, Callback<void>] | any[]): Statement;
 
-  columns(): ColumnInfo[];
+  columns(): ColumnInfo[] | null;
 }
 
 export const ERROR: number;
