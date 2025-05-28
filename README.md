@@ -1,6 +1,9 @@
+> [!WARNING]
+> The original DuckDB <> Node.js bindings in this package will *eventually be deprecated* in favor of the new and shiny `@duckdb/node-api` package. Currently, the plan is to release this package `duckdb-node` for the last time for the DuckDB 1.4.x (~Fall 2025) series but *not* for the DuckDB 1.5.x series (~Early 2026) any more.
+
 # DuckDB Node Bindings
 
-This package provides a node.js API for [DuckDB](https://github.com/duckdb/duckdb), the "SQLite for Analytics". The API for this client is somewhat compliant to the SQLite node.js client for easier transition (and transition you must eventually).
+This package provides a Node.js API for [DuckDB](https://github.com/duckdb/duckdb), the "SQLite for Analytics". The API for this client is somewhat compliant to the SQLite Node.js client for easier transition (and transition you must eventually).
 
 Load the package and create a database object:
 
