@@ -18,7 +18,7 @@ env:
 jobs:
   set-up-npm:
     name: Set up NPM
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     env:
       DUCKDB_NODE_BUILD_CACHE: 0
     steps:
@@ -273,7 +273,7 @@ jobs:
       - win-nodejs
     strategy:
       matrix:
-        os: [windows-latest, ubuntu-latest, ubuntu-22.04, ubuntu-20.04, windows-2019, macos-12, macos-13, macos-14]
+        os: [windows-latest, ubuntu-latest, ubuntu-22.04, windows-2019, macos-12, macos-13, macos-14]
         version: [20]
     runs-on: ${{ matrix.os }}
     steps:
