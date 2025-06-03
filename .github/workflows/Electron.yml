@@ -19,7 +19,7 @@ jobs:
   set-up-npm:
     if: false
     name: Set up NPM
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     env:
       DUCKDB_NODE_BUILD_CACHE: 0
     steps:
@@ -41,7 +41,7 @@ jobs:
   # From `npm show electron time --json` and https://www.electronjs.org/docs/latest/tutorial/electron-timelines
   set-up-electron-versions:
     name: Set up Electron version
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     outputs:
       matrix: ${{ steps.setup.outputs.matrix }}
     steps:
@@ -59,7 +59,7 @@ jobs:
 
   linux-electron:
     name: Electron Linux
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs: [set-up-npm, set-up-electron-versions]
     env:
       TARGET_ARCH: ${{ matrix.target_arch }}
@@ -271,7 +271,7 @@ jobs:
       - win-electron
     strategy:
       matrix:
-        os: [windows-latest, ubuntu-latest, ubuntu-22.04, ubuntu-20.04, windows-2019, macos-12, macos-13, macos-14]
+        os: [windows-latest, ubuntu-latest, ubuntu-22.04, windows-2019, macos-12, macos-13, macos-14]
         version: [20]
     runs-on: ${{ matrix.os }}
     steps:
