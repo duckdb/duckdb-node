@@ -204,7 +204,7 @@ jobs:
 
   win-nodejs:
     name: node.js Windows
-    runs-on: windows-2019
+    runs-on: windows-latest
     needs: set-up-npm
     continue-on-error: ${{ matrix.node != '18' && matrix.node != '20' && matrix.node != '21' }}
     env:
@@ -273,7 +273,7 @@ jobs:
       - win-nodejs
     strategy:
       matrix:
-        os: [windows-latest, ubuntu-latest, ubuntu-22.04, windows-2019, macos-12, macos-13, macos-14]
+        os: [windows-latest, ubuntu-latest, macos-latest]
         version: [20]
     runs-on: ${{ matrix.os }}
     steps:
