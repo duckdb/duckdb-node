@@ -375,7 +375,7 @@ struct ExecTask : public Task {
 					break;
 				}
 			}
-		} catch (duckdb::ParserException &e) {
+		} catch (duckdb::Exception &e) {
 			success = false;
 			error = duckdb::ErrorData(e);
 			return;

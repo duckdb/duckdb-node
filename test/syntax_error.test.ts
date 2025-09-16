@@ -1,7 +1,7 @@
 import * as duckdb from '..';
 import * as assert from 'assert';
 
-describe('exec', function() {
+describe('syntax_error', function() {
     let db: duckdb.Database;
     before(function(done) {
         db = new duckdb.Database(':memory:', done);
