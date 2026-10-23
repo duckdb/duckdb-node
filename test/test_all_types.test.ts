@@ -5,7 +5,7 @@ function get_all_types(): Promise<string[]> {
   return new Promise((resolve, reject) => {
     const conn = new duckdb.Database(":memory:");
     conn.all(
-      "describe select * EXCLUDE(fixed_int_array, fixed_varchar_array, fixed_nested_int_array, fixed_nested_varchar_array, fixed_struct_array, struct_of_fixed_array, fixed_array_of_int_list, list_of_fixed_int_array, bignum) from test_all_types()",
+      "describe select * EXCLUDE(fixed_int_array, fixed_varchar_array, fixed_nested_int_array, fixed_nested_varchar_array, fixed_struct_array, struct_of_fixed_array, fixed_array_of_int_list, list_of_fixed_int_array) from test_all_types()",
       (error: DuckDbError | null, data: TableData) => {
         if (error) reject(error);
         resolve(data.map((row) => row.column_name));
@@ -76,6 +76,11 @@ const correct_answer_map: Record<string, any[]> = {
   dec38_10: [
     "-9999999999999999999999999999.9999999999",
     "9999999999999999999999999999.9999999999",
+    null,
+  ],
+  bignum: [
+    "-179769313486231570814527423731704356798070567525844996598917476803157260780028538760589558632766878171540458953514382464234321326889464182768467546703537516986049910576551282076245490090389328944075868508455133942304583236903222948165808559332123348274797826204144723168738177180919299881250404026184124858368",
+    "179769313486231570814527423731704356798070567525844996598917476803157260780028538760589558632766878171540458953514382464234321326889464182768467546703537516986049910576551282076245490090389328944075868508455133942304583236903222948165808559332123348274797826204144723168738177180919299881250404026184124858368",
     null,
   ],
   uuid: [
